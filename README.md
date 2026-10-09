@@ -1,3 +1,104 @@
+# Pillion – XMAX / Pixel 10a Fork
+
+> Personal fork of Pillion optimized for Yamaha XMAX, Google Pixel 10a, and Yahoo! Car Navigation.
+>
+> This branch is my daily-use build and contains changes focused on stable navigation display, automatic recovery, and practical use with the Yamaha XMAX dashboard.
+>
+> This is not an official Pillion build.
+> Issues or questions related to modifications in this fork should be reported here, not to the upstream Pillion repository.
+
+> Yamaha XMAX / Google Pixel 10a / Yahoo!カーナビ向けに調整した Pillion の個人forkです。
+>
+> このブランチは実際に日常使用しているビルドで、Yamaha XMAX メーターでの安定したナビ表示、自動復帰、実運用時の扱いやすさを重視して変更しています。
+>
+> Pillion公式版ではありません。
+> このfork独自の変更に関する不具合・質問は、オリジナルPillionではなくこちらへお願いします。
+
+---
+
+## Target environment / 想定環境
+
+- Yamaha XMAX with Garmin StreetCross / NaviLite compatible dashboard
+- Google Pixel 10a
+- Yahoo! Car Navigation
+- Android Virtual Display mode
+
+- Garmin StreetCross / NaviLite 対応メーターを搭載した Yamaha XMAX
+- Google Pixel 10a
+- Yahoo!カーナビ
+- Android Virtual Display モード
+
+This fork is primarily developed and tested with the environment above.
+Compatibility with other Android devices, Yamaha models, or navigation apps is not guaranteed.
+
+このforkは主に上記環境で開発・実機確認しています。
+他のAndroid端末、Yamaha車種、ナビアプリでの動作は保証していません。
+
+---
+
+## Main changes from upstream / 主な変更点
+
+- Virtual Display based casting optimized for Yahoo! Car Navigation
+- 480 × 234 XMAX dashboard layout with configurable crop and margins
+- Right-top clamped rendering for the usable dashboard area
+- Automatic Bluetooth reconnect and recovery after ignition OFF / ON
+- Yahoo!カーナビ restart-on-VD handling for rendering and DPI stability
+- OCR overlays for arrival information and map scale
+- XMAX stick up/down input support
+- Pixel SecureCamera detection and physical display wake handling
+- Start mirroring race / duplicate-start prevention
+- Reset Pillion and Save & Restart workflows
+- Diagnostic flight recorder and diagnostic export
+- Additional recovery and stability improvements for long-running use
+
+- Yahoo!カーナビ向け Virtual Display キャスト
+- XMAXメーター 480 × 234 に合わせたクロップ・余白調整
+- 使用可能領域への右上クランプ描画
+- Bluetooth再接続、およびキーOFF / ON後の自動復帰
+- Yahoo!カーナビの描画・DPI安定化を目的としたVD移動時のアプリ再起動
+- 到着情報・地図縮尺のOCRオーバーレイ
+- XMAXスティック上下入力対応
+- Pixel SecureCamera検出と物理ディスプレイ復帰処理
+- Start mirroring の二重発火・レース対策
+- Reset Pillion / Save & Restart
+- 診断用フライトレコーダーと診断ログExport
+- 長時間運用向けの復帰処理・安定性改善
+
+---
+
+## Branches and tags / ブランチとタグ
+
+- `xmax-pillion`  
+  Daily-use XMAX / Pixel build.  
+  XMAX / Pixel向けの実運用版。
+
+- `main`  
+  Kept close to the upstream Pillion repository.  
+  オリジナルPillion追従用。
+
+- `legacy-base`  
+  Tag marking the upstream commit used as the original base of this fork.  
+  このforkの開発を開始したオリジナル側の起点を示すタグ。
+
+- `xmax-v34`  
+  Stable working snapshot of the v34 build used on the actual bike.  
+  実車で運用確認済みのv34を保存した固定タグ。
+
+---
+
+## Upstream / オリジナル
+
+This project is based on Pillion by alexandrevega.
+For the original general-purpose project, documentation, and upstream development, please refer to the original Pillion repository.
+
+このプロジェクトは alexandrevega 氏の Pillion をベースにしています。
+汎用版Pillion、オリジナルのドキュメント、およびオリジナル側の開発についてはオリジナルのPillionリポジトリを参照してください。
+
+---
+
+# Original Pillion README / オリジナルREADME
+
+
 <p align="center">
   <img src="art/icon.png" alt="Pillion logo" width="150" height="150">
 </p>
