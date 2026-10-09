@@ -1,7 +1,7 @@
 package app.pillion.ui
 
+import androidx.compose.animation.core.animate
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,15 +10,18 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -26,9 +29,13 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -36,35 +43,62 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.pillion.core.MirrorState
-import app.pillion.core.UpdateInfo
+import app.pillion.resources.*
+import kotlinx.coroutines.delay
+import org.jetbrains.compose.resources.stringResource
+import kotlin.math.roundToInt
 
 @Composable
 internal fun HomeScreen(
     state: MirrorState,
-    update: UpdateInfo?,
     onOpenSettings: () -> Unit,
     onStart: () -> Unit,
     onStop: () -> Unit,
+    onResetAndRestart: () -> Unit,
+    startRequestInFlight: Boolean? = null,
 ) {
+    var startTapLocked by remember { mutableStateOf(false) }
+
+    // Android supplies startRequestInFlight and owns the complete request lifetime. Keep the local
+    // latch only for immediate click suppression; release it on cancel/failure or once the session
+    // actually leaves Idle. Platforms that do not supply the external flag retain the previous
+    // short 1.2 s double-tap guard unchanged.
+    LaunchedEffect(startRequestInFlight, state) {
+        if (startRequestInFlight != null && startTapLocked) {
+            if (!startRequestInFlight || state !is MirrorState.Idle) {
+                startTapLocked = false
+            }
+        }
+    }
+    LaunchedEffect(startTapLocked, state) {
+        if (startRequestInFlight != null || !startTapLocked) return@LaunchedEffect
+        if (state !is MirrorState.Idle) {
+            startTapLocked = false
+        } else {
+            delay(1_200L)
+            startTapLocked = false
+        }
+    }
+
+    val startLocked = startTapLocked || startRequestInFlight == true
+
     Column(
         modifier = Modifier.fillMaxSize()
             .safeDrawingPadding()
             .padding(horizontal = 28.dp, vertical = 14.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        if (update != null) {
-            UpdateReminder(update.version, onClick = onOpenSettings)
-            Spacer(Modifier.height(12.dp))
-        }
         Box(Modifier.fillMaxWidth()) {
             Box(Modifier.align(Alignment.TopCenter)) { Wordmark() }
             IconButton(onClick = onOpenSettings, modifier = Modifier.align(Alignment.TopEnd)) {
                 Icon(
                     Icons.Filled.Settings,
-                    contentDescription = "Settings",
+                    contentDescription = stringResource(Res.string.settings),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -83,34 +117,96 @@ internal fun HomeScreen(
                 }
             }
         }
-        PrimaryButton(state, onStart, onStop)
+        PrimaryButton(
+            state = state,
+            startEnabled = !startLocked,
+            onStart = {
+                if (!startLocked) {
+                    startTapLocked = true
+                    onStart()
+                }
+            },
+            onStop = onStop,
+        )
+        Spacer(Modifier.height(28.dp))
+        ResetRestartSlider(onResetAndRestart = onResetAndRestart)
+        Text(
+            stringResource(Res.string.reset_restart_help),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 6.dp, start = 6.dp, end = 6.dp),
+        )
     }
 }
 
+
 @Composable
-private fun UpdateReminder(version: String, onClick: () -> Unit) {
-    Surface(
-        shape = RoundedCornerShape(10.dp),
-        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+private fun ResetRestartSlider(onResetAndRestart: () -> Unit) {
+    var trackWidthPx by remember { mutableStateOf(0f) }
+    var thumbOffsetPx by remember { mutableStateOf(0f) }
+    val thumbSize = 44.dp
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant),
+        contentAlignment = Alignment.Center,
     ) {
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 9.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
+        Text(
+            stringResource(Res.string.slide_reset_restart),
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(6.dp)
+                .onSizeChanged { trackWidthPx = it.width.toFloat() },
+            contentAlignment = Alignment.CenterStart,
         ) {
-            Text(
-                "Update available — $version",
-                style = MaterialTheme.typography.bodySmall,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.primary,
-            )
-            Icon(
-                Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(20.dp),
-            )
+            val thumbSizePx = with(androidx.compose.ui.platform.LocalDensity.current) { thumbSize.toPx() }
+            val maxOffsetPx = (trackWidthPx - thumbSizePx).coerceAtLeast(0f)
+            val dragState = rememberDraggableState { delta ->
+                thumbOffsetPx = (thumbOffsetPx + delta).coerceIn(0f, maxOffsetPx)
+            }
+
+            Box(
+                modifier = Modifier
+                    .offset { IntOffset(thumbOffsetPx.roundToInt(), 0) }
+                    .size(thumbSize)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary)
+                    .draggable(
+                        state = dragState,
+                        orientation = Orientation.Horizontal,
+                        onDragStopped = {
+                            if (maxOffsetPx > 0f && thumbOffsetPx >= maxOffsetPx * 0.9f) {
+                                animate(thumbOffsetPx, maxOffsetPx) { value, _ ->
+                                    thumbOffsetPx = value
+                                }
+                                onResetAndRestart()
+                                thumbOffsetPx = 0f
+                            } else {
+                                animate(thumbOffsetPx, 0f) { value, _ ->
+                                    thumbOffsetPx = value
+                                }
+                            }
+                        },
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    "›",
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
         }
     }
 }
@@ -125,7 +221,7 @@ private fun Wordmark() {
             letterSpacing = 0.5.sp,
         )
         Text(
-            "your screen, on the bike dash",
+            stringResource(Res.string.tagline),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -144,7 +240,7 @@ private fun StatusDisplay(state: MirrorState) {
                     modifier = Modifier.size(34.dp),
                 )
                 Spacer(Modifier.height(16.dp))
-                Text("Connecting to dash…", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(Res.string.connecting_to_dash), style = MaterialTheme.typography.titleMedium)
             }
             is MirrorState.Streaming -> {
                 Text(
@@ -155,13 +251,13 @@ private fun StatusDisplay(state: MirrorState) {
                     color = MaterialTheme.colorScheme.primary,
                 )
                 Text(
-                    "fps",
+                    stringResource(Res.string.fps),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(Modifier.height(10.dp))
                 Text(
-                    "mirroring • ${state.kbPerFrame} KB per frame",
+                    stringResource(Res.string.mirroring_frame_size, state.kbPerFrame),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -169,10 +265,10 @@ private fun StatusDisplay(state: MirrorState) {
             MirrorState.Broadcasting -> {
                 StatusDot(MaterialTheme.colorScheme.primary)
                 Spacer(Modifier.height(14.dp))
-                Text("Broadcasting", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(Res.string.broadcasting), style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    "Open Waze or Google Maps — it's on your dash.",
+                    stringResource(Res.string.open_maps_on_dash),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -181,7 +277,7 @@ private fun StatusDisplay(state: MirrorState) {
             is MirrorState.Error -> {
                 StatusDot(MaterialTheme.colorScheme.error)
                 Spacer(Modifier.height(14.dp))
-                Text("Disconnected", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(Res.string.disconnected), style = MaterialTheme.typography.titleMedium)
                 Text(
                     state.message,
                     style = MaterialTheme.typography.bodyMedium,
@@ -201,15 +297,15 @@ private fun StatusDot(color: Color) {
 @Composable
 private fun ConnectGuide() {
     val steps = listOf(
-        "Pair your phone with the bike in your Bluetooth settings (one time only).",
-        "Mount the phone in landscape and turn on auto-rotate, so the map fills the dash.",
-        "On the bike, switch the dash to Navigation mode.",
-        "Tap Start mirroring, then choose \"Entire screen\" and allow capture.",
-        "Open Waze or Google Maps — it appears on your dash.",
+        stringResource(Res.string.guide_pair_bluetooth),
+        stringResource(Res.string.guide_landscape),
+        stringResource(Res.string.guide_navigation_mode),
+        stringResource(Res.string.guide_start_mirroring),
+        stringResource(Res.string.guide_open_maps),
     )
     Column(Modifier.fillMaxWidth()) {
         Text(
-            "Before you ride",
+            stringResource(Res.string.before_you_ride),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
         )
@@ -246,11 +342,17 @@ private fun StepRow(number: Int, text: String) {
 }
 
 @Composable
-private fun PrimaryButton(state: MirrorState, onStart: () -> Unit, onStop: () -> Unit) {
+private fun PrimaryButton(
+    state: MirrorState,
+    startEnabled: Boolean,
+    onStart: () -> Unit,
+    onStop: () -> Unit,
+) {
     val active = state is MirrorState.Streaming || state is MirrorState.Connecting ||
         state is MirrorState.Broadcasting
     Button(
         onClick = if (active) onStop else onStart,
+        enabled = active || startEnabled,
         modifier = Modifier.fillMaxWidth().height(56.dp),
         shape = RoundedCornerShape(16.dp),
         colors = ButtonDefaults.buttonColors(
@@ -259,7 +361,7 @@ private fun PrimaryButton(state: MirrorState, onStart: () -> Unit, onStop: () ->
         ),
     ) {
         Text(
-            if (active) "Stop mirroring" else "Start mirroring",
+            if (active) stringResource(Res.string.stop_mirroring) else stringResource(Res.string.start_mirroring),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
         )

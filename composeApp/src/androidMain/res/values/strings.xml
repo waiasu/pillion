@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ==================== Android visible text ==================== -->
+    <!-- [Android visible text] Original: "Connecting…" -->
+    <string name="notification_connecting">Connecting…</string>
+
+    <!-- [Android visible text] Original: "Waiting for connection — reconnecting automatically" -->
+    <string name="notification_waiting">Waiting for connection — reconnecting automatically</string>
+
+    <!-- [Android visible text] Original: "Reconnecting… (attempt %1$d)" -->
+    <string name="notification_reconnecting">Reconnecting… (attempt %1$d)</string>
+
+    <!-- [Android visible text] Original: "Streaming" -->
+    <string name="notification_streaming">Streaming</string>
+
+    <!-- [Android visible text] Original: "Stop" -->
+    <string name="notification_stop">Stop</string>
+
+    <!-- [Android visible text] Original: "Pillion" -->
+    <string name="notification_channel_name">Pillion</string>
+
+    <!-- [Android visible text] Original: "Pillion connection status" -->
+    <string name="notification_channel_description">Pillion connection status</string>
+
+    <!-- [Android visible text] Original: "In Wireless debugging, open Pair device with pairing code." -->
+    <string name="adb_open_pairing_dialog">In Wireless debugging, open “Pair device with pairing code”.</string>
+
+    <!-- [Android visible text] Original: "Connecting to Wireless debugging..." -->
+    <string name="adb_connecting_wireless_debugging">Connecting to Wireless debugging...</string>
+
+    <!-- [Android visible text] Original: "Connected as shell." -->
+    <string name="adb_connected_shell">Connected as shell.</string>
+
+    <!-- [Android visible text] Original: "Couldn't find the paired ADB service." -->
+    <string name="adb_paired_service_not_found">Couldn\'t find the paired ADB service.</string>
+
+    <!-- [Android visible text] Original: "Connect failed" -->
+    <string name="adb_connect_failed">Connect failed</string>
+
+    <!-- [Android visible text] Original: "Enter the 6-digit code, or the pairing port and code." -->
+    <string name="adb_enter_code_or_port">Enter the 6-digit code, or the pairing port and code.</string>
+
+    <!-- [Android visible text] Original: "Enter code, or port and code, from the pairing dialog." -->
+    <string name="adb_notification_enter_code_or_port">Enter code, or port and code, from the pairing dialog.</string>
+
+    <!-- [Android visible text] Original: "No pairing port found. Enter the port and code from the dialog." -->
+    <string name="adb_no_pairing_port">No pairing port found. Enter the port and code from the dialog.</string>
+
+    <!-- [Android visible text] Original: "Port not found. Reply with: port code" -->
+    <string name="adb_notification_port_not_found">Port not found. Reply with: port code</string>
+
+    <!-- [Android visible text] Original: "Pairing on port %1$d..." -->
+    <string name="adb_pairing_on_port">Pairing on port %1$d...</string>
+
+    <!-- [Android visible text] Original: "Paired. Connecting..." -->
+    <string name="adb_paired_connecting">Paired. Connecting...</string>
+
+    <!-- [Android visible text] Original: "Paired, but could not connect." -->
+    <string name="adb_paired_connect_failed">Paired, but could not connect.</string>
+
+    <!-- [Android visible text] Original: "Connected. Tap to return to Pillion." -->
+    <string name="adb_connected_return">Connected. Tap to return to Pillion.</string>
+
+    <!-- [Android visible text] Original: "Pairing failed. Check the code before it expires." -->
+    <string name="adb_pairing_failed_expired">Pairing failed. Check the code before it expires.</string>
+
+    <!-- [Android visible text] Original: "Pairing failed. Open the dialog and try again." -->
+    <string name="adb_pairing_failed_retry">Pairing failed. Open the dialog and try again.</string>
+    <string name="adb_pairing_timed_out">Pairing timed out. Open the pairing-code dialog and try again.</string>
+    <string name="adb_preparing_timed_out">Preparing Pillion timed out. Return to Pillion and retry setup.</string>
+
+    <!-- [Android visible text] Original: "Open Pair device with pairing code, then enter the PIN from Pillion\'s notification." -->
+    <string name="adb_waiting_pairing_dialog">Open “Pair device with pairing code”, then enter the PIN from Pillion\'s notification.</string>
+
+    <!-- [Android visible text] Original: "Pairing port %1$d detected. Enter the 6-digit PIN from Pillion\'s notification." -->
+    <string name="adb_found_pairing_port">Pairing port %1$d detected. Enter the 6-digit PIN from Pillion\'s notification.</string>
+
+    <!-- [Android visible text] Original: "Found port %1$d. Enter the 6-digit code." -->
+    <string name="adb_found_port_notification">Found port %1$d. Enter the 6-digit code.</string>
+
+    <!-- [Android visible text] Original: "ADB service discovery failed (%1$d). Use split screen as fallback." -->
+    <string name="adb_discovery_failed">ADB service discovery failed (%1$d). Use split screen as fallback.</string>
+
+    <!-- [Android visible text] Original: "ADB service discovery failed" -->
+    <string name="adb_discovery_failed_generic">ADB service discovery failed</string>
+
+    <!-- [Android visible text] Original: "Allow notifications so Pillion can ask for the code in Settings." -->
+    <string name="adb_allow_notifications">Allow notifications so Pillion can ask for the code in Settings.</string>
+
+    <!-- [Android visible text] Original: "Pillion setup" -->
+    <string name="adb_setup_channel">Pillion setup</string>
+
+    <!-- [Android visible text] Original: "Code, or port and code" -->
+    <string name="adb_code_or_port_label">Code, or port and code</string>
+
+    <!-- [Android visible text] Original: "Enter code" -->
+    <string name="adb_enter_code_action">Enter code</string>
+
+    <!-- [Android visible text] Original: "Open Pillion" -->
+    <string name="adb_open_pillion_action">Open Pillion</string>
+
+    <!-- [Android visible text] Original: "Pillion Wireless debugging setup" -->
+    <string name="adb_setup_title">Pillion Wireless debugging setup</string>
+
+    <!-- [Android visible text] Setup helper lifecycle -->
+    <string name="adb_preparing_pillion">ADB connected. Preparing Pillion…</string>
+    <string name="adb_setup_complete">Setup complete. Pillion is ready.</string>
+    <string name="adb_setup_complete_return">Setup complete. Tap to return to Pillion.</string>
+    <string name="adb_setup_failed">Connected, but Pillion could not finish setup.</string>
+    <string name="adb_setup_failed_return">Pillion setup could not be completed. Tap to return and retry.</string>
+    <string name="adb_setup_retry_failed">Could not reconnect. Tap to return to Pillion and retry.</string>
+    <string name="adb_paired_connect_failed_return">Paired, but could not connect. Tap to return to Pillion and retry.</string>
+    <string name="adb_discovery_failed_notification">Pairing-port discovery failed. Enter “port code” from the Android pairing dialog.</string>
+
+</resources>

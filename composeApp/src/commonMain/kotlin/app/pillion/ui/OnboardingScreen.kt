@@ -54,6 +54,8 @@ import app.pillion.resources.Res
 import app.pillion.resources.app_icon
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
+import app.pillion.resources.*
+import org.jetbrains.compose.resources.stringResource
 
 /** The app's own product name. (StreetCross / Motorize are Garmin's apps — used only as compatibility
  *  labels on the bike cards, never as our brand.) */
@@ -85,7 +87,7 @@ fun OnboardingScreen(
                         onClick = { scope.launch { pager.animateScrollToPage(selectionPage) } },
                         modifier = Modifier.align(Alignment.CenterEnd),
                     ) {
-                        Text("Skip", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(Res.string.skip), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
@@ -118,7 +120,7 @@ fun OnboardingScreen(
                         contentColor = MaterialTheme.colorScheme.onPrimary,
                     ),
                 ) {
-                    Text("Continue", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(Res.string.continue_text), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 }
             } else {
                 // Keep the bottom height stable so the dots don't jump when the button disappears.
@@ -144,15 +146,14 @@ private fun WelcomePage() {
         Text(BRAND, style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
         Spacer(Modifier.height(12.dp))
         Text(
-            "Turn your phone into your motorcycle's dash.",
+            stringResource(Res.string.intro_title),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(8.dp))
         Text(
-            "Navigation, speed and maps — projected right onto the screen built into your bike, where you can " +
-                "actually see them at a glance.",
+            stringResource(Res.string.intro_body),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -167,30 +168,30 @@ private fun HowItConnectsPage() {
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.Center,
     ) {
-        Text("How it connects", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Text(stringResource(Res.string.how_it_connects), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(6.dp))
         Text(
-            "Two ways to reach the dash, depending on what your bike supports.",
+            stringResource(Res.string.how_it_connects_body),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(24.dp))
         FeatureRow(
             Icons.Filled.Bluetooth,
-            "Bluetooth",
-            "Wireless. Sends a fast slideshow of your screen — perfect for turn-by-turn navigation.",
+            stringResource(Res.string.bluetooth),
+            stringResource(Res.string.bluetooth_desc),
         )
         Spacer(Modifier.height(18.dp))
         FeatureRow(
             Icons.Filled.Usb,
-            "USB",
-            "A wired connection with smooth, full-motion video — great for maps and live navigation.",
+            stringResource(Res.string.usb),
+            stringResource(Res.string.usb_desc),
         )
         Spacer(Modifier.height(18.dp))
         FeatureRow(
             Icons.Filled.Map,
-            "More bikes over time",
-            "We're adding support for more motorcycles and dashes — just keep the app updated.",
+            stringResource(Res.string.more_bikes_over_time),
+            stringResource(Res.string.more_bikes_desc),
         )
     }
 }
@@ -198,10 +199,10 @@ private fun HowItConnectsPage() {
 @Composable
 private fun SelectionPage(profiles: List<HeadUnitProfile>, onSelect: (HeadUnitProfile) -> Unit) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-        Text("Choose your motorcycle", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Text(stringResource(Res.string.choose_motorcycle), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(6.dp))
         Text(
-            "Pick the head unit your bike uses. You can change this anytime in Settings.",
+            stringResource(Res.string.choose_motorcycle_body),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -216,8 +217,7 @@ private fun SelectionPage(profiles: List<HeadUnitProfile>, onSelect: (HeadUnitPr
 @Composable
 private fun TrademarkNotice() {
     Text(
-        "Yamaha, StreetCross and Motorize are trademarks of their respective owners. Pillion is an " +
-            "independent project and is not affiliated with, endorsed, or sponsored by them.",
+        stringResource(Res.string.trademark_notice),
         style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
         textAlign = TextAlign.Center,
@@ -245,7 +245,7 @@ private fun BikeCard(profile: HeadUnitProfile, onClick: () -> Unit) {
                 Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.height(2.dp))
                 Text(
-                    if (usb) "USB cable to the bike" else "Wireless over Bluetooth",
+                    if (usb) stringResource(Res.string.usb_cable) else stringResource(Res.string.wireless_bluetooth),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -272,8 +272,8 @@ private fun BikeCard(profile: HeadUnitProfile, onClick: () -> Unit) {
 @Composable
 private fun CapabilityPill(video: VideoPreference) {
     val (label, icon) = when (video) {
-        is VideoPreference.H264 -> "Full-motion video" to Icons.Filled.Bolt
-        is VideoPreference.JpegSlideshow -> "Slideshow" to Icons.Filled.Speed
+        is VideoPreference.H264 -> stringResource(Res.string.full_motion_video) to Icons.Filled.Bolt
+        is VideoPreference.JpegSlideshow -> stringResource(Res.string.slideshow) to Icons.Filled.Speed
     }
     Surface(
         shape = RoundedCornerShape(8.dp),

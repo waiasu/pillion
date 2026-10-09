@@ -1,0 +1,34 @@
+Pillion v14 - XMAX stick VD center-tap diagnostic
+
+Purpose
+- Preserve the proven NaviLite zoom-request reply (service 51/52 -> service 14).
+- After each service 51 or 52, inject exactly one tap into the helper-owned virtual display.
+- Both UP and DOWN intentionally tap the same logical center point.
+- No settings UI, coordinate persistence, long-press behavior, reconnect changes, or notification changes.
+
+Tap path
+XMAX stick -> NaviLite service 51/52 -> MirrorEngine -> DashStreamScreenSource
+-> loopback command TAP_CENTER -> DashServer helper ->
+input -d <dashDisplayId> tap <virtualWidth/2> <virtualHeight/2>
+
+Important coordinate note
+- Android input is dispatched in the virtual display's logical coordinate space.
+- Therefore the tap uses virtualWidth/virtualHeight (the actual VD holding the app task),
+  not the post-capture 480x234 JPEG/output/margin coordinate space.
+
+Expected log lines
+STICK-DIAG RX ... service=51(APP_MAP_ZOOM_IN_REQUEST) ...
+STICK-DIAG REPLY zoom=IN ...
+STICK-DIAG TAP_CENTER zoom=IN queued=true
+STICK-DIAG VD_TAP display=<id> x=<x> y=<y> virtual=<w>x<h> output=<w>x<h> rc=0
+
+and similarly for service 52 / zoom=OUT.
+
+Suggested test
+1. Start VD with an app where tapping the center causes an obvious visual change.
+2. Start logging.
+3. Press UP once.
+4. Press DOWN once.
+5. Confirm each press causes one center tap.
+6. If desired, try holding DOWN; this diagnostic does not synthesize a long press. It only
+   performs one tap for each request the vehicle actually sends.

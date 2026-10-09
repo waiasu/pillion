@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
@@ -24,7 +25,6 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -36,6 +36,7 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -52,35 +53,153 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.pillion.core.AppInfo
+import app.pillion.core.DashMarginColor
+import app.pillion.core.DashMargins
 import app.pillion.core.DashResolution
+import app.pillion.core.DashScale
+import app.pillion.core.LaunchableApp
 import app.pillion.core.ThemeMode
-import app.pillion.core.UpdateInfo
 import app.pillion.resources.Res
 import app.pillion.resources.app_icon
 import kotlin.math.roundToInt
 import org.jetbrains.compose.resources.painterResource
+import app.pillion.resources.*
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun SettingsScreen(
     quality: Int,
     onQuality: (Int) -> Unit,
-    maxFps: Int,
-    onMaxFps: (Int) -> Unit,
+    dashDpi: Int = 220,
+    onDashDpi: (Int) -> Unit = {},
+    maxFps: Double,
+    onMaxFps: (Double) -> Unit,
     themeMode: ThemeMode,
     onThemeMode: (ThemeMode) -> Unit,
     dashSupported: Boolean = false,
     dashEnabled: Boolean = false,
-    dashResolution: DashResolution = DashResolution.DEFAULT,
-    onDashResolution: (DashResolution) -> Unit = {},
+    dashScale: DashScale = DashScale.DEFAULT,
+    onDashScale: (DashScale) -> Unit = {},
+    draftLeftMargin: Int = 0,
+    onDraftLeftMargin: (Int) -> Unit = {},
+    draftBottomMargin: Int = 0,
+    onDraftBottomMargin: (Int) -> Unit = {},
+    draftMarginColor: DashMarginColor = DashMarginColor.Black,
+    onDraftMarginColor: (DashMarginColor) -> Unit = {},
+    draftStickZoomInX: Int = 94,
+    onDraftStickZoomInX: (Int) -> Unit = {},
+    draftStickZoomInY: Int = 48,
+    onDraftStickZoomInY: (Int) -> Unit = {},
+    draftStickZoomOutX: Int = 94,
+    onDraftStickZoomOutX: (Int) -> Unit = {},
+    draftStickZoomOutY: Int = 77,
+    onDraftStickZoomOutY: (Int) -> Unit = {},
+    draftOcrEnabled: Boolean = false,
+    onDraftOcrEnabled: (Boolean) -> Unit = {},
+    draftOcrShowArea: Boolean = false,
+    onDraftOcrShowArea: (Boolean) -> Unit = {},
+    draftOcrLeft: Int = 30,
+    onDraftOcrLeft: (Int) -> Unit = {},
+    draftOcrTop: Int = 89,
+    onDraftOcrTop: (Int) -> Unit = {},
+    draftOcrRight: Int = 70,
+    onDraftOcrRight: (Int) -> Unit = {},
+    draftOcrBottom: Int = 100,
+    onDraftOcrBottom: (Int) -> Unit = {},
+    draftOcr2Left: Int = 86,
+    onDraftOcr2Left: (Int) -> Unit = {},
+    draftOcr2Top: Int = 52,
+    onDraftOcr2Top: (Int) -> Unit = {},
+    draftOcr2Right: Int = 98,
+    onDraftOcr2Right: (Int) -> Unit = {},
+    draftOcr2Bottom: Int = 64,
+    onDraftOcr2Bottom: (Int) -> Unit = {},
+    draftRestartAppOnVd: Boolean = false,
+    onDraftRestartAppOnVd: (Boolean) -> Unit = {},
+    draftFixedDashAppEnabled: Boolean = false,
+    onDraftFixedDashAppEnabled: (Boolean) -> Unit = {},
+    draftFixedDashAppPackage: String? = null,
+    onDraftFixedDashAppPackage: (String?) -> Unit = {},
+    launchableApps: List<LaunchableApp> = emptyList(),
+    restartPending: Boolean = false,
+    onSaveAndRestart: () -> Unit = {},
+    onExportDiagnostics: () -> Unit = {},
     onSetUpDash: () -> Unit = {},
     onDisableDash: () -> Unit = {},
     bikeName: String = "",
     onChangeBike: () -> Unit = {},
-    update: UpdateInfo?,
     onBack: () -> Unit,
 ) {
     val uriHandler = LocalUriHandler.current
+    var showFixedAppPicker by remember { mutableStateOf(false) }
+    val selectedFixedApp = launchableApps.firstOrNull { it.packageName == draftFixedDashAppPackage }
+
+    if (showFixedAppPicker) {
+        AlertDialog(
+            onDismissRequest = { showFixedAppPicker = false },
+            title = { Text("Select app for VD") },
+            text = {
+                Column(
+                    Modifier.fillMaxWidth()
+                        .heightIn(max = 420.dp)
+                        .verticalScroll(rememberScrollState()),
+                ) {
+                    Row(
+                        Modifier.fillMaxWidth()
+                            .clickable {
+                                onDraftFixedDashAppPackage(null)
+                                showFixedAppPicker = false
+                            }
+                            .padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text(stringResource(Res.string.not_selected))
+                            Text(
+                                "Falls back to Pillion when fixed-app mode is enabled.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        if (draftFixedDashAppPackage == null) {
+                            Icon(Icons.Filled.Check, contentDescription = null)
+                        }
+                    }
+                    launchableApps.forEach { app ->
+                        GroupDivider()
+                        Row(
+                            Modifier.fillMaxWidth()
+                                .clickable {
+                                    onDraftFixedDashAppPackage(app.packageName)
+                                    showFixedAppPicker = false
+                                }
+                                .padding(vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(Modifier.weight(1f)) {
+                                Text(app.label)
+                                Text(
+                                    app.packageName,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            if (draftFixedDashAppPackage == app.packageName) {
+                                Icon(Icons.Filled.Check, contentDescription = null)
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showFixedAppPicker = false }) {
+                    Text(stringResource(Res.string.cancel))
+                }
+            },
+        )
+    }
+
     Column(
         modifier = Modifier.fillMaxSize()
             .safeDrawingPadding()
@@ -94,59 +213,20 @@ internal fun SettingsScreen(
             IconButton(onClick = onBack) {
                 Icon(
                     Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
+                    contentDescription = stringResource(Res.string.back),
                     tint = MaterialTheme.colorScheme.onSurface,
                 )
             }
             Spacer(Modifier.width(4.dp))
-            Text("Settings", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text(stringResource(Res.string.settings), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         }
 
-        if (update != null) {
-            SectionHeader("Updates")
-            SettingsGroup {
-                Row(
-                    Modifier.fillMaxWidth().padding(vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text(update.version, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Text(
-                            "A new version is available",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    Button(
-                        onClick = { uriHandler.openUri(update.url) },
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary,
-                        ),
-                    ) {
-                        Text("Get", fontWeight = FontWeight.SemiBold)
-                    }
-                }
-                if (update.notes.isNotBlank()) {
-                    GroupDivider()
-                    Text(
-                        update.notes,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(vertical = 12.dp),
-                    )
-                }
-            }
-            Spacer(Modifier.height(24.dp))
-        }
-
-        SectionHeader("Appearance")
+        SectionHeader(stringResource(Res.string.appearance))
         SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
             val options = listOf(
-                ThemeMode.SYSTEM to "System",
-                ThemeMode.LIGHT to "Light",
-                ThemeMode.DARK to "Dark",
+                ThemeMode.SYSTEM to stringResource(Res.string.system),
+                ThemeMode.LIGHT to stringResource(Res.string.light),
+                ThemeMode.DARK to stringResource(Res.string.dark),
             )
             options.forEachIndexed { index, (mode, label) ->
                 SegmentedButton(
@@ -160,22 +240,22 @@ internal fun SettingsScreen(
         }
 
         Spacer(Modifier.height(24.dp))
-        SectionHeader("Motorcycle")
+        SectionHeader(stringResource(Res.string.motorcycle))
         SettingsGroup {
             Row(
                 Modifier.fillMaxWidth().clickable(onClick = onChangeBike).padding(vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(Modifier.weight(1f)) {
-                    Text(bikeName.ifEmpty { "Not selected" }, style = MaterialTheme.typography.bodyLarge)
+                    Text(if (bikeName.isEmpty()) stringResource(Res.string.not_selected) else bikeName, style = MaterialTheme.typography.bodyLarge)
                     Text(
-                        "Tap to switch head unit",
+                        stringResource(Res.string.tap_switch_head_unit),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 Text(
-                    "Change",
+                    stringResource(Res.string.change),
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary,
@@ -184,23 +264,68 @@ internal fun SettingsScreen(
         }
 
         Spacer(Modifier.height(24.dp))
-        SectionHeader("Mirroring")
+        SectionHeader(stringResource(Res.string.mirroring))
         SettingsGroup {
-            SettingSlider("Image quality", "$quality", quality.toFloat(), 10f, 80f) { onQuality(it.roundToInt()) }
+            SettingSlider(stringResource(Res.string.image_quality), "$quality", quality.toFloat(), 10f, 80f) { onQuality(it.roundToInt()) }
+            if (dashSupported) {
+                GroupDivider()
+                SettingSlider(
+                    stringResource(Res.string.dpi),
+                    "$dashDpi dpi",
+                    dashDpi.toFloat(),
+                    160f,
+                    480f,
+                    step = 10f,
+                ) { onDashDpi((it.roundToInt() / 10) * 10) }
+            }
             GroupDivider()
-            SettingSlider("Max frame rate", "$maxFps fps", maxFps.toFloat(), 5f, 30f) { onMaxFps(it.roundToInt()) }
+            val fpsChoices = (1..15).map { it.toDouble() }
+            val fpsIndex = fpsChoices.indexOf(maxFps).takeIf { it >= 0 } ?: 2
+            SettingSlider(
+                stringResource(Res.string.max_frame_rate),
+                "${formatMaxFps(maxFps)} fps",
+                fpsIndex.toFloat(),
+                0f,
+                fpsChoices.lastIndex.toFloat(),
+                step = 1f,
+            ) { rawIndex ->
+                onMaxFps(fpsChoices[rawIndex.roundToInt().coerceIn(0, fpsChoices.lastIndex)])
+            }
+            if (dashSupported) {
+                GroupDivider()
+                SettingSlider(
+                    stringResource(Res.string.left_margin),
+                    "$draftLeftMargin px",
+                    draftLeftMargin.toFloat(),
+                    0f,
+                    DashMargins.maxLeft().toFloat(),
+                    step = DashMargins.STEP_PX.toFloat(),
+                ) { onDraftLeftMargin(DashMargins.clampLeft(it.roundToInt())) }
+                GroupDivider()
+                SettingSlider(
+                    stringResource(Res.string.bottom_margin),
+                    "$draftBottomMargin px",
+                    draftBottomMargin.toFloat(),
+                    0f,
+                    DashMargins.maxBottom().toFloat(),
+                    step = DashMargins.STEP_PX.toFloat(),
+                ) { onDraftBottomMargin(DashMargins.clampBottom(it.roundToInt())) }
+                GroupDivider()
+                MarginColorSelector(draftMarginColor, onDraftMarginColor)
+            }
         }
-        Text(
-            "Higher quality looks sharper but makes the picture less smooth (about 15–25 fps at 40% " +
-                "on a fast phone). The cap keeps the frame rate down to save battery and reduce heat.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(start = 6.dp, top = 8.dp, end = 6.dp),
-        )
+        if (!dashSupported) {
+            Text(
+                stringResource(Res.string.image_quality_help),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 6.dp, top = 8.dp, end = 6.dp),
+            )
+        }
 
         if (dashSupported) {
             Spacer(Modifier.height(24.dp))
-            SectionHeader("Dedicated dash display (experimental)")
+            SectionHeader(stringResource(Res.string.dedicated_dash_display))
             SettingsGroup {
                 Row(
                     Modifier.fillMaxWidth().padding(vertical = 12.dp),
@@ -208,31 +333,256 @@ internal fun SettingsScreen(
                 ) {
                     Column(Modifier.weight(1f)) {
                         Text(
-                            if (dashEnabled) "On" else "Off",
+                            if (dashEnabled) stringResource(Res.string.on) else stringResource(Res.string.off),
                             style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
                         )
                         Text(
-                            "Keep your nav app on the dash with the phone screen off.",
+                            stringResource(Res.string.dash_keep_nav),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                     if (dashEnabled) {
-                        OutlinedButton(onClick = onDisableDash, shape = RoundedCornerShape(12.dp)) { Text("Disable") }
+                        OutlinedButton(onClick = onDisableDash, shape = RoundedCornerShape(12.dp)) { Text(stringResource(Res.string.disable)) }
                     } else {
-                        Button(onClick = onSetUpDash, shape = RoundedCornerShape(12.dp)) { Text("Set up") }
+                        Button(onClick = onSetUpDash, shape = RoundedCornerShape(12.dp)) { Text(stringResource(Res.string.set_up)) }
                     }
                 }
                 if (dashEnabled) {
                     GroupDivider()
-                    LinkRow("Re-run setup (after a restart)") { onSetUpDash() }
+                    LinkRow(stringResource(Res.string.rerun_setup)) { onSetUpDash() }
                 }
                 GroupDivider()
-                DashResolutionSelector(dashResolution, onDashResolution)
+                DashResolutionSelector(dashScale, draftLeftMargin, draftBottomMargin, onDashScale)
+                GroupDivider()
+                Text(
+                    stringResource(Res.string.stick_tap_position),
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
+                )
+                Text(
+                    stringResource(Res.string.stick_tap_position_help),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 6.dp),
+                )
+                SettingSlider(
+                    stringResource(Res.string.zoom_in_horizontal),
+                    "$draftStickZoomInX%",
+                    draftStickZoomInX.toFloat(),
+                    0f,
+                    100f,
+                    step = 1f,
+                ) { onDraftStickZoomInX(it.roundToInt().coerceIn(0, 100)) }
+                GroupDivider()
+                SettingSlider(
+                    stringResource(Res.string.zoom_in_vertical),
+                    "$draftStickZoomInY%",
+                    draftStickZoomInY.toFloat(),
+                    0f,
+                    100f,
+                    step = 1f,
+                ) { onDraftStickZoomInY(it.roundToInt().coerceIn(0, 100)) }
+                GroupDivider()
+                SettingSlider(
+                    stringResource(Res.string.zoom_out_horizontal),
+                    "$draftStickZoomOutX%",
+                    draftStickZoomOutX.toFloat(),
+                    0f,
+                    100f,
+                    step = 1f,
+                ) { onDraftStickZoomOutX(it.roundToInt().coerceIn(0, 100)) }
+                GroupDivider()
+                SettingSlider(
+                    stringResource(Res.string.zoom_out_vertical),
+                    "$draftStickZoomOutY%",
+                    draftStickZoomOutY.toFloat(),
+                    0f,
+                    100f,
+                    step = 1f,
+                ) { onDraftStickZoomOutY(it.roundToInt().coerceIn(0, 100)) }
+                GroupDivider()
+                Text(
+                    stringResource(Res.string.ocr_title),
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
+                )
+                Text(
+                    stringResource(Res.string.ocr_help),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 6.dp),
+                )
+                Row(
+                    Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(stringResource(Res.string.ocr_enable), modifier = Modifier.weight(1f))
+                    Switch(checked = draftOcrEnabled, onCheckedChange = onDraftOcrEnabled)
+                }
+                GroupDivider()
+                Row(
+                    Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(stringResource(Res.string.ocr_show_area), modifier = Modifier.weight(1f))
+                    Switch(
+                        checked = draftOcrShowArea,
+                        onCheckedChange = onDraftOcrShowArea,
+                        enabled = draftOcrEnabled,
+                    )
+                }
+                GroupDivider()
+                Text(
+                    stringResource(Res.string.ocr_area_1),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(top = 8.dp, bottom = 2.dp),
+                )
+                SettingSlider(
+                    stringResource(Res.string.ocr_left),
+                    "$draftOcrLeft%",
+                    draftOcrLeft.toFloat(),
+                    20f,
+                    80f,
+                    step = 1f,
+                ) { onDraftOcrLeft(it.roundToInt().coerceIn(20, 80)) }
+                GroupDivider()
+                SettingSlider(
+                    stringResource(Res.string.ocr_top),
+                    "$draftOcrTop%",
+                    draftOcrTop.toFloat(),
+                    80f,
+                    100f,
+                    step = 1f,
+                ) { onDraftOcrTop(it.roundToInt().coerceIn(80, 100)) }
+                GroupDivider()
+                SettingSlider(
+                    stringResource(Res.string.ocr_right),
+                    "$draftOcrRight%",
+                    draftOcrRight.toFloat(),
+                    20f,
+                    80f,
+                    step = 1f,
+                ) { onDraftOcrRight(it.roundToInt().coerceIn(20, 80)) }
+                GroupDivider()
+                SettingSlider(
+                    stringResource(Res.string.ocr_bottom),
+                    "$draftOcrBottom%",
+                    draftOcrBottom.toFloat(),
+                    80f,
+                    100f,
+                    step = 1f,
+                ) { onDraftOcrBottom(it.roundToInt().coerceIn(80, 100)) }
+                GroupDivider()
+                Text(
+                    stringResource(Res.string.ocr_area_2),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(top = 8.dp, bottom = 2.dp),
+                )
+                SettingSlider(stringResource(Res.string.ocr_left), "$draftOcr2Left%", draftOcr2Left.toFloat(), 0f, 100f, step = 1f) {
+                    onDraftOcr2Left(it.roundToInt().coerceIn(0, 100))
+                }
+                GroupDivider()
+                SettingSlider(stringResource(Res.string.ocr_top), "$draftOcr2Top%", draftOcr2Top.toFloat(), 0f, 100f, step = 1f) {
+                    onDraftOcr2Top(it.roundToInt().coerceIn(0, 100))
+                }
+                GroupDivider()
+                SettingSlider(stringResource(Res.string.ocr_right), "$draftOcr2Right%", draftOcr2Right.toFloat(), 0f, 100f, step = 1f) {
+                    onDraftOcr2Right(it.roundToInt().coerceIn(0, 100))
+                }
+                GroupDivider()
+                SettingSlider(stringResource(Res.string.ocr_bottom), "$draftOcr2Bottom%", draftOcr2Bottom.toFloat(), 0f, 100f, step = 1f) {
+                    onDraftOcr2Bottom(it.roundToInt().coerceIn(0, 100))
+                }
+                GroupDivider()
+                Row(
+                    Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Restart app on VD")
+                        Text(
+                            "Restart the app after moving it to the virtual display.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(checked = draftRestartAppOnVd, onCheckedChange = onDraftRestartAppOnVd)
+                }
+                GroupDivider()
+                Row(
+                    Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Always use selected app on VD")
+                        Text(
+                            "Promote the selected app instead of the current foreground app.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(
+                        checked = draftFixedDashAppEnabled,
+                        onCheckedChange = onDraftFixedDashAppEnabled,
+                    )
+                }
+                GroupDivider()
+                Row(
+                    Modifier.fillMaxWidth()
+                        .clickable { showFixedAppPicker = true }
+                        .padding(vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Selected app")
+                        Text(
+                            selectedFixedApp?.label
+                                ?: draftFixedDashAppPackage
+                                ?: stringResource(Res.string.not_selected),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Text(
+                        stringResource(Res.string.change),
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
             }
             Text(
-                "Casts the real app to the dash in landscape with the screen off. Run setup once " +
-                    "while Wi-Fi is connected; after that it can start without Wi-Fi until restart.",
+                stringResource(Res.string.dash_feature_help),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 6.dp, top = 8.dp, end = 6.dp),
+            )
+        }
+
+        if (dashSupported) {
+            Spacer(Modifier.height(24.dp))
+            SettingsGroup {
+                RestartRow(restartPending, onSaveAndRestart)
+            }
+            Text(
+                stringResource(Res.string.save_restart_help),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 6.dp, top = 8.dp, end = 6.dp),
+            )
+
+            Spacer(Modifier.height(12.dp))
+            SettingsGroup {
+                DiagnosticExportRow(onExportDiagnostics)
+            }
+            Text(
+                "Saves recent Pillion connection history plus a one-time Android/Bluetooth snapshot to Downloads. " +
+                    "Full-device logcat is collected only when you tap Export.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = 6.dp, top = 8.dp, end = 6.dp),
@@ -240,15 +590,15 @@ internal fun SettingsScreen(
         }
 
         Spacer(Modifier.height(24.dp))
-        SectionHeader("About")
+        SectionHeader(stringResource(Res.string.about))
         SettingsGroup {
             AppRow()
             GroupDivider()
-            LinkRow("Source code") { uriHandler.openUri(REPO_URL) }
+            LinkRow(stringResource(Res.string.source_code)) { uriHandler.openUri(REPO_URL) }
             GroupDivider()
-            LinkRow("Report an issue") { uriHandler.openUri("$REPO_URL/issues") }
+            LinkRow(stringResource(Res.string.report_issue)) { uriHandler.openUri("$REPO_URL/issues") }
             GroupDivider()
-            LinkRow("Changelog") { uriHandler.openUri("$REPO_URL/blob/main/CHANGELOG.md") }
+            LinkRow(stringResource(Res.string.changelog)) { uriHandler.openUri("$REPO_URL/blob/main/CHANGELOG.md") }
         }
 
         Spacer(Modifier.height(28.dp))
@@ -295,6 +645,7 @@ private fun SettingSlider(
     current: Float,
     min: Float,
     max: Float,
+    step: Float? = null,
     onChange: (Float) -> Unit,
 ) {
     Column(Modifier.padding(vertical = 4.dp)) {
@@ -306,31 +657,35 @@ private fun SettingSlider(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        Slider(value = current, onValueChange = onChange, valueRange = min..max)
+        Slider(
+            value = current,
+            onValueChange = onChange,
+            valueRange = min..max,
+            steps = step?.let { (((max - min) / it).roundToInt() - 1).coerceAtLeast(0) } ?: 0,
+        )
     }
 }
 
 @Composable
-private fun DashResolutionSelector(
-    selected: DashResolution,
-    onSelect: (DashResolution) -> Unit,
+private fun MarginColorSelector(
+    selected: DashMarginColor,
+    onSelect: (DashMarginColor) -> Unit,
 ) {
     var choosing by remember { mutableStateOf(false) }
-
     Row(
         Modifier.fillMaxWidth().clickable { choosing = true }.padding(vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
-            Text("Map layout size", style = MaterialTheme.typography.bodyLarge)
+            Text(stringResource(Res.string.margin_color), style = MaterialTheme.typography.bodyLarge)
             Text(
-                "${selected.label} - ${resolutionDetail(selected)}",
+                selected.label,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         Text(
-            "Change",
+            stringResource(Res.string.change),
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.primary,
@@ -340,83 +695,171 @@ private fun DashResolutionSelector(
     if (choosing) {
         AlertDialog(
             onDismissRequest = { choosing = false },
-            title = { Text("Map layout size") },
+            title = { Text(stringResource(Res.string.margin_color)) },
             text = {
-                Column(Modifier.verticalScroll(rememberScrollState())) {
-                    Text(
-                        "Controls how much of the map fits on the dash. The dash always receives a " +
-                            "480 × 240 image — a larger layout just shows more at once.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(bottom = 8.dp),
-                    )
-                    DashResolution.values().forEachIndexed { index, option ->
-                        ResolutionDialogRow(
-                            option = option,
-                            selected = option == selected,
-                            onClick = {
+                Column {
+                    DashMarginColor.entries.forEachIndexed { index, option ->
+                        Row(
+                            Modifier.fillMaxWidth().clickable {
                                 onSelect(option)
                                 choosing = false
-                            },
-                        )
-                        if (index != DashResolution.values().lastIndex) {
+                            }.padding(vertical = 11.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                option.label,
+                                modifier = Modifier.weight(1f),
+                                color = if (selected == option) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurface,
+                            )
+                            if (selected == option) {
+                                Icon(
+                                    Icons.Filled.Check,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                            }
+                        }
+                        if (index != DashMarginColor.entries.lastIndex) {
                             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
                         }
                     }
                 }
             },
-            confirmButton = {
-                TextButton(onClick = { choosing = false }) {
-                    Text("Cancel")
-                }
-            },
+            confirmButton = { TextButton(onClick = { choosing = false }) { Text(stringResource(Res.string.cancel)) } },
         )
     }
 }
 
 @Composable
-private fun ResolutionDialogRow(
-    option: DashResolution,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
+private fun RestartRow(enabled: Boolean, onClick: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 10.dp),
+        Modifier.fillMaxWidth().clickable(enabled = enabled, onClick = onClick).padding(vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
+            Text(stringResource(Res.string.save_settings_restart), style = MaterialTheme.typography.bodyLarge)
+        }
+        Text(
+            stringResource(Res.string.save_restart),
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = if (enabled) MaterialTheme.colorScheme.primary
+            else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f),
+        )
+    }
+}
+
+@Composable
+private fun DiagnosticExportRow(onExport: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clickable(onClick = onExport).padding(vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text("Export diagnostic log", style = MaterialTheme.typography.bodyLarge)
+        }
+        Text(
+            "Export",
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.primary,
+        )
+    }
+}
+
+@Composable
+private fun DashResolutionSelector(
+    selected: DashScale,
+    leftMargin: Int,
+    bottomMargin: Int,
+    onSelect: (DashScale) -> Unit,
+) {
+    var choosing by remember { mutableStateOf(false) }
+    val selectedResolution = DashResolution.forLayout(leftMargin, bottomMargin, selected.tenths)
+
+    Row(
+        Modifier.fillMaxWidth().clickable { choosing = true }.padding(vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(stringResource(Res.string.map_layout_size), style = MaterialTheme.typography.bodyLarge)
             Text(
-                option.label,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-            )
-            Text(
-                resolutionDetail(option),
+                "${selectedResolution.label} - ${resolutionDetail(selected)}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        if (selected) {
-            Icon(
-                Icons.Filled.Check,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(20.dp),
-            )
-        }
+        Text(
+            stringResource(Res.string.change),
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.primary,
+        )
+    }
+
+    if (choosing) {
+        AlertDialog(
+            onDismissRequest = { choosing = false },
+            title = { Text(stringResource(Res.string.map_layout_size)) },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    Text(
+                        stringResource(Res.string.virtual_display_size_help, DashResolution.OUTPUT_WIDTH, DashResolution.OUTPUT_HEIGHT),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 8.dp),
+                    )
+                    DashScale.entries.forEachIndexed { index, option ->
+                        val resolution = DashResolution.forLayout(leftMargin, bottomMargin, option.tenths)
+                        Row(
+                            Modifier.fillMaxWidth().clickable {
+                                onSelect(option)
+                                choosing = false
+                            }.padding(vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(Modifier.weight(1f)) {
+                                Text(
+                                    resolution.label,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = if (selected == option) FontWeight.SemiBold else FontWeight.Normal,
+                                    color = if (selected == option) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurface,
+                                )
+                                Text(
+                                    resolutionDetail(option),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            if (selected == option) {
+                                Icon(
+                                    Icons.Filled.Check,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                            }
+                        }
+                        if (index != DashScale.entries.lastIndex) {
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { choosing = false }) { Text(stringResource(Res.string.cancel)) } },
+        )
     }
 }
 
-private fun resolutionDetail(option: DashResolution): String {
-    val tenths = option.width * 10 / DashResolution.Native.width
-    val scale = if (tenths % 10 == 0) "${tenths / 10}x" else "${tenths / 10}.${tenths % 10}x"
-    return when (option) {
-        DashResolution.Native -> "Matches the dash panel"
-        DashResolution.Balanced -> "Recommended"
-        DashResolution.R1920 -> "Most detail · heaviest on battery"
-        else -> "$scale · more detail"
-    }
+@Composable
+private fun resolutionDetail(option: DashScale): String = when (option) {
+    DashScale.X10 -> stringResource(Res.string.matches_usable_area)
+    DashScale.X20 -> "${option.label} · ${stringResource(Res.string.recommended)}"
+    DashScale.X30 -> "${option.label} · ${stringResource(Res.string.most_detail_heavy)}"
+    else -> "${option.label} · ${stringResource(Res.string.more_detail)}"
 }
 
 @Composable
@@ -434,7 +877,7 @@ private fun AppRow() {
         Column {
             Text("Pillion", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             Text(
-                "Version ${AppInfo.VERSION}",
+                stringResource(Res.string.version_format, AppInfo.VERSION),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -482,3 +925,6 @@ private fun MadeByCredit(onClick: () -> Unit) {
         )
     }
 }
+
+private fun formatMaxFps(value: Double): String =
+    if (value % 1.0 == 0.0) value.toInt().toString() else value.toString()

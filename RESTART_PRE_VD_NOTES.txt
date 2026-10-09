@@ -1,0 +1,15 @@
+Restart-on-VD pre-kill variant
+
+Restart OFF:
+- Preserves the existing v24 relocate -> power/heartbeat path.
+
+Restart ON:
+- Does not relocate the live app task to the VD first.
+- Arms the existing app-side Reloading app mask before PROMOTE (unchanged).
+- Helper removes the existing task while it is still on its current/phone display.
+- Waits for task disappearance, then keeps the existing 2 s cleanup window.
+- Launches a fresh Activity directly on the dash display with am start --display.
+- If task removal fails, falls back to the proven normal relocation path.
+- If Android ignores --display after the fresh launch, retains the existing relocation fallback.
+
+No diagnostic instrumentation or POWER-race experiment was added.

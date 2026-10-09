@@ -14,9 +14,11 @@ import java.util.UUID
  * Single responsibility: move bytes; it owns no protocol knowledge.
  */
 class RfcommByteChannel : ByteChannel {
-    private var socket: BluetoothSocket? = null
-    private var input: InputStream? = null
-    private var output: OutputStream? = null
+    @Volatile private var socket: BluetoothSocket? = null
+    @Volatile private var input: InputStream? = null
+    @Volatile private var output: OutputStream? = null
+    @Volatile private var connectedName: String? = null
+    @Volatile private var lastEvent: String = "created"
 
     @SuppressLint("MissingPermission") // BLUETOOTH_CONNECT is requested by the Activity before start
     override fun open() {
@@ -28,25 +30,38 @@ class RfcommByteChannel : ByteChannel {
         val candidates = adapter.bondedDevices
             .filter { d -> d.name?.let { it.startsWith("YCCU") || it.contains("CCU") } == true }
             .sortedBy { d -> val n = d.name?.lowercase().orEmpty(); if ("dev" in n || "test" in n) 1 else 0 }
-        if (candidates.isEmpty()) error("dash (YCCU…) is not paired")
+        if (candidates.isEmpty()) {
+            DiagnosticFlightRecorder.record("RFCOMM", "NO_BONDED_DASH")
+            error("dash (YCCU…) is not paired")
+        }
         // cancelDiscovery() needs BLUETOOTH_SCAN on Android 12+; it's only a connect-speed
         // optimization (nothing is discovering here), so ignore it if the permission is absent.
         runCatching { adapter.cancelDiscovery() }
         var lastError: Throwable? = null
         for (dash in candidates) {
             Log.d("Pillion", "rfcomm: connecting to ${dash.name}")
+            DiagnosticFlightRecorder.record("RFCOMM", "CONNECT_START device=${dash.name ?: "unknown"}")
+            var candidateSocket: BluetoothSocket? = null
             try {
                 val s = dash.createInsecureRfcommSocketToServiceRecord(SPP_UUID)
+                candidateSocket = s
                 s.connect()
                 socket = s
                 input = s.inputStream
                 output = s.outputStream
+                connectedName = dash.name
+                lastEvent = "connected"
                 Log.d("Pillion", "rfcomm: connected to ${dash.name}")
+                DiagnosticFlightRecorder.record("RFCOMM", "CONNECTED device=${dash.name ?: "unknown"}")
                 return
             } catch (t: Throwable) {
                 lastError = t
                 Log.d("Pillion", "rfcomm: ${dash.name} unreachable (${t.message}); trying next")
-                runCatching { socket?.close() }
+                DiagnosticFlightRecorder.record(
+                    "RFCOMM",
+                    "CONNECT_FAIL device=${dash.name ?: "unknown"} ${t.javaClass.simpleName}: ${t.message ?: "-"}",
+                )
+                runCatching { candidateSocket?.close() }
             }
         }
         throw lastError ?: IllegalStateException("no CCU dash connectable")
@@ -54,16 +69,46 @@ class RfcommByteChannel : ByteChannel {
 
     override fun write(bytes: ByteArray) {
         val out = output ?: error("channel not open")
-        out.write(bytes)
-        out.flush()
+        try {
+            out.write(bytes)
+            out.flush()
+        } catch (t: Throwable) {
+            lastEvent = "write:${t.javaClass.simpleName}"
+            Log.w("Pillion", "rfcomm: write failed (${t.javaClass.simpleName}: ${t.message})")
+            DiagnosticFlightRecorder.record("RFCOMM", "WRITE_FAIL ${t.javaClass.simpleName}: ${t.message ?: "-"}")
+            throw t
+        }
     }
 
-    override fun read(buffer: ByteArray): Int =
-        (input ?: error("channel not open")).read(buffer)
+    override fun read(buffer: ByteArray): Int {
+        val result = try {
+            (input ?: error("channel not open")).read(buffer)
+        } catch (t: Throwable) {
+            lastEvent = "read:${t.javaClass.simpleName}"
+            Log.w("Pillion", "rfcomm: read failed (${t.javaClass.simpleName}: ${t.message})")
+            DiagnosticFlightRecorder.record("RFCOMM", "READ_FAIL ${t.javaClass.simpleName}: ${t.message ?: "-"}")
+            throw t
+        }
+        if (result < 0) {
+            lastEvent = "read:eof"
+            Log.w("Pillion", "rfcomm: read EOF (-1) from $connectedName")
+            DiagnosticFlightRecorder.record("RFCOMM", "READ_EOF device=${connectedName ?: "-"}")
+        }
+        return result
+    }
 
     override fun close() {
+        Log.d("Pillion", "rfcomm: close requested; state=${debugState()}")
         runCatching { socket?.close() }
         socket = null; input = null; output = null
+        connectedName = null
+        lastEvent = "closed"
+    }
+
+    fun debugState(): String {
+        val s = socket
+        return "socket=${s != null},isConnected=${runCatching { s?.isConnected }.getOrNull()}," +
+            "input=${input != null},output=${output != null},device=${connectedName ?: "-"},last=$lastEvent"
     }
 
     private companion object {

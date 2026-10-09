@@ -1,0 +1,23 @@
+Pillion XMAX reconnect final polish
+
+Changes from reconnect-v5:
+- Bluetooth reconnect retry interval: 5000 ms -> 2000 ms.
+- Reconnect core / VD / helper / power behavior is otherwise unchanged.
+- Removed reconnect diagnostic periodic snapshots and event snapshot dumps.
+- Kept normal operational/error logging for future troubleshooting.
+- Foreground notification is now quiet + ongoing:
+  - IMPORTANCE_LOW channel
+  - silent / vibration disabled
+  - ongoing, no auto-cancel, only-alert-once
+  - duplicate notification text is not re-posted
+  - public lock-screen visibility
+- Notification states:
+  - 接続中…
+  - 接続待ち — 自動再接続します
+  - 再接続中（n回目）
+  - 映像投影中
+- Notification [停止] action still calls CaptureService ACTION_STOP, same full-stop path used by the service.
+
+Build note:
+- Container build could not be completed because the Gradle wrapper attempted to download Gradle 8.11.1 and this environment has no network access.
+- Build on the existing Windows environment with: .\\gradlew.bat assembleDebug

@@ -46,7 +46,11 @@ object NaviLiteCodec {
         return HEADER_SIZE + CRC_SIZE + size
     }
 
+    fun frameTypeAt(data: ByteArray, off: Int): Int = data[off + 5].toInt() and 0xff
+
     fun serviceTypeAt(data: ByteArray, off: Int): Int = data[off + 6].toInt() and 0xff
+
+    fun payloadDataTypeAt(data: ByteArray, off: Int): Int = data[off + 11].toInt() and 0xff
 
     fun payloadAt(data: ByteArray, off: Int): ByteArray {
         val size = (data[off + 7].toInt() and 0xff) or

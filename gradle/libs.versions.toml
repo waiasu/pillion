@@ -16,6 +16,7 @@ conscrypt = "2.5.3"
 sdl = "5.8.0"
 # Code coverage for the shared Kotlin (commonTest) — compatible with Kotlin 2.1.0.
 kover = "0.9.1"
+tesseract4android = "4.9.0"
 
 [libraries]
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activityCompose" }
@@ -25,6 +26,7 @@ libadb-android = { module = "com.github.MuntashirAkon:libadb-android", version.r
 bouncycastle-pkix = { module = "org.bouncycastle:bcpkix-jdk15to18", version.ref = "bouncycastle" }
 conscrypt-android = { module = "org.conscrypt:conscrypt-android", version.ref = "conscrypt" }
 smartdevicelink-android = { module = "com.smartdevicelink:sdl_android", version.ref = "sdl" }
+tesseract4android = { module = "cz.adaptech.tesseract4android:tesseract4android", version.ref = "tesseract4android" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

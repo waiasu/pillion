@@ -1,0 +1,16 @@
+Pillion XMAX reconnect diagnostic v1
+
+Changes:
+- Max FPS range: 1..15 fps (old 0.5 value normalizes to 1)
+- Log Bluetooth ACL CONNECTED / DISCONNECTED
+- Log RFCOMM EOF (-1), read/write failures, socket/stream state
+- Unexpected transport/session loss no longer stops CaptureService
+- On loss, demote promoted task and switch to generated STATUS/Waiting frame
+- Keep screen source / MediaProjection side alive on unexpected transport failure
+- Periodic diagnostic snapshot every 5 seconds
+- Notification includes Stop action; Stop performs the real service teardown
+- No automatic Bluetooth/RFCOMM reconnect yet
+- No wake behavior yet
+
+Useful log filter:
+adb logcat -v time Pillion:D *:S

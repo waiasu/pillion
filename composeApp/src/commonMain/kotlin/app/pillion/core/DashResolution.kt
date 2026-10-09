@@ -1,32 +1,32 @@
 package app.pillion.core
 
+import kotlin.math.roundToInt
+
 /**
- * Off-screen display size used by the dedicated dash helper. Frames are still scaled to the
- * Yamaha dash's native 480x240 before they are sent over NaviLite.
+ * Off-screen display size used by the dedicated dash helper. The final frame sent to the XMAX stays
+ * fixed at [OUTPUT_WIDTH] x [OUTPUT_HEIGHT]; only the Android virtual display changes size.
  */
-enum class DashResolution(
+data class DashResolution(
     val width: Int,
     val height: Int,
 ) {
-    Native(480, 240),
-    R640(640, 320),
-    R720(720, 360),
-    R800(800, 400),
-    Balanced(960, 480),
-    R1024(1024, 512),
-    R1152(1152, 576),
-    Wide(1280, 640),
-    R1360(1360, 680),
-    High(1440, 720),
-    R1600(1600, 800),
-    R1920(1920, 960);
-
     val label: String get() = "$width x $height"
 
     companion object {
-        val DEFAULT = Balanced
+        const val OUTPUT_WIDTH = 480
+        const val OUTPUT_HEIGHT = 234
+        const val DEFAULT_SCALE_TENTHS = 20
 
-        fun fromName(name: String?): DashResolution =
-            values().firstOrNull { it.name == name } ?: DEFAULT
+        val DEFAULT: DashResolution = forLayout(0, 0, DEFAULT_SCALE_TENTHS)
+
+        fun forLayout(leftMargin: Int, bottomMargin: Int, scaleTenths: Int): DashResolution {
+            val usableWidth = (OUTPUT_WIDTH - leftMargin).coerceAtLeast(1)
+            val usableHeight = (OUTPUT_HEIGHT - bottomMargin).coerceAtLeast(1)
+            val scale = scaleTenths / 10f
+            return DashResolution(
+                width = (usableWidth * scale).roundToInt().coerceAtLeast(1),
+                height = (usableHeight * scale).roundToInt().coerceAtLeast(1),
+            )
+        }
     }
 }

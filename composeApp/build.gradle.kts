@@ -34,6 +34,8 @@ kotlin {
             implementation(libs.conscrypt.android)
             // SDL "Path B": USB/AOA full-motion H.264 to USB head units (Tracer etc.).
             implementation(libs.smartdevicelink.android)
+            // Tesseract4Android standard flavor: single-threaded to minimize contention with dash frame/JPEG work.
+            implementation(libs.tesseract4android)
         }
         commonMain.dependencies {
             implementation(compose.runtime)

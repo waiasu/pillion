@@ -1,0 +1,29 @@
+Pillion v17 - safe screen wake / keyguard app retention test
+
+Base: pillion-v15-final(2).zip
+
+Intentional changes only:
+1. Keep the existing first-run behavior: normal MediaProjection mirror until the first lock.
+2. While DASH is already promoted, a SCREEN_OFF edge after the existing 3 s settle window is
+   treated as the user's next physical POWER press. This demotes back to the phone instead of
+   ignoring the event.
+3. DashServer demote restores the phone through shell-injected KEYCODE_WAKEUP (224) after moving
+   the existing app task back to display 0. The old low-level display-power ON path is used only
+   if key injection itself fails.
+4. If only SystemUI/keyguard was visited, CaptureService preserves the last selected DASH target so a
+   timeout lock or another POWER lock promotes the same app again. Settings/launcher/permission
+   UIs retain the existing Pillion fallback behavior.
+
+Expected state sequence:
+START -> normal mirror
+POWER -> app promoted to VD; phone panel off; Android kept awake
+POWER -> app moved to display 0; KEYCODE_WAKEUP; lock screen; dash STATUS "Please lock the phone"
+lock-screen timeout -> same app promoted to VD again
+POWER from lock screen -> same app promoted to VD again
+unlock -> app remains on display 0; dash remains STATUS until next lock
+
+Untouched: Bluetooth/reconnect, NaviLite protocol, MirrorEngine/FPS pacing, JPEG settings,
+VD size/DPI/margins, stick input/tap handling, notification behavior, first normal-mirror phase.
+
+Important: this is an on-device behavior test. Logcat tags Pillion and PillionDash should be kept
+for the first repeated lock/unlock cycles in case the Pixel emits a different screen-state ordering.

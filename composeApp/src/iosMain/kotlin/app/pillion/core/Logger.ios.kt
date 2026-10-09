@@ -8,4 +8,8 @@ actual object Logger {
     actual fun e(message: String, error: Throwable?) {
         println("Pillion ERROR: $message" + (error?.let { " — $it" } ?: ""))
     }
+
+    actual fun trail(message: String) {
+        println("Pillion TRAIL: $message")
+    }
 }

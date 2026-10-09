@@ -1,0 +1,18 @@
+Pillion v25 changes
+
+- Existing OCR rectangle is now "OCR area 1".
+- Added configurable "OCR area 2" for the Yahoo! Car Navi zoom-scale text.
+  Defaults (estimated from supplied screenshots): Left 86%, Top 52%, Right 98%, Bottom 64%.
+- Both OCR areas are captured from the same raw VD frame and recognized independently.
+- ROAD output is: area1 + five IDEOGRAPHIC SPACEs (U+3000) + area2.
+  No scale-value normalization or decorative prefix/suffix is added.
+- Existing OCR gate is preserved: no OCR during handshake/promotion/demotion; OCR still starts only
+  after IMAGE_ACK plus the existing grace period.
+- Normal OCR cadence remains 10 seconds.
+- A dash zoom tap keeps the same single OCR scheduler and advances the next eligible OCR crop to
+  about 1 second later. No second timer or second OCR loop is introduced.
+- "Show OCR area" draws both area rectangles.
+
+Build verification note:
+The source was statically checked, but Gradle compilation could not be run in the packaging
+container because Gradle 8.11.1 was not cached and external distribution download was unavailable.

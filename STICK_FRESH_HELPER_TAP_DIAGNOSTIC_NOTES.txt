@@ -1,0 +1,16 @@
+Pillion v14 fresh-helper point-tap diagnostic
+
+Purpose
+- Force a newly loaded DashServer helper by changing diagnostic loopback port 28115 -> 28116.
+- Keep the proven helper-side shell injection mechanism: input -d <dashDisplayId> tap <x> <y>.
+- UP final-output marker/target: (330,80).
+- DOWN final-output marker/target: (330,150).
+- Marker is drawn only on a temporary Bluetooth send copy and never stored in helper JPEG cache.
+
+Expected log chain
+Pillion: STICK-DIAG TAP_CMD label=UP output=(330,80) ... port=28116
+PillionDash: STICK-DIAG HELPER_CMD tap label=UP output=(330,80) display=<id> port=28116
+PillionDash: STICK-DIAG VD_TAP label=UP display=<id> ... vd=(x,y) ... rc=0
+
+If HELPER_CMD and VD_TAP appear with rc=0 but the map does not move, the remaining issue is point/coordinate targeting.
+If TAP_CMD appears but HELPER_CMD does not, reverse socket command delivery is still failing.

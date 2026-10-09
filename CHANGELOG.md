@@ -6,6 +6,15 @@ All notable changes to Pillion are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- One-time ADB setup now shows a live, in-memory shell-style progress trace after PIN submission,
+  including pairing, ADB connection, loopback/Wireless ADB bootstrap, privilege preparation, helper
+  launch, and helper readiness. The PIN is never recorded and the trace is not persisted.
+
+### Fixed
+- `Open settings again` now refreshes/resumes the setup notification and pairing-port discovery instead
+  of leaving the notification stuck on the previous failure state.
+
 ## [0.2.0-alpha] - 2026-06-28
 
 Second alpha. iOS joins Android, and a SOLID head-unit architecture lands so the app can drive more than

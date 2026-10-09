@@ -2,7 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Network: only used for the in-app update check against GitHub Releases -->
+    <!-- Network sockets: used by the local dash-helper / OCR loopback channels and SDL integration. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Required by the SDL router service (its integration validator aborts without it). -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -50,6 +50,7 @@
 
     <application
         android:name="app.pillion.android.PillionApp"
+        android:allowBackup="false"
         android:label="Pillion"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"

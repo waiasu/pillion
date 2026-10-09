@@ -3,7 +3,12 @@ package app.pillion.core
 import app.pillion.protocol.NaviLiteCodec
 
 /** A frame parsed off the wire. */
-data class NaviFrameView(val serviceType: Int, val payload: ByteArray)
+data class NaviFrameView(
+    val frameType: Int,
+    val serviceType: Int,
+    val payloadDataType: Int,
+    val payload: ByteArray,
+)
 
 /**
  * Reads complete NaviLite frames from a [ByteChannel]. Single responsibility: framing/resync.
@@ -19,7 +24,12 @@ class FrameReader(private val channel: ByteChannel) {
         val len = NaviLiteCodec.frameLengthAt(buf, 0)
         check(len >= NaviLiteCodec.HEADER_SIZE + NaviLiteCodec.CRC_SIZE) { "bad frame length $len" }
         fill(len)
-        val view = NaviFrameView(NaviLiteCodec.serviceTypeAt(buf, 0), NaviLiteCodec.payloadAt(buf, 0))
+        val view = NaviFrameView(
+            frameType = NaviLiteCodec.frameTypeAt(buf, 0),
+            serviceType = NaviLiteCodec.serviceTypeAt(buf, 0),
+            payloadDataType = NaviLiteCodec.payloadDataTypeAt(buf, 0),
+            payload = NaviLiteCodec.payloadAt(buf, 0),
+        )
         buf = buf.copyOfRange(len, buf.size)
         return view
     }

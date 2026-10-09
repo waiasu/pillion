@@ -1,0 +1,327 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ==================== Visible UI ==================== -->
+    <!-- [Visible UI] Original: "Settings" -->
+    <string name="settings">Settings</string>
+
+    <!-- [Visible UI] Original: "your screen, on the bike dash" -->
+    <string name="tagline">your screen, on the bike dash</string>
+
+    <!-- [Visible UI] Original: "Connecting to dash…" -->
+    <string name="connecting_to_dash">Connecting to dash…</string>
+
+    <!-- [Visible UI] Original: "fps" -->
+    <string name="fps">fps</string>
+
+    <!-- [Visible UI] Original: "mirroring • %1$d KB per frame" -->
+    <string name="mirroring_frame_size">mirroring • %1$d KB per frame</string>
+
+    <!-- [Visible UI] Original: "Broadcasting" -->
+    <string name="broadcasting">Broadcasting</string>
+
+    <!-- [Visible UI] Original: "Open Waze or Google Maps — it's on your dash." -->
+    <string name="open_maps_on_dash">Open Waze or Google Maps — it's on your dash.</string>
+
+    <!-- [Visible UI] Original: "Disconnected" -->
+    <string name="disconnected">Disconnected</string>
+
+    <!-- [Visible UI] Original: "Before you ride" -->
+    <string name="before_you_ride">Before you ride</string>
+
+    <!-- [Visible UI] Original: "Pair your phone with the bike in your Bluetooth settings (one time only)." -->
+    <string name="guide_pair_bluetooth">Pair your phone with the bike in your Bluetooth settings (one time only).</string>
+
+    <!-- [Visible UI] Original: "Mount the phone in landscape and turn on auto-rotate, so the map fills the dash." -->
+    <string name="guide_landscape">Mount the phone in landscape and turn on auto-rotate, so the map fills the dash.</string>
+
+    <!-- [Visible UI] Original: "On the bike, switch the dash to Navigation mode." -->
+    <string name="guide_navigation_mode">On the bike, switch the dash to Navigation mode.</string>
+
+    <!-- [Visible UI] Normal mirroring uses whole-screen capture only. -->
+    <string name="guide_start_mirroring">Tap Start mirroring, then allow screen capture.</string>
+
+    <!-- [Visible UI] Original: "Open Waze or Google Maps — it appears on your dash." -->
+    <string name="guide_open_maps">Open Waze or Google Maps — it appears on your dash.</string>
+
+    <!-- [Visible UI] Original: "Start mirroring" -->
+    <string name="start_mirroring">Start mirroring</string>
+
+    <!-- [Visible UI] Original: "Stop mirroring" -->
+    <string name="stop_mirroring">Stop mirroring</string>
+
+    <!-- [Visible UI] Original: "Back" -->
+    <string name="back">Back</string>
+
+    <!-- [Visible UI] Original: "Updates" -->
+    <string name="updates">Updates</string>
+
+    <!-- [Visible UI] Original: "A new version is available" -->
+    <string name="new_version_available">A new version is available</string>
+
+    <!-- [Visible UI] Original: "Get" -->
+    <string name="get">Get</string>
+
+    <!-- [Visible UI] Original: "Appearance" -->
+    <string name="appearance">Appearance</string>
+
+    <!-- [Visible UI] Original: "System" -->
+    <string name="system">System</string>
+
+    <!-- [Visible UI] Original: "Light" -->
+    <string name="light">Light</string>
+
+    <!-- [Visible UI] Original: "Dark" -->
+    <string name="dark">Dark</string>
+
+    <!-- [Visible UI] Original: "Motorcycle" -->
+    <string name="motorcycle">Motorcycle</string>
+
+    <!-- [Visible UI] Original: "Not selected" -->
+    <string name="not_selected">Not selected</string>
+
+    <!-- [Visible UI] Original: "Tap to switch head unit" -->
+    <string name="tap_switch_head_unit">Tap to switch head unit</string>
+
+    <!-- [Visible UI] Original: "Change" -->
+    <string name="change">Change</string>
+
+    <!-- [Visible UI] Original: "Mirroring" -->
+    <string name="mirroring">Mirroring</string>
+
+    <!-- [Visible UI] Original: "Image quality" -->
+    <string name="image_quality">Image quality</string>
+
+    <!-- [Visible UI] Original: "DPI" -->
+    <string name="dpi">DPI</string>
+
+    <!-- [Visible UI] Original: "Max frame rate" -->
+    <string name="max_frame_rate">Max frame rate</string>
+
+    <!-- [Visible UI] Original: "Left margin" -->
+    <string name="left_margin">Left margin</string>
+
+    <!-- [Visible UI] Original: "Bottom margin" -->
+    <string name="bottom_margin">Bottom margin</string>
+
+    <!-- [Visible UI] Original: "Margin color" -->
+    <string name="margin_color">Margin color</string>
+
+    <!-- [Visible UI] Original: "Cancel" -->
+    <string name="cancel">Cancel</string>
+
+    <!-- [Visible UI] Original: "Higher quality looks sharper but makes the picture less smooth (about 15–25 fps at 40% on a fast phone). The cap keeps the frame rate down to save battery and reduce heat." -->
+    <string name="image_quality_help">Higher quality looks sharper but makes the picture less smooth (about 15–25 fps at 40% on a fast phone). The cap keeps the frame rate down to save battery and reduce heat.</string>
+
+    <!-- [Visible UI] Original: "Dedicated dash display (experimental)" -->
+    <string name="dedicated_dash_display">Dedicated dash display (experimental)</string>
+
+    <!-- [Visible UI] Original: "On" -->
+    <string name="on">On</string>
+
+    <!-- [Visible UI] Original: "Off" -->
+    <string name="off">Off</string>
+
+    <!-- [Visible UI] Original: "Keep your nav app on the dash with the phone screen off." -->
+    <string name="dash_keep_nav">Keep your nav app on the dash with the phone screen off.</string>
+
+    <!-- [Visible UI] Original: "Disable" -->
+    <string name="disable">Disable</string>
+
+    <!-- [Visible UI] Original: "Set up" -->
+    <string name="set_up">Set up</string>
+
+    <!-- [Visible UI] Original: "Re-run setup (after a restart)" -->
+    <string name="rerun_setup">Re-run setup (after a restart)</string>
+
+    <!-- [Visible UI] Original: "Casts the real app to the dash in landscape with the screen off. Run setup once while Wi-Fi is connected; after that it can start without Wi-Fi until restart." -->
+    <string name="dash_feature_help">Casts the real app to the dash in landscape with the screen off. Run setup once while Wi-Fi is connected; after that it can start without Wi-Fi until restart.</string>
+
+    <!-- [Visible UI] Stick input target positions inside the usable dash image. -->
+    <string name="stick_tap_position">Stick tap position</string>
+    <string name="stick_tap_position_help">0% is left/top and 100% is right/bottom of the displayed navigation image.</string>
+
+    <string name="ocr_title">Road text OCR</string>
+    <string name="ocr_help">Reads the selected rectangle from the original virtual display once every 10 seconds and sends the recognized text to the dash road-name field.</string>
+    <string name="ocr_enable">OCR</string>
+    <string name="ocr_area_1">OCR area 1</string>
+    <string name="ocr_area_2">OCR area 2</string>
+    <string name="ocr_show_area">Show OCR area</string>
+    <string name="ocr_left">OCR left</string>
+    <string name="ocr_top">OCR top</string>
+    <string name="ocr_right">OCR right</string>
+    <string name="ocr_bottom">OCR bottom</string>
+    <string name="zoom_in_horizontal">Zoom in - Horizontal position</string>
+    <string name="zoom_in_vertical">Zoom in - Vertical position</string>
+    <string name="zoom_out_horizontal">Zoom out - Horizontal position</string>
+    <string name="zoom_out_vertical">Zoom out - Vertical position</string>
+
+    <string name="save_settings_restart">Save settings &amp; restart</string>
+    <string name="save_restart">Save &amp; restart</string>
+    <string name="save_restart_help">Saves all settings, cleanly stops Pillion components, then restarts Pillion to apply the changes.</string>
+
+    <string name="reset_restart">Reset &amp; restart</string>
+    <string name="slide_reset_restart">Slide to Reset &amp; Restart</string>
+    <string name="reset_restart_help">Stops Pillion components, clears temporary cache, then restarts. Settings, permissions, ADB setup, and diagnostic logs are kept.</string>
+
+    <!-- [Visible UI] Original: "Map layout size" -->
+    <string name="map_layout_size">Map layout size</string>
+
+    <!-- [Visible UI] Original: "Virtual-display size follows the usable area after margins. The dash still receives a %1$d × %2$d image." -->
+    <string name="virtual_display_size_help">Virtual-display size follows the usable area after margins. The dash still receives a %1$d × %2$d image.</string>
+
+    <!-- [Visible UI] Original: "Matches the usable dash area" -->
+    <string name="matches_usable_area">Matches the usable dash area</string>
+
+    <!-- [Visible UI] Original: "Recommended" -->
+    <string name="recommended">Recommended</string>
+
+    <!-- [Visible UI] Original: "Most detail · heaviest on battery" -->
+    <string name="most_detail_heavy">Most detail · heaviest on battery</string>
+
+    <!-- [Visible UI] Original: "more detail" -->
+    <string name="more_detail">more detail</string>
+
+    <!-- [Visible UI] Original: "About" -->
+    <string name="about">About</string>
+
+    <!-- [Visible UI] Original: "Source code" -->
+    <string name="source_code">Source code</string>
+
+    <!-- [Visible UI] Original: "Report an issue" -->
+    <string name="report_issue">Report an issue</string>
+
+    <!-- [Visible UI] Original: "Changelog" -->
+    <string name="changelog">Changelog</string>
+
+    <!-- [Visible UI] Original: "Version %1$s" -->
+    <string name="version_format">Version %1$s</string>
+
+    <!-- [Visible UI] Original: "Skip" -->
+    <string name="skip">Skip</string>
+
+    <!-- [Visible UI] Original: "Continue" -->
+    <string name="continue_text">Continue</string>
+
+    <!-- [Visible UI] Original: "Turn your phone into your motorcycle's dash." -->
+    <string name="intro_title">Turn your phone into your motorcycle's dash.</string>
+
+    <!-- [Visible UI] Original: "Navigation, speed and maps — projected right onto the screen built into your bike, where you can actually see them at a glance." -->
+    <string name="intro_body">Navigation, speed and maps — projected right onto the screen built into your bike, where you can actually see them at a glance.</string>
+
+    <!-- [Visible UI] Original: "How it connects" -->
+    <string name="how_it_connects">How it connects</string>
+
+    <!-- [Visible UI] Original: "Two ways to reach the dash, depending on what your bike supports." -->
+    <string name="how_it_connects_body">Two ways to reach the dash, depending on what your bike supports.</string>
+
+    <!-- [Visible UI] Original: "Bluetooth" -->
+    <string name="bluetooth">Bluetooth</string>
+
+    <!-- [Visible UI] Original: "Wireless. Sends a fast slideshow of your screen — perfect for turn-by-turn navigation." -->
+    <string name="bluetooth_desc">Wireless. Sends a fast slideshow of your screen — perfect for turn-by-turn navigation.</string>
+
+    <!-- [Visible UI] Original: "USB" -->
+    <string name="usb">USB</string>
+
+    <!-- [Visible UI] Original: "A wired connection with smooth, full-motion video — great for maps and live navigation." -->
+    <string name="usb_desc">A wired connection with smooth, full-motion video — great for maps and live navigation.</string>
+
+    <!-- [Visible UI] Original: "More bikes over time" -->
+    <string name="more_bikes_over_time">More bikes over time</string>
+
+    <!-- [Visible UI] Original: "We're adding support for more motorcycles and dashes — just keep the app updated." -->
+    <string name="more_bikes_desc">We're adding support for more motorcycles and dashes — just keep the app updated.</string>
+
+    <!-- [Visible UI] Original: "Choose your motorcycle" -->
+    <string name="choose_motorcycle">Choose your motorcycle</string>
+
+    <!-- [Visible UI] Original: "Pick the head unit your bike uses. You can change this anytime in Settings." -->
+    <string name="choose_motorcycle_body">Pick the head unit your bike uses. You can change this anytime in Settings.</string>
+
+    <!-- [Visible UI] Original: "Yamaha, StreetCross and Motorize are trademarks of their respective owners. Pillion is an independent project and is not affiliated with, endorsed, or sponsored by them." -->
+    <string name="trademark_notice">Yamaha, StreetCross and Motorize are trademarks of their respective owners. Pillion is an independent project and is not affiliated with, endorsed, or sponsored by them.</string>
+
+    <!-- [Visible UI] Original: "USB cable to the bike" -->
+    <string name="usb_cable">USB cable to the bike</string>
+
+    <!-- [Visible UI] Original: "Wireless over Bluetooth" -->
+    <string name="wireless_bluetooth">Wireless over Bluetooth</string>
+
+    <!-- [Visible UI] Original: "Full-motion video" -->
+    <string name="full_motion_video">Full-motion video</string>
+
+    <!-- [Visible UI] Original: "Slideshow" -->
+    <string name="slideshow">Slideshow</string>
+
+    <!-- [Visible UI] Original: "Your nav, on the dash" -->
+    <string name="dash_nav_title">Your nav, on the dash</string>
+
+    <!-- [Visible UI] Original: "Keep your maps app on the bike screen — in landscape, with your phone screen off. Unlike mirroring, the dash shows only your app and your phone stays free." -->
+    <string name="dash_nav_body">Keep your maps app on the bike screen — in landscape, with your phone screen off. Unlike mirroring, the dash shows only your app and your phone stays free.</string>
+
+    <!-- [Visible UI] Original: "Get started" -->
+    <string name="get_started">Get started</string>
+
+    <!-- [Visible UI] Original: "Maybe later" -->
+    <string name="maybe_later">Maybe later</string>
+
+    <!-- [Visible UI] Original: "Turn on Wireless debugging" -->
+    <string name="wireless_debugging_on">Turn on Wireless debugging</string>
+
+    <!-- [Visible UI] Original: "Open Developer options, turn on Wireless debugging, then open Pair device with pairing code. Pillion will notify you when the pairing port is ready." -->
+    <string name="wireless_debugging_help">Open Developer options, turn on Wireless debugging, then open “Pair device with pairing code”. Pillion will notify you when the pairing port is ready.</string>
+
+    <!-- [Visible UI] Original: "Open settings" -->
+    <string name="open_settings">Open settings</string>
+
+    <!-- Legacy labels retained for source compatibility. The normal UI now uses notification-only PIN entry. -->
+    <string name="pair_with_code">Pair with the code</string>
+    <string name="pair_with_code_help">Enter the PIN from Pillion's notification.</string>
+
+    <string name="pair_from_notification">Pair from the notification</string>
+    <string name="pair_from_notification_help">In Wireless debugging, open “Pair device with pairing code” and keep the PIN dialog open. When Pillion detects the port, its notification will change. Enter the 6-digit PIN from that notification.</string>
+    <string name="preparing_pillion">Preparing Pillion…</string>
+    <string name="setup_success">Setup successful</string>
+    <string name="setup_needs_attention">Setup needs attention</string>
+    <string name="retry_setup">Retry setup</string>
+    <string name="setup_trace">Setup trace</string>
+
+    <!-- [Visible UI] Original: "Next" -->
+    <string name="next">Next</string>
+
+    <!-- [Visible UI] Original: "Pair" -->
+    <string name="pair">Pair</string>
+
+    <!-- [Visible UI] Original: "Open settings again" -->
+    <string name="open_settings_again">Open settings again</string>
+
+    <!-- [Visible UI] Original: "Code, or port and code" -->
+    <string name="code_or_port_code">Code, or port and code</string>
+
+    <!-- [Visible UI] Original: "You're all set" -->
+    <string name="all_set">You're all set</string>
+
+    <!-- [Visible UI] Original: "Open your nav app and start Pillion as usual. While you ride with the phone unlocked it mirrors your screen — lock the phone and your nav automatically stays on the dash, screen off. Keep Wi-Fi available for setup; after that it works without Wi-Fi until the phone restarts." -->
+    <string name="all_set_help">Open your nav app and start Pillion as usual. While you ride with the phone unlocked it mirrors your screen — lock the phone and your nav automatically stays on the dash, screen off. Keep Wi-Fi available for setup; after that it works without Wi-Fi until the phone restarts.</string>
+
+    <!-- [Visible UI] Original: "Done" -->
+    <string name="done">Done</string>
+
+    <!-- [Visible UI] Original: "Close setup" -->
+    <string name="close_setup">Close setup</string>
+
+    <!-- [Visible UI] Original: "Pairing…" -->
+    <string name="pairing">Pairing…</string>
+
+    <!-- [Visible UI] Original: "✅ Connected" -->
+    <string name="connected">✅ Connected</string>
+
+    <!-- [Visible UI] Original: "Pairing failed — check the code and try again" -->
+    <string name="pairing_failed">Pairing failed — check the code and try again</string>
+
+    <!-- [Visible UI] Original: "Shutting down Pillion…" -->
+    <string name="shutting_down">Shutting down Pillion…</string>
+    <string name="saving_restarting">Saving settings &amp; restarting Pillion…</string>
+    <string name="resetting_restarting">Resetting &amp; restarting Pillion…</string>
+
+</resources>

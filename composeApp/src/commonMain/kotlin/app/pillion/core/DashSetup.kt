@@ -8,14 +8,26 @@ enum class DashStage {
     Idle,
     Pairing,
     Connecting,
-    /** Shell bootstrap is ready; the dash can be cast. */
+    /** Shell bootstrap + helper are ready; the dash can be cast. */
     Connected,
     /** The helper is running and streaming the foreground app to the dash. */
     Casting,
     Error,
 }
 
-data class DashState(val stage: DashStage = DashStage.Idle, val message: String? = null)
+data class SetupTraceLine(
+    val elapsedMs: Long,
+    val text: String,
+)
+
+data class DashState(
+    val stage: DashStage = DashStage.Idle,
+    val message: String? = null,
+    /** Error recovery can reuse the stored pairing key and does not require another PIN. */
+    val canRetrySetup: Boolean = false,
+    /** Ephemeral, in-memory setup progress. Never persisted and never contains the pairing PIN. */
+    val setupTrace: List<SetupTraceLine> = emptyList(),
+)
 
 /**
  * Drives the "dedicated dash display" feature for the UI (onboarding + settings). The UI depends
@@ -29,18 +41,24 @@ data class DashState(val stage: DashStage = DashStage.Idle, val message: String?
 interface DashSetup {
     val state: StateFlow<DashState>
 
-    /** Start pairing service discovery and show the notification used to enter the pairing code. */
+    /** Start pairing service discovery and show the notification used to enter the pairing PIN. */
     fun startPairingAssistant()
+
+    /** End only the one-time pairing assistant/notification; normal dash operation is untouched. */
+    fun cancelPairingAssistant()
 
     /** Open Android's Developer options screen so the user can enable Wireless debugging. */
     fun openWirelessDebuggingSettings()
 
-    /** Pair using auto-discovered port, or parse a fallback "port code" submission. */
+    /** Re-open Settings from step 2 and refresh/resume the setup notification without losing state. */
+    fun reopenWirelessDebuggingSettings()
+
+    /** Programmatic/dev fallback: pair using auto-discovered port or "port code" input. */
     fun pair(code: String)
 
-    /** Pair once using the code + port from Wireless debugging → "Pair device with pairing code". */
+    /** Programmatic/dev fallback: pair once using an explicit host/port/code. */
     fun pair(host: String, pairingPort: Int, code: String)
 
-    /** Connect to the phone's own adbd (mDNS auto-discovery, reusing the stored pairing key). */
+    /** Retry the stored-key ADB/helper setup without requesting a new pairing PIN. */
     fun connect()
 }

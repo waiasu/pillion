@@ -1,0 +1,16 @@
+Pillion XMAX reconnect v5
+
+Changes from v4:
+- Reconnect no longer requires ACTION_ACL_CONNECTED / dashAclConnected=true.
+- While reconnectWait=true, probe a brand-new RFCOMM/NaviLite session every 5 seconds.
+- ACL_CONNECTED remains a hint and can trigger a quicker 1.5 s probe.
+- ACL_DISCONNECTED no longer cancels the pending reconnect loop.
+- Failed reconnect attempts always schedule another retry regardless of cached ACL state.
+- Reconnect reuses the existing ScreenSource (reuseScreen=true); it does not call screen.start(),
+  request MediaProjection again, recreate helper/VD, wake the phone, or force VD promotion.
+- Explicit notification Stop remains the real teardown path.
+
+Expected sequence:
+  key OFF -> STATUS/reconnectWait -> periodic RFCOMM probes fail harmlessly
+  key ON -> either ACL_CONNECTED speeds the next probe or the periodic probe finds YCCU
+  -> fresh RFCOMM -> NaviLite handshake -> Streaming -> reconnectWait=false

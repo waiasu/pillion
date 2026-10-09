@@ -15,7 +15,7 @@ import app.pillion.core.ScreenSource
 import java.io.ByteArrayOutputStream
 
 /**
- * A [ScreenSource] backed by MediaProjection. Mirrors the display into a 480x240 [ImageReader]
+ * A [ScreenSource] backed by MediaProjection. Mirrors the display into a 480x234 [ImageReader]
  * and, on demand, compresses the most recent frame to JPEG. Single responsibility: screen -> JPEG.
  */
 class MediaProjectionScreenSource(
@@ -29,12 +29,16 @@ class MediaProjectionScreenSource(
     private var reader: ImageReader? = null
     private var display: VirtualDisplay? = null
     @Volatile private var latest: Bitmap? = null
+    @Volatile private var projectionStopped = false
 
     override fun start() {
         if (display != null) return // idempotent: capture may be pre-started by the service
         // Android 14+ requires a registered callback before createVirtualDisplay.
         projection.registerCallback(object : MediaProjection.Callback() {
-            override fun onStop() { Log.w(TAG, "screen: projection stopped by the system") }
+            override fun onStop() {
+                projectionStopped = true
+                Log.w(TAG, "screen: projection stopped by the system")
+            }
         }, handler)
         val r = ImageReader.newInstance(WIDTH, HEIGHT, PixelFormat.RGBA_8888, 2)
         r.setOnImageAvailableListener({ ir -> capture(ir) }, handler)
@@ -79,7 +83,12 @@ class MediaProjectionScreenSource(
         return out.toByteArray()
     }
 
+    fun debugState(): String =
+        "display=${display != null},reader=${reader != null},latest=${latest != null}," +
+            "threadAlive=${thread.isAlive},projectionStopped=$projectionStopped"
+
     override fun stop() {
+        Log.d(TAG, "screen: stop requested; state=${debugState()}")
         runCatching { display?.release() }
         runCatching { reader?.close() }
         runCatching { projection.stop() }
@@ -89,7 +98,7 @@ class MediaProjectionScreenSource(
 
     private companion object {
         const val WIDTH = 480
-        const val HEIGHT = 240
+        const val HEIGHT = 234
         const val DEFAULT_QUALITY = 40
         const val TAG = "Pillion"
     }

@@ -1,0 +1,296 @@
+--- /mnt/data/v5_compare/pillion-xmax-margin-v14-reconnect-v5/composeApp/src/androidMain/kotlin/app/pillion/android/CaptureService.kt	2026-08-28 12:58:23.000000000 +0000
++++ /mnt/data/reconnect_v6_work/pillion-xmax-margin-v14-reconnect-final/composeApp/src/androidMain/kotlin/app/pillion/android/CaptureService.kt	2026-08-28 16:15:46.892235575 +0000
+@@ -47,9 +47,6 @@
+ 
+     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+     private var engine: MirrorEngine? = null
+-    private var rfcommChannel: RfcommByteChannel? = null
+-    private var mirrorSource: MediaProjectionScreenSource? = null
+-    private var diagnosticJob: Job? = null
+     private var engineStateJob: Job? = null
+     private var reconnectJob: Job? = null
+     private var activeScreenSource: ScreenSource? = null
+@@ -57,6 +54,7 @@
+     @Volatile private var reconnectWait = false
+     @Volatile private var dashAclConnected = false
+     @Volatile private var reconnectAttempt = 0
++    @Volatile private var lastNotificationText: String? = null
+     private var wakeLock: PowerManager.WakeLock? = null
+     private var dashEnabled = false
+     private var dashSwitch: SwitchableScreenSource? = null
+@@ -69,7 +67,7 @@
+ 
+     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+         if (intent?.action == ACTION_STOP) {
+-            Log.i(TAG, "reconnect-diagnostic: explicit STOP from notification")
++            Log.i(TAG, "notification: explicit Stop")
+             stopSelf()
+             return START_NOT_STICKY
+         }
+@@ -132,7 +130,6 @@
+         resultCode = 0; resultData = null
+         // Create the mirror display NOW, while the projection token is fresh.
+         val mirror = MediaProjectionScreenSource(this, projection, quality)
+-        mirrorSource = mirror
+         runCatching { mirror.start() }
+ 
+         val source: ScreenSource = if (dashEnabled) {
+@@ -169,7 +166,6 @@
+             mirror
+         }
+         runEngine(source, maxFps)
+-        startDiagnosticLogging()
+     }
+ 
+     /** Mirror while unlocked, dash while locked: promote the foreground app on lock, demote on unlock. */
+@@ -259,18 +255,16 @@
+                     BluetoothDevice.ACTION_ACL_CONNECTED -> {
+                         dashAclConnected = true
+                         Log.i(TAG, "reconnect-v5: BT ACL_CONNECTED device=$name wait=$reconnectWait")
+-                        logDiagnosticSnapshot("ACL_CONNECTED")
+                         scheduleReconnect("ACL_CONNECTED")
+                     }
+                     BluetoothDevice.ACTION_ACL_DISCONNECTED -> {
+                         dashAclConnected = false
+                         Log.w(TAG, "reconnect-v5: BT ACL_DISCONNECTED device=$name")
+ 
+-                        // ACL is diagnostic/a useful hint only. Do not cancel the reconnect loop here:
++                        // ACL is only a useful hint. Do not cancel the reconnect loop here:
+                         // Android/CCU can flap ACL while the bike is booting, and waiting for a later
+                         // ACL_CONNECTED broadcast proved unreliable on the real XMAX.
+                         enterReconnectWait("ACL disconnected: $name")
+-                        logDiagnosticSnapshot("ACL_DISCONNECTED")
+                     }
+                 }
+             }
+@@ -426,7 +420,6 @@
+         activeScreenSource = screen
+         activeMaxFps = maxFps
+         val channel = RfcommByteChannel()
+-        rfcommChannel = channel
+         val mirror = MirrorEngine(
+             channel = channel,
+             screen = screen,
+@@ -443,11 +436,10 @@
+                         _state.value = state
+                         if (reconnectWait) {
+                             Log.i(TAG, "reconnect-v5: session stable; leaving reconnect wait after attempt=$reconnectAttempt")
+-                            logDiagnosticSnapshot("RECONNECT_SUCCESS")
+                         }
+                         reconnectWait = false
+                         reconnectAttempt = 0
+-                        updateNotification("Streaming — ${state.kbPerFrame} KB/frame")
++                        updateNotification("映像投影中")
+                     }
+                     is MirrorState.Error -> {
+                         // A dead RFCOMM engine reports Error as it unwinds. Do NOT publish that
+@@ -511,13 +503,12 @@
+             reconnectAttempt += 1
+             val attempt = reconnectAttempt
+             Log.i(TAG, "reconnect-v5: attempt=$attempt rebuilding RFCOMM + NaviLite session acl=$dashAclConnected")
+-            updateNotification("Reconnecting…")
+-            logDiagnosticSnapshot("RECONNECT_BEGIN_$attempt")
++            updateNotification("再接続中（${attempt}回目）")
+ 
+             val screen = activeScreenSource
+             if (screen == null) {
+                 Log.e(TAG, "reconnect-v5: no surviving screen source; cannot reconnect")
+-                updateNotification("Reconnect failed — waiting (Stop to end)")
++                updateNotification("接続待ち — 自動再接続します")
+                 reconnectJob = null
+                 scheduleReconnect("no-screen", RECONNECT_RETRY_MS)
+                 return@launch
+@@ -533,8 +524,7 @@
+ 
+     private fun onReconnectAttemptFailed(reason: String) {
+         Log.w(TAG, "reconnect-v5: reconnect attempt=$reconnectAttempt failed: $reason")
+-        updateNotification("Reconnect failed — waiting (Stop to end)")
+-        logDiagnosticSnapshot("RECONNECT_FAIL_$reconnectAttempt")
++        updateNotification("接続待ち — 自動再接続します")
+ 
+         // Retry regardless of our cached ACL flag. A fresh RFCOMM connect is the real readiness
+         // test; ACL broadcasts are only hints and can be missed/flap while the CCU is booting.
+@@ -542,7 +532,7 @@
+     }
+ 
+     /**
+-     * Diagnostic behavior for an unexpected RFCOMM/NaviLite loss.
++     * Stable reconnect behavior for an unexpected RFCOMM/NaviLite loss.
+      * Deliberately do NOT stop the service, MediaProjection, screen sources or helper. Move any
+      * promoted task back to display 0, switch the stream source to the generated waiting frame,
+      * and sit here until the user explicitly presses Stop in the notification.
+@@ -559,43 +549,14 @@
+         dashPromotedAtMs = 0L
+         dashSawLockedKeyguard = false
+         runCatching { dashSwitch?.enterReconnectWait() }
+-            .onFailure { Log.e(TAG, "reconnect-diagnostic: demote/STATUS transition failed", it) }
+-        updateNotification("Connection lost — waiting (Stop to end)")
+-        logDiagnosticSnapshot("ENTER_WAIT")
++            .onFailure { Log.e(TAG, "reconnect: demote/STATUS transition failed", it) }
++        updateNotification("接続待ち — 自動再接続します")
+         // Keep probing even when ACL is currently false. The CCU may come back without a useful
+         // ACTION_ACL_CONNECTED edge reaching this receiver; RFCOMM success is our authoritative
+         // signal that the dash is ready again.
+         scheduleReconnect("transport-loss", RECONNECT_RETRY_MS)
+     }
+ 
+-    private fun startDiagnosticLogging() {
+-        if (diagnosticJob != null) return
+-        diagnosticJob = scope.launch(Dispatchers.Default) {
+-            while (true) {
+-                delay(DIAGNOSTIC_INTERVAL_MS)
+-                logDiagnosticSnapshot("PERIODIC")
+-            }
+-        }
+-    }
+-
+-    private fun logDiagnosticSnapshot(reason: String) {
+-        val pm = getSystemService(PowerManager::class.java)
+-        val km = getSystemService(KeyguardManager::class.java)
+-        val screenInteractive = pm?.isInteractive
+-        val keyguardLocked = km?.isKeyguardLocked
+-        val deviceLocked = km?.isDeviceLocked
+-        Log.i(
+-            TAG,
+-            "reconnect-diagnostic[$reason]: wait=$reconnectWait acl=$dashAclConnected attempt=$reconnectAttempt " +
+-                "service=alive engineState=${_state.value} " +
+-                "interactive=$screenInteractive keyguardLocked=$keyguardLocked deviceLocked=$deviceLocked " +
+-                "wakeLock=${wakeLock?.isHeld == true} promoted=${dashPromotedAtMs != 0L} " +
+-                "switch={${dashSwitch?.debugState() ?: "-"}} " +
+-                "mediaProjection={${mirrorSource?.debugState() ?: "-"}} " +
+-                "rfcomm={${rfcommChannel?.debugState() ?: "-"}}",
+-        )
+-    }
+-
+     private fun dashResolutionFrom(intent: Intent?): DashResolution {
+         val width = intent?.getIntExtra(EXTRA_DASH_WIDTH, DashResolution.DEFAULT.width)
+             ?: DashResolution.DEFAULT.width
+@@ -611,11 +572,10 @@
+     private fun fail(message: String) {
+         _state.value = MirrorState.Error(message)
+         if (reconnectWait) {
+-            // During reconnect wait, transport/helper failures are diagnostic state only.
++            // During reconnect wait, transport/helper failures must not end the surviving session.
+             // The notification Stop action is the only path that is allowed to end the service.
+             Log.w(TAG, "reconnect-v5: fail suppressed during reconnect wait: $message")
+-            updateNotification("Connection lost — waiting (Stop to end)")
+-            logDiagnosticSnapshot("FAIL_SUPPRESSED")
++            updateNotification("接続待ち — 自動再接続します")
+             return
+         }
+         Log.e(TAG, "reconnect-v5: fatal startup failure; stopping service: $message")
+@@ -623,10 +583,7 @@
+     }
+ 
+     override fun onDestroy() {
+-        Log.i(TAG, "reconnect-diagnostic: CaptureService.onDestroy()")
+-        logDiagnosticSnapshot("ON_DESTROY")
+-        diagnosticJob?.cancel()
+-        diagnosticJob = null
++        Log.i(TAG, "CaptureService.onDestroy()")
+         reconnectJob?.cancel()
+         reconnectJob = null
+         engineStateJob?.cancel()
+@@ -669,7 +626,9 @@
+ 
+     /** Foreground with the right service type: mediaProjection for mirror, connectedDevice for dash. */
+     private fun startForegroundTyped(type: Int) {
+-        val notification = buildNotification("Connecting to dash…")
++        val text = "接続中…"
++        lastNotificationText = text
++        val notification = buildNotification(text)
+         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+             startForeground(NOTIF_ID, notification, type)
+         } else {
+@@ -677,6 +636,11 @@
+         }
+     }
+ 
++    /**
++     * One quiet, ongoing service notification. Android 14+ may still let the user swipe an ongoing
++     * foreground-service notification away, but these flags make our intent explicit and prevent
++     * reconnect/status updates from repeatedly alerting.
++     */
+     private fun buildNotification(text: String): Notification {
+         val stopIntent = Intent(this, CaptureService::class.java).setAction(ACTION_STOP)
+         val stopPendingIntent = PendingIntent.getService(
+@@ -687,35 +651,49 @@
+         )
+         val stopAction = Notification.Action.Builder(
+             android.R.drawable.ic_menu_close_clear_cancel,
+-            "Stop",
++            "停止",
+             stopPendingIntent,
+         ).build()
+ 
+-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+-            getSystemService(NotificationManager::class.java).createNotificationChannel(
+-                NotificationChannel(CHANNEL_ID, "Pillion", NotificationManager.IMPORTANCE_LOW),
+-            )
+-            Notification.Builder(this, CHANNEL_ID)
+-                .setContentTitle("Pillion — mirroring to dash")
+-                .setContentText(text)
+-                .setSmallIcon(android.R.drawable.ic_menu_share)
+-                .addAction(stopAction)
+-                .build()
++        val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
++            val manager = getSystemService(NotificationManager::class.java)
++            val channel = NotificationChannel(
++                CHANNEL_ID,
++                "Pillion",
++                NotificationManager.IMPORTANCE_LOW,
++            ).apply {
++                description = "Pillion connection status"
++                setSound(null, null)
++                enableVibration(false)
++                setShowBadge(false)
++                lockscreenVisibility = Notification.VISIBILITY_PUBLIC
++            }
++            manager.createNotificationChannel(channel)
++            Notification.Builder(this, CHANNEL_ID)
+         } else {
+             @Suppress("DEPRECATION")
+             Notification.Builder(this)
+-                .setContentTitle("Pillion — mirroring to dash")
+-                .setContentText(text)
+-                .setSmallIcon(android.R.drawable.ic_menu_share)
+-                .addAction(stopAction)
+-                .build()
+         }
++
++        return builder
++            .setContentTitle("Pillion")
++            .setContentText(text)
++            .setSmallIcon(android.R.drawable.ic_menu_share)
++            .setCategory(Notification.CATEGORY_SERVICE)
++            .setOngoing(true)
++            .setAutoCancel(false)
++            .setOnlyAlertOnce(true)
++            .setShowWhen(false)
++            .setVisibility(Notification.VISIBILITY_PUBLIC)
++            .addAction(stopAction)
++            .build()
+     }
+ 
++    /** Avoid notify() churn when Streaming publishes updated fps/KB values with the same UI state. */
+     private fun updateNotification(text: String) {
+-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+-            getSystemService(NotificationManager::class.java).notify(NOTIF_ID, buildNotification(text))
+-        }
++        if (lastNotificationText == text) return
++        lastNotificationText = text
++        getSystemService(NotificationManager::class.java).notify(NOTIF_ID, buildNotification(text))
+     }
+ 
+     companion object {
+@@ -725,9 +703,8 @@
+         private const val MAX_SESSION_MS = 3L * 60 * 60 * 1000 // 3h safety cap
+         private const val RETURN_TO_PHONE_GRACE_MS = 3_000L
+         private const val LOCK_STATE_SAMPLE_DELAY_MS = 250L
+-        private const val DIAGNOSTIC_INTERVAL_MS = 5_000L
+         private const val RECONNECT_SETTLE_MS = 1_500L
+-        private const val RECONNECT_RETRY_MS = 5_000L
++        private const val RECONNECT_RETRY_MS = 2_000L
+         private const val PERMISSION_SUBSCRIBE_KEYGUARD =
+             "android.permission.SUBSCRIBE_TO_KEYGUARD_LOCKED_STATE"
+         const val ACTION_STOP = "app.pillion.action.STOP"

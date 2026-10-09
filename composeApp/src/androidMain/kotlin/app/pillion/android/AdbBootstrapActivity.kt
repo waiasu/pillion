@@ -179,7 +179,7 @@ class AdbBootstrapActivity : ComponentActivity() {
                                 // frames after Wi-Fi drops on the bike.
                                 val cmd = "CLASSPATH=\$(pm path app.pillion | grep base.apk | cut -d: -f2) " +
                                     "nohup app_process / app.pillion.server.DashServer " +
-                                    "960 480 160 40 480 240 $component >/dev/null 2>&1 &"
+                                    "960 480 160 40 480 234 $component >/dev/null 2>&1 &"
                                 val stream = PillionAdb.getInstance(applicationContext).openExecStream(cmd)
                                 stream.openInputStream().readBytes() // returns once backgrounded
                                 stream.close()
@@ -221,7 +221,7 @@ class AdbBootstrapActivity : ComponentActivity() {
         }
     }
 
-    /** The most recent foreground package other than Pillion (the app to promote at screen-block). */
+    /** The most recent foreground package (Pillion itself is allowed). */
     private fun foregroundPackage(): String? {
         val usm = getSystemService(UsageStatsManager::class.java) ?: return null
         val now = System.currentTimeMillis()
@@ -231,7 +231,7 @@ class AdbBootstrapActivity : ComponentActivity() {
         while (events.hasNextEvent()) {
             events.getNextEvent(event)
             @Suppress("DEPRECATION")
-            if (event.eventType == UsageEvents.Event.MOVE_TO_FOREGROUND && event.packageName != packageName) {
+            if (event.eventType == UsageEvents.Event.MOVE_TO_FOREGROUND) {
                 pkg = event.packageName
             }
         }

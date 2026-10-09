@@ -1,0 +1,25 @@
+Pillion v14 - percentage-based stick tap positions
+
+Changes in this build:
+- Adds four sliders at the bottom of Dedicated dash display (experimental):
+  - Zoom in - Horizontal position (0..100%)
+  - Zoom in - Vertical position (0..100%)
+  - Zoom out - Horizontal position (0..100%)
+  - Zoom out - Vertical position (0..100%)
+- Values are saved with the existing Save settings & shut down flow and applied on next launch.
+- The saved values are percentages inside the usable navigation image only; margins are not part of
+  the user-facing coordinate system.
+- UP/service 51 uses the Zoom in percentages. DOWN/service 52 uses Zoom out percentages.
+- The shell helper converts percentages directly to the current VD logical resolution and calls the
+  already-proven `input -d <displayId> tap x y` path.
+- The visual marker converts the same percentages to the usable portion of the final 480x234 JPEG,
+  then offsets X by the left margin. This keeps the marker and real tap aligned when margin or VD
+  scale/DPI changes.
+- 0% maps to the first pixel and 100% maps to the last pixel (size-1), avoiding out-of-range taps.
+- Default values preserve the approximate positions of the last successful fixed-point test under
+  the default 50px/46px margins: IN 65%/43%, OUT 65%/80%.
+- Helper loopback port bumped from 28116 to 28117 because the helper command protocol changed from
+  pixel TAP to TAP_PERCENT. This also prevents an already-detached 28116 helper from silently
+  swallowing the new command after APK replacement.
+- Bluetooth reconnect, notification, VD power/lock behavior and other unrelated code were not
+  intentionally changed.

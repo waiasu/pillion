@@ -21,13 +21,15 @@ import kotlinx.coroutines.launch
 class MirrorEngine(
     private val channel: ByteChannel,
     private val screen: ScreenSource,
-    private val maxFps: Int = 15,
+    private val maxFps: Double = 3.0,
     private val imageType: Int = 3, // NAVIGATION_EXPANDED
+    private val keepScreenAliveOnFailure: Boolean = false,
+    private val startScreenOnStart: Boolean = true,
 ) {
     private val _state = MutableStateFlow<MirrorState>(MirrorState.Idle)
     val state: StateFlow<MirrorState> = _state.asStateFlow()
 
-    private val minIntervalMs: Long = if (maxFps in 1..59) 1000L / maxFps else 0L
+    private val minIntervalMs: Long = if (maxFps > 0.0 && maxFps < 60.0) (1000.0 / maxFps).toLong().coerceAtLeast(1L) else 0L
     private var job: Job? = null
     @Volatile private var running = false
     @Volatile private var lastFrameKb = 0
@@ -38,24 +40,39 @@ class MirrorEngine(
         running = true
         _state.value = MirrorState.Connecting
         job = scope.launch(Dispatchers.Default) {
+            var unexpectedFailure = false
             try {
                 // Start capture FIRST: a MediaProjection token goes stale if the virtual display
                 // isn't created promptly, so we must not defer it behind the Bluetooth handshake.
-                Logger.d("session: starting screen capture")
-                screen.start()
+                if (startScreenOnStart) {
+                    Logger.d("session: starting screen capture")
+                    screen.start()
+                } else {
+                    Logger.d("session: reusing existing screen capture")
+                }
                 Logger.d("session: connecting transport")
+                Logger.trail("TRANSPORT CONNECT_START")
+                // Keep optional features (OCR etc.) outside the established connect/handshake path.
+                // A surviving ScreenSource can use this hook to reset any post-connect work before
+                // every initial connection or reconnect attempt without changing RFCOMM itself.
+                screen.onTransportConnecting()
                 channel.open()
+                Logger.trail("TRANSPORT CONNECTED")
                 val reader = FrameReader(channel)
                 Logger.d("session: handshake")
+                Logger.trail("HANDSHAKE START")
                 Handshake(channel, reader).perform()
+                Logger.trail("HANDSHAKE OK")
                 Logger.d("session: streaming")
                 streamLoop(reader)
             } catch (t: Throwable) {
+                unexpectedFailure = running
                 Logger.e("session failed", t)
+                Logger.trail("SESSION FAILED ${t::class.simpleName ?: "Throwable"}: ${t.message ?: "-"}")
                 if (running) _state.value = MirrorState.Error(t.message ?: "connection lost")
             } finally {
                 running = false
-                runCatching { screen.stop() }
+                if (!unexpectedFailure || !keepScreenAliveOnFailure) runCatching { screen.stop() }
                 runCatching { channel.close() }
             }
         }
@@ -79,6 +96,7 @@ class MirrorEngine(
         var windowStart = nowMs()
         var ackMsTotal = 0L
         var ackMsMax = 0L
+        var firstAckRecorded = false
         while (running) {
             val jpeg = screen.latestFrame()
             if (jpeg == null) {
@@ -97,11 +115,37 @@ class MirrorEngine(
             lastSend = sentAt
             sendImage(jpeg)
             lastFrameKb = jpeg.size / 1024
-            if (seq == 2) Logger.d("session: first image sent (${jpeg.size} bytes)")
+            if (seq == 2) {
+                Logger.d("session: first image sent (${jpeg.size} bytes)")
+                Logger.trail("IMAGE FIRST_SENT bytes=${jpeg.size}")
+            }
             // Wait for this frame's ACK before capturing/sending the next one. channel.close() on
             // stop() unblocks the reader, so this can't hang a teardown.
-            while (running && reader.next().serviceType != ServiceType.IMAGE_ACK) { /* skip non-ACKs */ }
+            while (running) {
+                val incoming = reader.next()
+                if (incoming.serviceType == ServiceType.IMAGE_ACK) break
+                handleStickInput(incoming)
+            }
             if (!running) break
+            // This is the only signal OCR uses to start its post-connect grace period. Until this
+            // point the connect/handshake/image path is identical to the v17 path.
+            if (!firstAckRecorded) {
+                firstAckRecorded = true
+                Logger.trail("IMAGE FIRST_ACK")
+            }
+            screen.onImageAck()
+            // OCR ROAD writes stay serialized on the existing stop-and-wait loop, immediately after
+            // a valid IMAGE_ACK, so no second coroutine can interleave Bluetooth writes.
+            screen.pollRoadText()?.let { roadText ->
+                channel.write(
+                    NaviLiteCodec.build(
+                        FRAME_TYPE_PHONE,
+                        ServiceType.ROAD,
+                        PDT_POINTER,
+                        roadText.encodeToByteArray(),
+                    )
+                )
+            }
             val ackMs = nowMs() - sentAt
             ackMsTotal += ackMs
             if (ackMs > ackMsMax) ackMsMax = ackMs
@@ -117,6 +161,34 @@ class MirrorEngine(
                 windowStart = nowMs()
             }
         }
+    }
+
+
+    /**
+     * XMAX stick integration: only UP/DOWN zoom requests are consumed by Pillion.
+     * Center press and every other dash-side request are deliberately ignored so the
+     * vehicle's own menu behavior remains untouched.
+     */
+    private fun handleStickInput(frame: NaviFrameView) {
+        if (frame.serviceType != 51 && frame.serviceType != 52) return
+
+        // Reply with the zoom-level update already accepted by the dash, then inject the configured
+        // UP/DOWN tap into the dedicated display. No other stick service is handled here.
+        val zoomPayload = byteArrayOf(
+            0x07, 0x19, 0x06, 0x00,
+            0x30, 0x2e, 0x32, 0x20, 0x6d, 0x69,
+        )
+        channel.write(
+            NaviLiteCodec.build(
+                FRAME_TYPE_PHONE,
+                ServiceType.ZOOM,
+                PDT_POINTER,
+                zoomPayload,
+            )
+        )
+
+        val markerFrames = kotlin.math.ceil(maxFps.coerceAtLeast(0.1) * 0.5).toInt().coerceAtLeast(1)
+        screen.tapDashPoint(frame.serviceType == 51, markerFrames)
     }
 
     private fun sendImage(jpeg: ByteArray) {

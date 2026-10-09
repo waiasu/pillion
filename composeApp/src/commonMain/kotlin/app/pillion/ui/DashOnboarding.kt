@@ -1,6 +1,5 @@
 package app.pillion.ui
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,48 +21,42 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.TwoWheeler
 import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.text.KeyboardOptions
 import app.pillion.core.DashSetup
 import app.pillion.core.DashStage
-import app.pillion.resources.Res
-import app.pillion.resources.dash_step_dialog
-import app.pillion.resources.dash_step_toggle
-import org.jetbrains.compose.resources.DrawableResource
-import org.jetbrains.compose.resources.painterResource
+import app.pillion.core.SetupTraceLine
+import app.pillion.resources.*
+import org.jetbrains.compose.resources.stringResource
 
 /**
- * Guided setup for "dedicated dash display" mode — one idea per screen, value first, with an
- * opt-out on the welcome step ([onOptOut]). Depends only on the [DashSetup] abstraction; it drives
- * pairing/connecting and reflects progress from its state.
+ * Guided setup for dedicated dash mode.
  *
- * Screens: welcome (+ opt-out) → enable Wireless debugging → pair → ready.
+ * Screens: welcome → enable Wireless debugging → notification-driven pairing/status → ready.
+ * PIN entry intentionally exists only in Android's setup notification; there is no duplicate text
+ * field in Pillion.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun DashOnboarding(
     dash: DashSetup,
@@ -72,81 +65,91 @@ internal fun DashOnboarding(
     onClose: () -> Unit,
 ) {
     val state by dash.state.collectAsState()
-    var step by remember { mutableStateOf(0) }
-    var code by remember { mutableStateOf("") }
+    var step by rememberSaveable { mutableStateOf(0) }
 
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-      Box(Modifier.fillMaxSize()) {
-        when (step) {
-            0 -> Page(
-                hero = { IconHero(Icons.Filled.TwoWheeler) },
-                title = "Your nav, on the dash",
-                subtitle = "Keep your maps app on the bike screen — in landscape, with your phone " +
-                    "screen off. Unlike mirroring, the dash shows only your app and your phone stays free.",
-                step = 0,
-                primary = "Get started" to { step = 1 },
-                secondary = "Maybe later" to onOptOut,
-            )
-            1 -> Page(
-                hero = { ScreenshotHero(Res.drawable.dash_step_toggle) },
-                title = "Turn on Wireless debugging",
-                subtitle = "In Settings → System → Developer options, switch on Wireless debugging. " +
-                    "Pillion will keep a notification open so you can enter the pairing code without " +
-                    "leaving Settings.",
-                step = 1,
-                primary = "Open settings" to {
-                    dash.startPairingAssistant()
-                    dash.openWirelessDebuggingSettings()
-                    step = 2
-                },
-                secondary = "Back" to { step = 0 },
-            )
-            2 -> Page(
-                hero = { ScreenshotHero(Res.drawable.dash_step_dialog) },
-                title = "Pair with the code",
-                subtitle = "In Wireless debugging, tap \"Pair device with pairing code\" and keep that " +
-                    "dialog open. Pull down notifications, tap Pillion's \"Enter code\", and type only " +
-                    "the 6-digit code. If Pillion asks for the port too, type both like \"35465 854874\".",
-                step = 2,
-                primary = (if (state.stage == DashStage.Connected) "Next" else "Pair") to {
-                    if (state.stage == DashStage.Connected) step = 3
-                    else dash.pair(code.trim())
-                },
-                secondary = "Open settings again" to {
-                    dash.startPairingAssistant()
-                    dash.openWirelessDebuggingSettings()
-                },
-            ) {
-                Spacer(Modifier.height(20.dp))
-                OutlinedTextField(
-                    code, { code = it }, label = { Text("Code, or port and code") }, singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth(),
+        Box(Modifier.fillMaxSize()) {
+            when (step) {
+                0 -> Page(
+                    hero = { IconHero(Icons.Filled.TwoWheeler) },
+                    title = stringResource(Res.string.dash_nav_title),
+                    subtitle = stringResource(Res.string.dash_nav_body),
+                    step = 0,
+                    primary = stringResource(Res.string.get_started) to { step = 1 },
+                    secondary = stringResource(Res.string.maybe_later) to onOptOut,
                 )
-                PairProgress(state.stage, state.message)
+
+                1 -> Page(
+                    hero = { IconHero(Icons.Filled.Settings) },
+                    title = stringResource(Res.string.wireless_debugging_on),
+                    subtitle = stringResource(Res.string.wireless_debugging_help),
+                    step = 1,
+                    primary = stringResource(Res.string.open_settings) to {
+                        dash.startPairingAssistant()
+                        dash.openWirelessDebuggingSettings()
+                        step = 2
+                    },
+                    secondary = stringResource(Res.string.back) to { step = 0 },
+                )
+
+                2 -> {
+                    val title = when (state.stage) {
+                        DashStage.Pairing -> stringResource(Res.string.pairing)
+                        DashStage.Connecting -> stringResource(Res.string.preparing_pillion)
+                        DashStage.Connected -> stringResource(Res.string.setup_success)
+                        DashStage.Error -> stringResource(Res.string.setup_needs_attention)
+                        else -> stringResource(Res.string.pair_from_notification)
+                    }
+                    val subtitle = state.message ?: stringResource(Res.string.pair_from_notification_help)
+                    val primary = when {
+                        state.stage == DashStage.Connected ->
+                            stringResource(Res.string.next) to { step = 3 }
+
+                        state.stage == DashStage.Error && state.canRetrySetup ->
+                            stringResource(Res.string.retry_setup) to { dash.connect() }
+
+                        else -> null
+                    }
+                    val secondary = if (state.stage == DashStage.Connected) null
+                    else stringResource(Res.string.open_settings_again) to {
+                        // Refresh/resume the setup notification as Settings is re-opened. This keeps
+                        // the existing retry/endpoint state while making a fresh pairing dialog usable.
+                        dash.reopenWirelessDebuggingSettings()
+                    }
+                    val showTrace = state.stage != DashStage.Connected && state.setupTrace.isNotEmpty()
+
+                    Page(
+                        hero = { PairingStatusHero(state.stage) },
+                        title = title,
+                        subtitle = subtitle,
+                        step = 2,
+                        primary = primary,
+                        secondary = secondary,
+                    ) {
+                        if (showTrace) SetupTracePanel(state.setupTrace)
+                    }
+                }
+
+                else -> Page(
+                    hero = { IconHero(Icons.Filled.CheckCircle) },
+                    title = stringResource(Res.string.all_set),
+                    subtitle = stringResource(Res.string.all_set_help),
+                    step = 3,
+                    primary = stringResource(Res.string.done) to onFinish,
+                )
             }
-            else -> Page(
-                hero = { IconHero(Icons.Filled.CheckCircle) },
-                title = "You're all set",
-                subtitle = "Open your nav app and start Pillion as usual. While you ride with the phone " +
-                    "unlocked it mirrors your screen — lock the phone and your nav automatically stays " +
-                    "on the dash, screen off. Keep Wi-Fi available for setup; after that it works " +
-                    "without Wi-Fi until the phone restarts.",
-                step = 3,
-                primary = "Done" to onFinish,
-            )
+
+            IconButton(
+                onClick = onClose,
+                modifier = Modifier.align(Alignment.TopEnd).safeDrawingPadding().padding(4.dp),
+            ) {
+                Icon(
+                    Icons.Filled.Close,
+                    contentDescription = stringResource(Res.string.close_setup),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
-        IconButton(
-            onClick = onClose,
-            modifier = Modifier.align(Alignment.TopEnd).safeDrawingPadding().padding(4.dp),
-        ) {
-            Icon(
-                Icons.Filled.Close,
-                contentDescription = "Close setup",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-      }
     }
 }
 
@@ -158,14 +161,14 @@ private fun Page(
     title: String,
     subtitle: String,
     step: Int,
-    primary: Pair<String, () -> Unit>,
+    primary: Pair<String, () -> Unit>?,
     secondary: Pair<String, () -> Unit>? = null,
     content: @Composable ColumnScope.() -> Unit = {},
 ) {
     Column(
         Modifier.fillMaxSize().safeDrawingPadding().padding(horizontal = 28.dp, vertical = 24.dp),
     ) {
-        // Content fills the available height and scrolls if needed; the actions stay pinned below.
+        // Content fills the available height and scrolls if needed; actions remain pinned below.
         Column(
             Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -174,54 +177,123 @@ private fun Page(
             hero()
             Spacer(Modifier.height(36.dp))
             Text(
-                title, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold,
+                title,
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
             )
             Spacer(Modifier.height(14.dp))
             Text(
-                subtitle, style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center,
+                subtitle,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
             )
             content()
         }
         Spacer(Modifier.height(20.dp))
         PageDots(step, total = 4)
         Spacer(Modifier.height(20.dp))
-        Button(
-            onClick = primary.second,
-            modifier = Modifier.fillMaxWidth().height(54.dp),
-            shape = RoundedCornerShape(16.dp),
-        ) { Text(primary.first, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold) }
+        if (primary != null) {
+            Button(
+                onClick = primary.second,
+                modifier = Modifier.fillMaxWidth().height(54.dp),
+                shape = RoundedCornerShape(16.dp),
+            ) {
+                Text(
+                    primary.first,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+        }
         if (secondary != null) {
-            TextButton(onClick = secondary.second, modifier = Modifier.fillMaxWidth()) { Text(secondary.first) }
+            TextButton(onClick = secondary.second, modifier = Modifier.fillMaxWidth()) {
+                Text(secondary.first)
+            }
         }
     }
 }
 
 @Composable
-private fun IconHero(icon: ImageVector) {
+private fun SetupTracePanel(lines: List<SetupTraceLine>) {
+    Spacer(Modifier.height(20.dp))
+    Column(
+        Modifier.fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(
+            stringResource(Res.string.setup_trace),
+            style = MaterialTheme.typography.labelMedium.copy(fontFamily = FontFamily.Monospace),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontWeight = FontWeight.SemiBold,
+        )
+        lines.forEachIndexed { index, line ->
+            val marker = if (index == lines.lastIndex) ">" else " "
+            Text(
+                "[${formatTraceTime(line.elapsedMs)}] $marker ${line.text}",
+                style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
+}
+
+private fun formatTraceTime(elapsedMs: Long): String {
+    val tenths = ((elapsedMs.coerceAtLeast(0L) + 50L) / 100L)
+    val seconds = tenths / 10L
+    val decimal = tenths % 10L
+    return "$seconds.$decimal".padStart(5) + "s"
+}
+
+@Composable
+private fun IconHero(icon: androidx.compose.ui.graphics.vector.ImageVector) {
     Box(
         Modifier.size(180.dp).clip(CircleShape)
             .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(88.dp))
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(88.dp),
+        )
     }
 }
 
 @Composable
-private fun ScreenshotHero(image: DrawableResource) {
-    Surface(
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-        modifier = Modifier.fillMaxWidth(),
+private fun PairingStatusHero(stage: DashStage) {
+    Box(
+        Modifier.size(180.dp).clip(CircleShape)
+            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+        contentAlignment = Alignment.Center,
     ) {
-        Image(
-            painter = painterResource(image),
-            contentDescription = null,
-            modifier = Modifier.fillMaxWidth().padding(12.dp).clip(RoundedCornerShape(12.dp)),
-        )
+        when (stage) {
+            DashStage.Pairing, DashStage.Connecting -> CircularProgressIndicator(Modifier.size(72.dp))
+            DashStage.Connected -> Icon(
+                Icons.Filled.CheckCircle,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(88.dp),
+            )
+            DashStage.Error -> Text(
+                "!",
+                style = MaterialTheme.typography.displayLarge,
+                color = MaterialTheme.colorScheme.error,
+                fontWeight = FontWeight.Bold,
+            )
+            else -> Text(
+                "PIN",
+                style = MaterialTheme.typography.headlineLarge,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold,
+            )
+        }
     }
 }
 
@@ -232,20 +304,11 @@ private fun PageDots(current: Int, total: Int) {
             val active = i == current
             Box(
                 Modifier.height(8.dp).width(if (active) 24.dp else 8.dp).clip(CircleShape)
-                    .background(if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline),
+                    .background(
+                        if (active) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.outline,
+                    ),
             )
         }
     }
-}
-
-@Composable
-private fun PairProgress(stage: DashStage, message: String?) {
-    val (text, color) = when (stage) {
-        DashStage.Pairing, DashStage.Connecting -> "Pairing…" to MaterialTheme.colorScheme.onSurfaceVariant
-        DashStage.Connected -> "✅ Connected" to MaterialTheme.colorScheme.primary
-        DashStage.Error -> "⚠ ${message ?: "Pairing failed — check the code and try again"}" to MaterialTheme.colorScheme.error
-        else -> return
-    }
-    Spacer(Modifier.height(12.dp))
-    Text(text, style = MaterialTheme.typography.bodyMedium, color = color, textAlign = TextAlign.Center)
 }
