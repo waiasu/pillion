@@ -1,6 +1,0 @@
-Reconnect v4
-- Fixes false UI disconnect after CCU key-off.
-- CaptureService no longer publishes MirrorEngine Error/Idle to HomeScreen while reconnectWait=true.
-- enterReconnectWait() immediately exposes MirrorState.Connecting so the main UI remains active/Stop-capable.
-- Actual Service teardown is still reserved for explicit notification/app Stop.
-- Existing ACL reconnect + RFCOMM/NaviLite rebuild logic remains unchanged.

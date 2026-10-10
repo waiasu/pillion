@@ -1,8 +1,0 @@
-Reconnect v3 safety fix
-
-- CCU ACTION_ACL_DISCONNECTED immediately enters reconnect wait / STATUS.
-- Cancels any pending reconnect attempt on ACL loss.
-- While reconnectWait=true, fail() no longer calls stopSelf().
-- Notification Stop remains the explicit service shutdown path.
-- Reconnect flow remains: ACL_CONNECTED -> 1.5s settle -> rebuild RFCOMM + NaviLite/MirrorEngine only.
-- Existing MediaProjection/helper/VD/power behavior is otherwise unchanged.

@@ -1,9 +1,0 @@
-Based directly on pIllion-v14-stick-vd-center-tap-diagnostic (the build where a VD center tap was confirmed to move the map).
-
-Changes only:
-- XMAX service 51/52 still gets the known service14 reply.
-- UP sends TAP_UP, DOWN sends TAP_DOWN over the same loopback helper command path.
-- DashServer still performs shell exec with exactly: input -d <helper VD displayId> tap <x> <y>.
-- Final output points: UP=(330,80), DOWN=(330,150). They are inverted through the same left/bottom margin transform used for JPEG output.
-- Small 12 px marker is drawn only on a temporary Bluetooth-send bitmap for ceil(FPS*0.5) frames. latest/helper JPEG cache remains untouched.
-- Log line: STICK-DIAG VD_TAP label=... display=... output=(...) vd=(...) ... rc=...
