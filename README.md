@@ -22,6 +22,7 @@
 - Google Pixel 10a
 - Yahoo! Car Navigation
 - Android Virtual Display mode
+<br>
 
 - Garmin StreetCross / NaviLite 対応メーターを搭載した Yamaha XMAX
 - Google Pixel 10a
@@ -42,7 +43,7 @@ Compatibility with other Android devices, Yamaha models, or navigation apps is n
 - 480 × 234 XMAX dashboard layout with configurable crop and margins
 - Right-top clamped rendering for the usable dashboard area
 - Automatic Bluetooth reconnect and recovery after ignition OFF / ON
-- Yahoo!カーナビ restart-on-VD handling for rendering and DPI stability
+- Yahoo! Car Navigation restart-on-VD handling for rendering and DPI stability
 - OCR overlays for arrival information and map scale
 - XMAX stick up/down input support
 - Pixel SecureCamera detection and physical display wake handling
@@ -50,6 +51,7 @@ Compatibility with other Android devices, Yamaha models, or navigation apps is n
 - Reset Pillion and Save & Restart workflows
 - Diagnostic flight recorder and diagnostic export
 - Additional recovery and stability improvements for long-running use
+<br>
 
 - Yahoo!カーナビ向け Virtual Display キャスト
 - XMAXメーター 480 × 234 に合わせたクロップ・余白調整
@@ -88,16 +90,13 @@ Compatibility with other Android devices, Yamaha models, or navigation apps is n
 
 ## Upstream / オリジナル
 
-This project is based on Pillion by alexandrevega.
+This project is based on the original Pillion project by alexandrevega. Many thanks to the original author for making the project available.
 For the original general-purpose project, documentation, and upstream development, please refer to the original Pillion repository.
 
-このプロジェクトは alexandrevega 氏の Pillion をベースにしています。
-汎用版Pillion、オリジナルのドキュメント、およびオリジナル側の開発についてはオリジナルのPillionリポジトリを参照してください。
+本プロジェクトは、alexandrevega氏によるオリジナルのPillionプロジェクトをベースにしています。プロジェクトを公開してくださった原作者に深く感謝いたします。
+オリジナルの汎用プロジェクト、ドキュメント、およびアップストリームでの開発状況については、オリジナルのPillionリポジトリをご参照ください。
 
 ---
-
-# Original Pillion README / オリジナルREADME
-
 
 <p align="center">
   <img src="art/icon.png" alt="Pillion logo" width="150" height="150">
