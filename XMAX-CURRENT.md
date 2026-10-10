@@ -64,6 +64,19 @@ Changing VD size/DPI while Yahoo! Car Navigation is already alive can produce pa
 
 ---
 
+## MediaProjection consent / Android 14+
+
+The Android 14+ whole-screen capture selection is **already implemented** for the normal NaviLite / dedicated-dash path.
+
+- On Android 14+ (`UPSIDE_DOWN_CAKE` and later), the non-SDL path calls `MediaProjectionConfig.createConfigForDefaultDisplay()`.
+- That path requests consent for the default physical display and skips the app-vs-whole-screen picker used by the generic capture flow.
+- SDL/USB intentionally keeps the existing generic `createScreenCaptureIntent()` consent flow.
+- Pre-Android-14 behavior is unchanged.
+
+This is current behavior, not a future item.
+
+---
+
 ## PROMOTE / DEMOTE and lock behavior
 
 Dedicated-dash mode promotes an app to the helper-owned VD when the phone transitions into the lock/screen-off path, and returns it to display 0 on the corresponding return/unlock path.
@@ -231,7 +244,6 @@ These are documentation observations only; this cleanup intentionally does not c
 
 Keep this section short. Ideas are not commitments.
 
-- Android 14+ MediaProjection default-display configuration to force the full-screen capture choice where appropriate.
 - Optional drive-mode profile for Yahoo! Car Navigation, if it proves useful in real riding.
 - Review selected upstream security/compatibility changes after the current XMAX line remains stable.
 
