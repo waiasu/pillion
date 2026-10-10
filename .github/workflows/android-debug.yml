@@ -39,13 +39,21 @@ jobs:
           fi
           test -x "$SDKMANAGER"
           yes | "$SDKMANAGER" --sdk_root="$SDK_ROOT" --licenses >/dev/null || true
-          "$SDKMANAGER" --sdk_root="$SDK_ROOT"             "platform-tools"             "platforms;android-35"             "build-tools;35.0.0"
+          "$SDKMANAGER" --sdk_root="$SDK_ROOT" \
+            "platform-tools" \
+            "platforms;android-35" \
+            "build-tools;35.0.0"
 
       - name: Build debug APK
         shell: bash
         run: |
           chmod +x ./gradlew
           ./gradlew --no-daemon :composeApp:assembleDebug
+
+      - name: Run debug unit tests
+        shell: bash
+        run: |
+          ./gradlew --no-daemon :composeApp:testDebugUnitTest
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
