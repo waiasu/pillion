@@ -38,8 +38,12 @@ class DashStreamScreenSource(
     private val ocrEnabled: Boolean = false,
     private val restartAppOnVd: Boolean = false,
     private val autoDriveMode: Boolean = false,
-    private val driveTapXPercent: Int = 10,
-    private val driveTapYPercent: Int = 50,
+    private val driveTapXPercent: Int = 7,
+    private val driveTapYPercent: Int = 54,
+    private val driveZoomInXPercent: Int = 94,
+    private val driveZoomInYPercent: Int = 10,
+    private val driveZoomOutXPercent: Int = 94,
+    private val driveZoomOutYPercent: Int = 30,
     private val markerMaxFps: Double = 3.0,
     private val appContext: Context? = null,
 ) : ScreenSource {
@@ -83,6 +87,7 @@ class DashStreamScreenSource(
     @Volatile private var driveGeneration = 0L
     @Volatile private var driveSampleAtMs = 0L
     @Volatile private var driveEmptyCount = 0
+    @Volatile private var driveStickReadyAtMs = 0L
 
     private val markerFillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.WHITE
@@ -427,6 +432,7 @@ class DashStreamScreenSource(
                                     if (tapDashPercentWithMarker(
                                             driveTapXPercent, driveTapYPercent, "DRIVE", markerFrames,
                                         )) {
+                                        driveStickReadyAtMs = SystemClock.elapsedRealtime() + DRIVE_STICK_SETTLE_MS
                                         driveState = DriveState.DRIVE
                                         DiagnosticFlightRecorder.record(
                                             "DRIVE", "MODE DRIVE tap H=$driveTapXPercent V=$driveTapYPercent",
@@ -455,9 +461,11 @@ class DashStreamScreenSource(
                     )
                     if (!ocrGateActive) return@execute
 
-                    val area2 = extractDistance(raw2) ?: ""
-                    val combined = area2 + OCR_AREA_SEPARATOR +
-                        (if (driveState == DriveState.DRIVE) "DRIVE MODE" else area1)
+                    val combined = if (driveState == DriveState.DRIVE) {
+                        "DRIVE MODE"
+                    } else {
+                        (extractDistance(raw2) ?: "") + OCR_AREA_SEPARATOR + area1
+                    }
                     val safe = sanitizeRoadText(combined)
                     var queued = false
                     synchronized(roadTextLock) {
@@ -606,6 +614,7 @@ class DashStreamScreenSource(
         driveGeneration++
         driveSampleAtMs = 0L
         driveEmptyCount = 0
+        driveStickReadyAtMs = 0L
         driveState = if (autoDriveMode &&
             component.substringBefore('/') == "jp.co.yahoo.android.apps.navi") {
             DiagnosticFlightRecorder.record("DRIVE", "CHECKING after PROMOTE")
@@ -620,8 +629,21 @@ class DashStreamScreenSource(
      * test. UP/DOWN only select a different final-output point.
      */
     override fun tapDashPoint(up: Boolean, markerFrames: Int): Boolean {
-        val xPercent = if (up) zoomInXPercent else zoomOutXPercent
-        val yPercent = if (up) zoomInYPercent else zoomOutYPercent
+        val isDrive = driveState == DriveState.DRIVE
+        if (isDrive && SystemClock.elapsedRealtime() < driveStickReadyAtMs) {
+            DiagnosticFlightRecorder.record("DRIVE", "stick input ignored during settle")
+            return false
+        }
+        val xPercent = if (isDrive) {
+            if (up) driveZoomInXPercent else driveZoomOutXPercent
+        } else {
+            if (up) zoomInXPercent else zoomOutXPercent
+        }
+        val yPercent = if (isDrive) {
+            if (up) driveZoomInYPercent else driveZoomOutYPercent
+        } else {
+            if (up) zoomInYPercent else zoomOutYPercent
+        }
         return tapDashPercentWithMarker(
             xPercent, yPercent, if (up) "UP" else "DOWN", markerFrames,
         )
@@ -687,6 +709,7 @@ class DashStreamScreenSource(
         resetOcrGate("demote")
         driveGeneration++
         driveState = DriveState.INACTIVE
+        driveStickReadyAtMs = 0L
         driveSampleAtMs = 0L
         driveEmptyCount = 0
         desiredComponent = null
@@ -792,6 +815,7 @@ class DashStreamScreenSource(
         const val OCR_IDLE_POLL_MS = 250L
         const val OCR_START_DELAY_MS = 5_000L
         const val DRIVE_CHECK_INTERVAL_MS = 10_000L
+        const val DRIVE_STICK_SETTLE_MS = 1_000L
 
         const val TAP_MARKER_RADIUS_PX = 12f
         const val TAP_MARKER_JPEG_QUALITY = 90

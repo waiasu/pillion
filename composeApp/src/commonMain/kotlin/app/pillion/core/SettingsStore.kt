@@ -69,6 +69,11 @@ interface SettingsStore {
     fun driveTapXPercent(): Int
     fun driveTapYPercent(): Int
     fun setAutoDriveMode(enabled: Boolean, xPercent: Int, yPercent: Int)
+    fun driveStickZoomInXPercent(): Int
+    fun driveStickZoomInYPercent(): Int
+    fun driveStickZoomOutXPercent(): Int
+    fun driveStickZoomOutYPercent(): Int
+    fun setDriveStickTapPositions(zoomInX: Int, zoomInY: Int, zoomOutX: Int, zoomOutY: Int)
 
     /** Restart the promoted app UI once on the virtual display after the normal move completes. */
     fun restartAppOnVd(): Boolean

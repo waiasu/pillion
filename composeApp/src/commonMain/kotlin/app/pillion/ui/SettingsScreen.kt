@@ -117,10 +117,18 @@ internal fun SettingsScreen(
     onDraftOcr2Bottom: (Int) -> Unit = {},
     draftAutoDriveMode: Boolean = false,
     onDraftAutoDriveMode: (Boolean) -> Unit = {},
-    draftDriveTapX: Int = 10,
+    draftDriveTapX: Int = 7,
     onDraftDriveTapX: (Int) -> Unit = {},
-    draftDriveTapY: Int = 50,
+    draftDriveTapY: Int = 54,
     onDraftDriveTapY: (Int) -> Unit = {},
+    draftDriveStickInX: Int = 94,
+    onDraftDriveStickInX: (Int) -> Unit = {},
+    draftDriveStickInY: Int = 10,
+    onDraftDriveStickInY: (Int) -> Unit = {},
+    draftDriveStickOutX: Int = 94,
+    onDraftDriveStickOutX: (Int) -> Unit = {},
+    draftDriveStickOutY: Int = 30,
+    onDraftDriveStickOutY: (Int) -> Unit = {},
     draftRestartAppOnVd: Boolean = false,
     onDraftRestartAppOnVd: (Boolean) -> Unit = {},
     draftFixedDashAppEnabled: Boolean = false,
@@ -591,25 +599,40 @@ internal fun SettingsScreen(
                         .padding(vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("DRIVE mode tap position", modifier = Modifier.weight(1f))
+                    Text("DRIVE mode settings", modifier = Modifier.weight(1f))
                     Text(if (driveSettingsExpanded) "▲" else "▼",
                         color = MaterialTheme.colorScheme.primary)
                 }
                 if (driveSettingsExpanded) {
                     Text(
-                        "Temporary DRIVE button tap (percent of VD content).",
+                        "Auto DRIVE button tap (percent of VD content).",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    SettingSlider("Horizontal", "$draftDriveTapX%", draftDriveTapX.toFloat(),
+                    SettingSlider("DRIVE tap horizontal", "$draftDriveTapX%", draftDriveTapX.toFloat(),
                         0f, 100f, step = 1f) {
                         onDraftDriveTapX(it.roundToInt().coerceIn(0, 100))
                     }
                     GroupDivider()
-                    SettingSlider("Vertical", "$draftDriveTapY%", draftDriveTapY.toFloat(),
+                    SettingSlider("DRIVE tap vertical", "$draftDriveTapY%", draftDriveTapY.toFloat(),
                         0f, 100f, step = 1f) {
                         onDraftDriveTapY(it.roundToInt().coerceIn(0, 100))
                     }
+                    GroupDivider()
+                    Text("DRIVE stick zoom taps (active 1 second after the DRIVE tap).",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    SettingSlider("Stick UP horizontal", "$draftDriveStickInX%", draftDriveStickInX.toFloat(),
+                        0f, 100f, step = 1f) { onDraftDriveStickInX(it.roundToInt().coerceIn(0, 100)) }
+                    GroupDivider()
+                    SettingSlider("Stick UP vertical", "$draftDriveStickInY%", draftDriveStickInY.toFloat(),
+                        0f, 100f, step = 1f) { onDraftDriveStickInY(it.roundToInt().coerceIn(0, 100)) }
+                    GroupDivider()
+                    SettingSlider("Stick DOWN horizontal", "$draftDriveStickOutX%", draftDriveStickOutX.toFloat(),
+                        0f, 100f, step = 1f) { onDraftDriveStickOutX(it.roundToInt().coerceIn(0, 100)) }
+                    GroupDivider()
+                    SettingSlider("Stick DOWN vertical", "$draftDriveStickOutY%", draftDriveStickOutY.toFloat(),
+                        0f, 100f, step = 1f) { onDraftDriveStickOutY(it.roundToInt().coerceIn(0, 100)) }
                 }
             }
             Text(

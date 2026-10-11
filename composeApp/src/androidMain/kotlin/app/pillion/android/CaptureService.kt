@@ -120,8 +120,12 @@ class CaptureService : Service() {
         val ocr2Bottom = intent?.getIntExtra(EXTRA_OCR2_BOTTOM, 64)?.coerceIn(0, 100) ?: 64
         val restartAppOnVd = intent?.getBooleanExtra(EXTRA_RESTART_APP_ON_VD, false) ?: false
         val autoDriveMode = intent?.getBooleanExtra(EXTRA_AUTO_DRIVE_MODE, false) ?: false
-        val driveTapX = intent?.getIntExtra(EXTRA_DRIVE_TAP_X, 10)?.coerceIn(0, 100) ?: 10
-        val driveTapY = intent?.getIntExtra(EXTRA_DRIVE_TAP_Y, 50)?.coerceIn(0, 100) ?: 50
+        val driveTapX = intent?.getIntExtra(EXTRA_DRIVE_TAP_X, 7)?.coerceIn(0, 100) ?: 7
+        val driveTapY = intent?.getIntExtra(EXTRA_DRIVE_TAP_Y, 54)?.coerceIn(0, 100) ?: 54
+        val driveStickInX = intent?.getIntExtra(EXTRA_DRIVE_STICK_IN_X, 94)?.coerceIn(0, 100) ?: 94
+        val driveStickInY = intent?.getIntExtra(EXTRA_DRIVE_STICK_IN_Y, 10)?.coerceIn(0, 100) ?: 10
+        val driveStickOutX = intent?.getIntExtra(EXTRA_DRIVE_STICK_OUT_X, 94)?.coerceIn(0, 100) ?: 94
+        val driveStickOutY = intent?.getIntExtra(EXTRA_DRIVE_STICK_OUT_Y, 30)?.coerceIn(0, 100) ?: 30
         fixedDashAppEnabled = intent?.getBooleanExtra(EXTRA_FIXED_DASH_APP_ENABLED, false) ?: false
         fixedDashAppPackage = intent?.getStringExtra(EXTRA_FIXED_DASH_APP_PACKAGE)
             ?.trim()
@@ -159,6 +163,10 @@ class CaptureService : Service() {
                 fixedDashAppPackage == "jp.co.yahoo.android.apps.navi",
             driveTapX,
             driveTapY,
+            driveStickInX,
+            driveStickInY,
+            driveStickOutX,
+            driveStickOutY,
         )
         return START_NOT_STICKY
     }
@@ -195,6 +203,10 @@ class CaptureService : Service() {
         autoDriveMode: Boolean,
         driveTapX: Int,
         driveTapY: Int,
+        driveStickInX: Int,
+        driveStickInY: Int,
+        driveStickOutX: Int,
+        driveStickOutY: Int,
     ) {
         // A screen-capture grant is single-use. If it's missing or stale (e.g. cleared when the app
         // crashed + restarted), starting a mediaProjection foreground service throws SecurityException
@@ -239,6 +251,10 @@ class CaptureService : Service() {
                     autoDriveMode = autoDriveMode,
                     driveTapXPercent = driveTapX,
                     driveTapYPercent = driveTapY,
+                    driveZoomInXPercent = driveStickInX,
+                    driveZoomInYPercent = driveStickInY,
+                    driveZoomOutXPercent = driveStickOutX,
+                    driveZoomOutYPercent = driveStickOutY,
                     markerMaxFps = maxFps,
                     appContext = applicationContext,
                 ),
@@ -986,6 +1002,10 @@ class CaptureService : Service() {
         const val EXTRA_AUTO_DRIVE_MODE = "autoDriveMode"
         const val EXTRA_DRIVE_TAP_X = "driveTapXPercent"
         const val EXTRA_DRIVE_TAP_Y = "driveTapYPercent"
+        const val EXTRA_DRIVE_STICK_IN_X = "driveStickInXPercent"
+        const val EXTRA_DRIVE_STICK_IN_Y = "driveStickInYPercent"
+        const val EXTRA_DRIVE_STICK_OUT_X = "driveStickOutXPercent"
+        const val EXTRA_DRIVE_STICK_OUT_Y = "driveStickOutYPercent"
         const val EXTRA_FIXED_DASH_APP_ENABLED = "fixedDashAppEnabled"
         const val EXTRA_FIXED_DASH_APP_PACKAGE = "fixedDashAppPackage"
 

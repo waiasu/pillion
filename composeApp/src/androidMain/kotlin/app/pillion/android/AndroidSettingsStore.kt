@@ -115,8 +115,21 @@ class AndroidSettingsStore(context: Context) : SettingsStore {
     }
 
     override fun autoDriveModeEnabled(): Boolean = prefs.getBoolean(KEY_AUTO_DRIVE_MODE, false)
-    override fun driveTapXPercent(): Int = prefs.getInt(KEY_DRIVE_TAP_X, 10).coerceIn(0, 100)
-    override fun driveTapYPercent(): Int = prefs.getInt(KEY_DRIVE_TAP_Y, 50).coerceIn(0, 100)
+    override fun driveTapXPercent(): Int = prefs.getInt(KEY_DRIVE_TAP_X, 7).coerceIn(0, 100)
+    override fun driveTapYPercent(): Int = prefs.getInt(KEY_DRIVE_TAP_Y, 54).coerceIn(0, 100)
+
+    override fun driveStickZoomInXPercent(): Int = prefs.getInt(KEY_DRIVE_STICK_IN_X, 94).coerceIn(0, 100)
+    override fun driveStickZoomInYPercent(): Int = prefs.getInt(KEY_DRIVE_STICK_IN_Y, 10).coerceIn(0, 100)
+    override fun driveStickZoomOutXPercent(): Int = prefs.getInt(KEY_DRIVE_STICK_OUT_X, 94).coerceIn(0, 100)
+    override fun driveStickZoomOutYPercent(): Int = prefs.getInt(KEY_DRIVE_STICK_OUT_Y, 30).coerceIn(0, 100)
+    override fun setDriveStickTapPositions(zoomInX: Int, zoomInY: Int, zoomOutX: Int, zoomOutY: Int) {
+        prefs.edit()
+            .putInt(KEY_DRIVE_STICK_IN_X, zoomInX.coerceIn(0, 100))
+            .putInt(KEY_DRIVE_STICK_IN_Y, zoomInY.coerceIn(0, 100))
+            .putInt(KEY_DRIVE_STICK_OUT_X, zoomOutX.coerceIn(0, 100))
+            .putInt(KEY_DRIVE_STICK_OUT_Y, zoomOutY.coerceIn(0, 100))
+            .commit()
+    }
 
     override fun setAutoDriveMode(enabled: Boolean, xPercent: Int, yPercent: Int) {
         prefs.edit()
@@ -183,6 +196,10 @@ class AndroidSettingsStore(context: Context) : SettingsStore {
         const val KEY_AUTO_DRIVE_MODE = "auto_drive_mode"
         const val KEY_DRIVE_TAP_X = "drive_tap_x_percent"
         const val KEY_DRIVE_TAP_Y = "drive_tap_y_percent"
+        const val KEY_DRIVE_STICK_IN_X = "drive_stick_in_x_percent"
+        const val KEY_DRIVE_STICK_IN_Y = "drive_stick_in_y_percent"
+        const val KEY_DRIVE_STICK_OUT_X = "drive_stick_out_x_percent"
+        const val KEY_DRIVE_STICK_OUT_Y = "drive_stick_out_y_percent"
         const val KEY_RESTART_APP_ON_VD = "restart_app_on_vd"
         const val KEY_FIXED_DASH_APP_ENABLED = "fixed_dash_app_enabled"
         const val KEY_FIXED_DASH_APP_PACKAGE = "fixed_dash_app_package"
