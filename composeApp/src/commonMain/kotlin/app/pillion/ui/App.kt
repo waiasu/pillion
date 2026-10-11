@@ -15,6 +15,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import app.pillion.core.DashMarginColor
+import app.pillion.core.DashMargins
 import app.pillion.core.DashResolution
 import app.pillion.core.DashScale
 import app.pillion.core.DashSetup
