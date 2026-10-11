@@ -239,6 +239,7 @@ class CaptureService : Service() {
                     autoDriveMode = autoDriveMode,
                     driveTapXPercent = driveTapX,
                     driveTapYPercent = driveTapY,
+                    markerMaxFps = maxFps,
                     appContext = applicationContext,
                 ),
                 restartAppOnVd = restartAppOnVd,

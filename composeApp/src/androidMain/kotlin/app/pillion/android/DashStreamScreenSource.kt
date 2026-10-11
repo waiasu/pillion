@@ -40,6 +40,7 @@ class DashStreamScreenSource(
     private val autoDriveMode: Boolean = false,
     private val driveTapXPercent: Int = 10,
     private val driveTapYPercent: Int = 50,
+    private val markerMaxFps: Double = 3.0,
     private val appContext: Context? = null,
 ) : ScreenSource {
     private val thread = Thread(::readLoop).apply { isDaemon = true }
@@ -420,8 +421,12 @@ class DashStreamScreenSource(
                                 DiagnosticFlightRecorder.record("DRIVE", "Area 1 empty ${driveEmptyCount}/2")
                                 if (driveEmptyCount >= 2) {
                                     // Tap only once per PROMOTE, without touching the power or task flow.
-                                    if (socket != null) {
-                                        send("TAP_PERCENT ${driveTapXPercent.coerceIn(0, 100)} ${driveTapYPercent.coerceIn(0, 100)} DRIVE\n")
+                                    val markerFrames = kotlin.math.ceil(
+                                        markerMaxFps.coerceAtLeast(0.1) * 0.5,
+                                    ).toInt().coerceAtLeast(1)
+                                    if (tapDashPercentWithMarker(
+                                            driveTapXPercent, driveTapYPercent, "DRIVE", markerFrames,
+                                        )) {
                                         driveState = DriveState.DRIVE
                                         DiagnosticFlightRecorder.record(
                                             "DRIVE", "MODE DRIVE tap H=$driveTapXPercent V=$driveTapYPercent",
@@ -615,15 +620,27 @@ class DashStreamScreenSource(
      * test. UP/DOWN only select a different final-output point.
      */
     override fun tapDashPoint(up: Boolean, markerFrames: Int): Boolean {
+        val xPercent = if (up) zoomInXPercent else zoomOutXPercent
+        val yPercent = if (up) zoomInYPercent else zoomOutYPercent
+        return tapDashPercentWithMarker(
+            xPercent, yPercent, if (up) "UP" else "DOWN", markerFrames,
+        )
+    }
+
+    /** Both stick and Auto DRIVE taps share the exact same visible marker and helper command. */
+    private fun tapDashPercentWithMarker(
+        requestedXPercent: Int,
+        requestedYPercent: Int,
+        label: String,
+        markerFrames: Int,
+    ): Boolean {
         if (socket == null) {
             Log.w(TAG, "dash tap: helper socket is not connected")
             return false
         }
 
-        val xPercent = (if (up) zoomInXPercent else zoomOutXPercent).coerceIn(0, 100)
-        val yPercent = (if (up) zoomInYPercent else zoomOutYPercent).coerceIn(0, 100)
-        val label = if (up) "UP" else "DOWN"
-
+        val xPercent = requestedXPercent.coerceIn(0, 100)
+        val yPercent = requestedYPercent.coerceIn(0, 100)
         val usableWidth = (DashResolution.OUTPUT_WIDTH - leftMargin).coerceAtLeast(1)
         val usableHeight = (DashResolution.OUTPUT_HEIGHT - bottomMargin).coerceAtLeast(1)
         tapMarkerX = leftMargin.coerceAtLeast(0) + percentToIndex(usableWidth, xPercent)
