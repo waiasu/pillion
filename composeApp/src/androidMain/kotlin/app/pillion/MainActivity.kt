@@ -109,6 +109,7 @@ class MainActivity : ComponentActivity() {
                     .putExtra(CaptureService.EXTRA_DRIVE_STICK_IN_Y, pendingSettings.driveStickZoomInYPercent)
                     .putExtra(CaptureService.EXTRA_DRIVE_STICK_OUT_X, pendingSettings.driveStickZoomOutXPercent)
                     .putExtra(CaptureService.EXTRA_DRIVE_STICK_OUT_Y, pendingSettings.driveStickZoomOutYPercent)
+                    .putExtra(CaptureService.EXTRA_DRIVE_IMAGE_SHIFT, pendingSettings.driveImageShiftPx)
                     .putExtra(CaptureService.EXTRA_FIXED_DASH_APP_ENABLED, pendingSettings.fixedDashAppEnabled)
                     .putExtra(CaptureService.EXTRA_FIXED_DASH_APP_PACKAGE, pendingSettings.fixedDashAppPackage)
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(intent)

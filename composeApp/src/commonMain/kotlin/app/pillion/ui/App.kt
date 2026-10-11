@@ -88,10 +88,11 @@ fun App(
         val savedAutoDriveMode = remember { settingsStore?.autoDriveModeEnabled() ?: false }
         val savedDriveTapX = remember { settingsStore?.driveTapXPercent() ?: 7 }
         val savedDriveTapY = remember { settingsStore?.driveTapYPercent() ?: 54 }
-        val savedDriveStickInX = remember { settingsStore?.driveStickZoomInXPercent() ?: 94 }
-        val savedDriveStickInY = remember { settingsStore?.driveStickZoomInYPercent() ?: 10 }
-        val savedDriveStickOutX = remember { settingsStore?.driveStickZoomOutXPercent() ?: 94 }
+        val savedDriveStickInX = remember { settingsStore?.driveStickZoomInXPercent() ?: 93 }
+        val savedDriveStickInY = remember { settingsStore?.driveStickZoomInYPercent() ?: 13 }
+        val savedDriveStickOutX = remember { settingsStore?.driveStickZoomOutXPercent() ?: 93 }
         val savedDriveStickOutY = remember { settingsStore?.driveStickZoomOutYPercent() ?: 30 }
+        val savedDriveImageShift = remember { settingsStore?.driveImageShiftPx() ?: 0 }
         val savedRestartAppOnVd = remember { settingsStore?.restartAppOnVd() ?: false }
         val savedFixedDashAppEnabled = remember { settingsStore?.fixedDashAppEnabled() ?: false }
         val savedFixedDashAppPackage = remember { settingsStore?.fixedDashAppPackage() }
@@ -124,6 +125,7 @@ fun App(
         var draftDriveStickInY by rememberSaveable { mutableStateOf(savedDriveStickInY) }
         var draftDriveStickOutX by rememberSaveable { mutableStateOf(savedDriveStickOutX) }
         var draftDriveStickOutY by rememberSaveable { mutableStateOf(savedDriveStickOutY) }
+        var draftDriveImageShift by rememberSaveable { mutableStateOf(savedDriveImageShift) }
         var draftRestartAppOnVd by rememberSaveable { mutableStateOf(savedRestartAppOnVd) }
         var draftFixedDashAppEnabled by rememberSaveable { mutableStateOf(savedFixedDashAppEnabled) }
         var draftFixedDashAppPackage by rememberSaveable { mutableStateOf(savedFixedDashAppPackage) }
@@ -166,6 +168,7 @@ fun App(
             draftDriveStickInY != savedDriveStickInY ||
             draftDriveStickOutX != savedDriveStickOutX ||
             draftDriveStickOutY != savedDriveStickOutY ||
+            draftDriveImageShift.coerceIn(0, DashMargins.clampBottom(draftBottomMargin)) != savedDriveImageShift ||
             draftRestartAppOnVd != savedRestartAppOnVd ||
             draftFixedDashAppEnabled != savedFixedDashAppEnabled ||
             draftFixedDashAppPackage != savedFixedDashAppPackage
@@ -262,6 +265,9 @@ fun App(
                 onDraftDriveStickOutX = { draftDriveStickOutX = it },
                 draftDriveStickOutY = draftDriveStickOutY,
                 onDraftDriveStickOutY = { draftDriveStickOutY = it },
+                draftDriveImageShift = draftDriveImageShift,
+                onDraftDriveImageShift = { draftDriveImageShift = it },
+                driveImageShiftMaxPx = savedBottomMargin,
                 draftFixedDashAppEnabled = draftFixedDashAppEnabled,
                 onDraftFixedDashAppEnabled = { draftFixedDashAppEnabled = it; if (!it) draftAutoDriveMode = false },
                 draftFixedDashAppPackage = draftFixedDashAppPackage,
@@ -303,6 +309,9 @@ fun App(
                         settingsStore?.setDriveStickTapPositions(
                             draftDriveStickInX, draftDriveStickInY,
                             draftDriveStickOutX, draftDriveStickOutY,
+                        )
+                        settingsStore?.setDriveImageShiftPx(
+                            draftDriveImageShift.coerceIn(0, DashMargins.clampBottom(draftBottomMargin)),
                         )
                         settingsStore?.setFixedDashApp(draftFixedDashAppEnabled, draftFixedDashAppPackage)
                         // Cover Settings immediately; the helper performs the final force-stop and
@@ -355,6 +364,7 @@ fun App(
                             driveStickZoomInYPercent = savedDriveStickInY,
                             driveStickZoomOutXPercent = savedDriveStickOutX,
                             driveStickZoomOutYPercent = savedDriveStickOutY,
+                            driveImageShiftPx = savedDriveImageShift,
                             fixedDashAppEnabled = savedFixedDashAppEnabled,
                             fixedDashAppPackage = savedFixedDashAppPackage,
                         ),

@@ -75,6 +75,10 @@ interface SettingsStore {
     fun driveStickZoomOutYPercent(): Int
     fun setDriveStickTapPositions(zoomInX: Int, zoomInY: Int, zoomOutX: Int, zoomOutY: Int)
 
+    /** Upward final-canvas translation in DRIVE, bounded by the saved bottom margin. */
+    fun driveImageShiftPx(): Int
+    fun setDriveImageShiftPx(value: Int)
+
     /** Restart the promoted app UI once on the virtual display after the normal move completes. */
     fun restartAppOnVd(): Boolean
     fun setRestartAppOnVd(enabled: Boolean)

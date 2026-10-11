@@ -122,10 +122,12 @@ class CaptureService : Service() {
         val autoDriveMode = intent?.getBooleanExtra(EXTRA_AUTO_DRIVE_MODE, false) ?: false
         val driveTapX = intent?.getIntExtra(EXTRA_DRIVE_TAP_X, 7)?.coerceIn(0, 100) ?: 7
         val driveTapY = intent?.getIntExtra(EXTRA_DRIVE_TAP_Y, 54)?.coerceIn(0, 100) ?: 54
-        val driveStickInX = intent?.getIntExtra(EXTRA_DRIVE_STICK_IN_X, 94)?.coerceIn(0, 100) ?: 94
-        val driveStickInY = intent?.getIntExtra(EXTRA_DRIVE_STICK_IN_Y, 10)?.coerceIn(0, 100) ?: 10
-        val driveStickOutX = intent?.getIntExtra(EXTRA_DRIVE_STICK_OUT_X, 94)?.coerceIn(0, 100) ?: 94
+        val driveStickInX = intent?.getIntExtra(EXTRA_DRIVE_STICK_IN_X, 93)?.coerceIn(0, 100) ?: 93
+        val driveStickInY = intent?.getIntExtra(EXTRA_DRIVE_STICK_IN_Y, 13)?.coerceIn(0, 100) ?: 13
+        val driveStickOutX = intent?.getIntExtra(EXTRA_DRIVE_STICK_OUT_X, 93)?.coerceIn(0, 100) ?: 93
         val driveStickOutY = intent?.getIntExtra(EXTRA_DRIVE_STICK_OUT_Y, 30)?.coerceIn(0, 100) ?: 30
+        val driveImageShift = intent?.getIntExtra(EXTRA_DRIVE_IMAGE_SHIFT, 0)
+            ?.coerceIn(0, dashBottomMargin) ?: 0
         fixedDashAppEnabled = intent?.getBooleanExtra(EXTRA_FIXED_DASH_APP_ENABLED, false) ?: false
         fixedDashAppPackage = intent?.getStringExtra(EXTRA_FIXED_DASH_APP_PACKAGE)
             ?.trim()
@@ -167,6 +169,7 @@ class CaptureService : Service() {
             driveStickInY,
             driveStickOutX,
             driveStickOutY,
+            driveImageShift,
         )
         return START_NOT_STICKY
     }
@@ -207,6 +210,7 @@ class CaptureService : Service() {
         driveStickInY: Int,
         driveStickOutX: Int,
         driveStickOutY: Int,
+        driveImageShift: Int,
     ) {
         // A screen-capture grant is single-use. If it's missing or stale (e.g. cleared when the app
         // crashed + restarted), starting a mediaProjection foreground service throws SecurityException
@@ -255,6 +259,7 @@ class CaptureService : Service() {
                     driveZoomInYPercent = driveStickInY,
                     driveZoomOutXPercent = driveStickOutX,
                     driveZoomOutYPercent = driveStickOutY,
+                    driveImageShiftPx = driveImageShift,
                     markerMaxFps = maxFps,
                     appContext = applicationContext,
                 ),
@@ -1006,6 +1011,7 @@ class CaptureService : Service() {
         const val EXTRA_DRIVE_STICK_IN_Y = "driveStickInYPercent"
         const val EXTRA_DRIVE_STICK_OUT_X = "driveStickOutXPercent"
         const val EXTRA_DRIVE_STICK_OUT_Y = "driveStickOutYPercent"
+        const val EXTRA_DRIVE_IMAGE_SHIFT = "driveImageShiftPx"
         const val EXTRA_FIXED_DASH_APP_ENABLED = "fixedDashAppEnabled"
         const val EXTRA_FIXED_DASH_APP_PACKAGE = "fixedDashAppPackage"
 

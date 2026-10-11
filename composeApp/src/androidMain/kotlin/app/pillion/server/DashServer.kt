@@ -91,6 +91,7 @@ object DashServer {
     private var leftMargin = 0
     private var bottomMargin = 0
     private var marginRgb = 0x000000
+    @Volatile private var driveImageShiftPx = 0
     private var ocrEnabled = false
     private var ocrShowArea = false
     private var ocrLeftPercent = 30
@@ -363,6 +364,11 @@ object DashServer {
                         promoteApp(fields.firstOrNull().orEmpty(), fields.getOrNull(1) == "1")
                     }
                     line == "DEMOTE" -> demoteApp()
+                    line.startsWith("DRIVE_SHIFT ") -> {
+                        // This is an output-canvas-only translation. Never move the VD itself.
+                        driveImageShiftPx = line.removePrefix("DRIVE_SHIFT ").trim()
+                            .toIntOrNull()?.coerceIn(0, bottomMargin) ?: 0
+                    }
                     line == "OCR_START" -> setOcrActive(true)
                     line == "OCR_STOP" -> setOcrActive(false)
                     line.startsWith("TAP_PERCENT ") -> {
@@ -440,6 +446,7 @@ object DashServer {
         // Every DASH promotion starts by resetting only the optional OCR side. OCR can only be
         // re-enabled later by OCR_START after the app sees a real IMAGE_ACK and its five-second grace.
         ocrActive = false
+        driveImageShiftPx = 0
         latestOcrJpeg = null
         latestOcrArea1Jpeg = null
         lastOcrArea1CropMs = 0L
@@ -1070,6 +1077,7 @@ object DashServer {
      * blanked; after moving the task back, use Android's normal wake input path instead.
      */
     private fun demoteApp() {
+        driveImageShiftPx = 0
         capturing = false
         restartPerformedForCurrentPromotion = false
         restartFrameGate = false
@@ -1147,7 +1155,8 @@ object DashServer {
         val scaleStart = System.currentTimeMillis()
         val usableWidth = (outputWidth - leftMargin).coerceAtLeast(1)
         val usableHeight = (outputHeight - bottomMargin).coerceAtLeast(1)
-        val noMargins = leftMargin == 0 && bottomMargin == 0
+        val shiftPx = driveImageShiftPx.coerceIn(0, bottomMargin)
+        val noMargins = leftMargin == 0 && bottomMargin == 0 && shiftPx == 0
         val needsOcrOverlay = ocrEnabled && ocrActive && ocrShowArea
         val output = if (noMargins && bitmap.width == outputWidth && bitmap.height == outputHeight && !needsOcrOverlay) {
             bitmap
@@ -1158,10 +1167,19 @@ object DashServer {
                 canvas.drawBitmap(
                     bitmap,
                     null,
-                    Rect(leftMargin, 0, leftMargin + usableWidth, usableHeight),
+                    Rect(leftMargin, -shiftPx, leftMargin + usableWidth, usableHeight - shiftPx),
                     scalePaint,
                 )
-                if (needsOcrOverlay) drawOcrArea(canvas, usableWidth, usableHeight)
+                if (needsOcrOverlay) {
+                    if (shiftPx == 0) {
+                        drawOcrArea(canvas, usableWidth, usableHeight)
+                    } else {
+                        val saved = canvas.save()
+                        canvas.translate(0f, -shiftPx.toFloat())
+                        drawOcrArea(canvas, usableWidth, usableHeight)
+                        canvas.restoreToCount(saved)
+                    }
+                }
             }
         }
         val scaleMs = System.currentTimeMillis() - scaleStart

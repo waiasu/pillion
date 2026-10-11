@@ -118,9 +118,9 @@ class AndroidSettingsStore(context: Context) : SettingsStore {
     override fun driveTapXPercent(): Int = prefs.getInt(KEY_DRIVE_TAP_X, 7).coerceIn(0, 100)
     override fun driveTapYPercent(): Int = prefs.getInt(KEY_DRIVE_TAP_Y, 54).coerceIn(0, 100)
 
-    override fun driveStickZoomInXPercent(): Int = prefs.getInt(KEY_DRIVE_STICK_IN_X, 94).coerceIn(0, 100)
-    override fun driveStickZoomInYPercent(): Int = prefs.getInt(KEY_DRIVE_STICK_IN_Y, 10).coerceIn(0, 100)
-    override fun driveStickZoomOutXPercent(): Int = prefs.getInt(KEY_DRIVE_STICK_OUT_X, 94).coerceIn(0, 100)
+    override fun driveStickZoomInXPercent(): Int = prefs.getInt(KEY_DRIVE_STICK_IN_X, 93).coerceIn(0, 100)
+    override fun driveStickZoomInYPercent(): Int = prefs.getInt(KEY_DRIVE_STICK_IN_Y, 13).coerceIn(0, 100)
+    override fun driveStickZoomOutXPercent(): Int = prefs.getInt(KEY_DRIVE_STICK_OUT_X, 93).coerceIn(0, 100)
     override fun driveStickZoomOutYPercent(): Int = prefs.getInt(KEY_DRIVE_STICK_OUT_Y, 30).coerceIn(0, 100)
     override fun setDriveStickTapPositions(zoomInX: Int, zoomInY: Int, zoomOutX: Int, zoomOutY: Int) {
         prefs.edit()
@@ -129,6 +129,14 @@ class AndroidSettingsStore(context: Context) : SettingsStore {
             .putInt(KEY_DRIVE_STICK_OUT_X, zoomOutX.coerceIn(0, 100))
             .putInt(KEY_DRIVE_STICK_OUT_Y, zoomOutY.coerceIn(0, 100))
             .commit()
+    }
+
+    override fun driveImageShiftPx(): Int =
+        prefs.getInt(KEY_DRIVE_IMAGE_SHIFT, 0).coerceIn(0, dashBottomMargin())
+
+    override fun setDriveImageShiftPx(value: Int) {
+        // Call after setDashLayout; restart may follow immediately, so commit synchronously.
+        prefs.edit().putInt(KEY_DRIVE_IMAGE_SHIFT, value.coerceIn(0, dashBottomMargin())).commit()
     }
 
     override fun setAutoDriveMode(enabled: Boolean, xPercent: Int, yPercent: Int) {
@@ -200,6 +208,7 @@ class AndroidSettingsStore(context: Context) : SettingsStore {
         const val KEY_DRIVE_STICK_IN_Y = "drive_stick_in_y_percent"
         const val KEY_DRIVE_STICK_OUT_X = "drive_stick_out_x_percent"
         const val KEY_DRIVE_STICK_OUT_Y = "drive_stick_out_y_percent"
+        const val KEY_DRIVE_IMAGE_SHIFT = "drive_image_shift_px"
         const val KEY_RESTART_APP_ON_VD = "restart_app_on_vd"
         const val KEY_FIXED_DASH_APP_ENABLED = "fixed_dash_app_enabled"
         const val KEY_FIXED_DASH_APP_PACKAGE = "fixed_dash_app_package"

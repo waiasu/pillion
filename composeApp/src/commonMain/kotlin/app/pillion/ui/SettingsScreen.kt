@@ -121,14 +121,17 @@ internal fun SettingsScreen(
     onDraftDriveTapX: (Int) -> Unit = {},
     draftDriveTapY: Int = 54,
     onDraftDriveTapY: (Int) -> Unit = {},
-    draftDriveStickInX: Int = 94,
+    draftDriveStickInX: Int = 93,
     onDraftDriveStickInX: (Int) -> Unit = {},
-    draftDriveStickInY: Int = 10,
+    draftDriveStickInY: Int = 13,
     onDraftDriveStickInY: (Int) -> Unit = {},
-    draftDriveStickOutX: Int = 94,
+    draftDriveStickOutX: Int = 93,
     onDraftDriveStickOutX: (Int) -> Unit = {},
     draftDriveStickOutY: Int = 30,
     onDraftDriveStickOutY: (Int) -> Unit = {},
+    draftDriveImageShift: Int = 0,
+    onDraftDriveImageShift: (Int) -> Unit = {},
+    driveImageShiftMaxPx: Int = 0,
     draftRestartAppOnVd: Boolean = false,
     onDraftRestartAppOnVd: (Boolean) -> Unit = {},
     draftFixedDashAppEnabled: Boolean = false,
@@ -633,6 +636,25 @@ internal fun SettingsScreen(
                     GroupDivider()
                     SettingSlider("Stick DOWN vertical", "$draftDriveStickOutY%", draftDriveStickOutY.toFloat(),
                         0f, 100f, step = 1f) { onDraftDriveStickOutY(it.roundToInt().coerceIn(0, 100)) }
+                    GroupDivider()
+                    Text(
+                        "DRIVE image shift (up only, after Auto DRIVE tap; 0 = Standard).",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    // Max is the SAVED bottom margin, not the editable draft. Do not resize
+                    // this slider as the user edits the margin; clamp the value on Save & Restart.
+                    if (driveImageShiftMaxPx > 0) {
+                        SettingSlider(
+                            "Upward shift", "$draftDriveImageShift px",
+                            draftDriveImageShift.coerceIn(0, driveImageShiftMaxPx).toFloat(),
+                            0f, driveImageShiftMaxPx.toFloat(), step = 1f,
+                        ) { onDraftDriveImageShift(it.roundToInt().coerceIn(0, driveImageShiftMaxPx)) }
+                    } else {
+                        Text("Standard (Bottom Margin is 0px)",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
             }
             Text(

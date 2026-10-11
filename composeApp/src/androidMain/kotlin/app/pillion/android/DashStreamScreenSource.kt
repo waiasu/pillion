@@ -40,10 +40,11 @@ class DashStreamScreenSource(
     private val autoDriveMode: Boolean = false,
     private val driveTapXPercent: Int = 7,
     private val driveTapYPercent: Int = 54,
-    private val driveZoomInXPercent: Int = 94,
-    private val driveZoomInYPercent: Int = 10,
-    private val driveZoomOutXPercent: Int = 94,
+    private val driveZoomInXPercent: Int = 93,
+    private val driveZoomInYPercent: Int = 13,
+    private val driveZoomOutXPercent: Int = 93,
     private val driveZoomOutYPercent: Int = 30,
+    private val driveImageShiftPx: Int = 0,
     private val markerMaxFps: Double = 3.0,
     private val appContext: Context? = null,
 ) : ScreenSource {
@@ -434,6 +435,9 @@ class DashStreamScreenSource(
                                         )) {
                                         driveStickReadyAtMs = SystemClock.elapsedRealtime() + DRIVE_STICK_SETTLE_MS
                                         driveState = DriveState.DRIVE
+                                        // TAP_PERCENT precedes this command on the same helper socket.
+                                        // Do not alter VD dimensions, OCR crops or the NAV image.
+                                        send("DRIVE_SHIFT ${driveImageShiftPx.coerceIn(0, bottomMargin)}\n")
                                         DiagnosticFlightRecorder.record(
                                             "DRIVE", "MODE DRIVE tap H=$driveTapXPercent V=$driveTapYPercent",
                                         )
@@ -666,7 +670,11 @@ class DashStreamScreenSource(
         val usableWidth = (DashResolution.OUTPUT_WIDTH - leftMargin).coerceAtLeast(1)
         val usableHeight = (DashResolution.OUTPUT_HEIGHT - bottomMargin).coerceAtLeast(1)
         tapMarkerX = leftMargin.coerceAtLeast(0) + percentToIndex(usableWidth, xPercent)
-        tapMarkerY = percentToIndex(usableHeight, yPercent)
+        val markerShiftPx = if (driveState == DriveState.DRIVE || label == "DRIVE") {
+            driveImageShiftPx.coerceIn(0, bottomMargin)
+        } else 0
+        tapMarkerY = (percentToIndex(usableHeight, yPercent) - markerShiftPx)
+            .coerceIn(0, DashResolution.OUTPUT_HEIGHT - 1)
         tapMarkerFramesRemaining = markerFrames.coerceAtLeast(1)
 
         send("TAP_PERCENT $xPercent $yPercent $label\n")
@@ -743,6 +751,11 @@ class DashStreamScreenSource(
         } else {
             Log.d(TAG, "dash stream: syncing pending PROMOTE $component")
             send(s, "PROMOTE $component ${if (restartAppOnVd) 1 else 0}\n")
+        }
+        // A reconnected helper resets shift during PROMOTE/DEMOTE; restore the
+        // current DRIVE overlay only for this same promoted session.
+        if (component != null && driveState == DriveState.DRIVE) {
+            send(s, "DRIVE_SHIFT ${driveImageShiftPx.coerceIn(0, bottomMargin)}\n")
         }
         if (ocrEnabled && ocrGateActive) {
             // PROMOTE/DEMOTE above always reset helper OCR. Replay START only when this same DASH
