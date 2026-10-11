@@ -115,6 +115,12 @@ internal fun SettingsScreen(
     onDraftOcr2Right: (Int) -> Unit = {},
     draftOcr2Bottom: Int = 64,
     onDraftOcr2Bottom: (Int) -> Unit = {},
+    draftAutoDriveMode: Boolean = false,
+    onDraftAutoDriveMode: (Boolean) -> Unit = {},
+    draftDriveTapX: Int = 10,
+    onDraftDriveTapX: (Int) -> Unit = {},
+    draftDriveTapY: Int = 50,
+    onDraftDriveTapY: (Int) -> Unit = {},
     draftRestartAppOnVd: Boolean = false,
     onDraftRestartAppOnVd: (Boolean) -> Unit = {},
     draftFixedDashAppEnabled: Boolean = false,
@@ -133,6 +139,9 @@ internal fun SettingsScreen(
 ) {
     val uriHandler = LocalUriHandler.current
     var showFixedAppPicker by remember { mutableStateOf(false) }
+    var driveSettingsExpanded by remember { mutableStateOf(false) }
+    val driveEligible = draftOcrEnabled && draftRestartAppOnVd &&
+        draftFixedDashAppEnabled && draftFixedDashAppPackage == "jp.co.yahoo.android.apps.navi"
     val selectedFixedApp = launchableApps.firstOrNull { it.packageName == draftFixedDashAppPackage }
 
     if (showFixedAppPicker) {
@@ -554,6 +563,53 @@ internal fun SettingsScreen(
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.primary,
                     )
+                }
+                GroupDivider()
+                Row(
+                    Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Auto DRIVE mode")
+                        Text(
+                            if (driveEligible) "After PROMOTE: switch on two empty Area 1 OCR results."
+                            else "Requires selected Yahoo! Car Navigation, OCR and Restart app on VD.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(
+                        checked = driveEligible && draftAutoDriveMode,
+                        enabled = driveEligible,
+                        onCheckedChange = onDraftAutoDriveMode,
+                    )
+                }
+                GroupDivider()
+                Row(
+                    Modifier.fillMaxWidth()
+                        .clickable { driveSettingsExpanded = !driveSettingsExpanded }
+                        .padding(vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("DRIVE mode tap position", modifier = Modifier.weight(1f))
+                    Text(if (driveSettingsExpanded) "▲" else "▼",
+                        color = MaterialTheme.colorScheme.primary)
+                }
+                if (driveSettingsExpanded) {
+                    Text(
+                        "Temporary DRIVE button tap (percent of VD content).",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    SettingSlider("Horizontal", "$draftDriveTapX%", draftDriveTapX.toFloat(),
+                        0f, 100f, step = 1f) {
+                        onDraftDriveTapX(it.roundToInt().coerceIn(0, 100))
+                    }
+                    GroupDivider()
+                    SettingSlider("Vertical", "$draftDriveTapY%", draftDriveTapY.toFloat(),
+                        0f, 100f, step = 1f) {
+                        onDraftDriveTapY(it.roundToInt().coerceIn(0, 100))
+                    }
                 }
             }
             Text(

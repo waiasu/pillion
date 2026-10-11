@@ -64,6 +64,12 @@ interface SettingsStore {
         area2Bottom: Int,
     )
 
+    /** Optional first-stage Yahoo! NAVI DRIVE auto-switch after PROMOTE. */
+    fun autoDriveModeEnabled(): Boolean
+    fun driveTapXPercent(): Int
+    fun driveTapYPercent(): Int
+    fun setAutoDriveMode(enabled: Boolean, xPercent: Int, yPercent: Int)
+
     /** Restart the promoted app UI once on the virtual display after the normal move completes. */
     fun restartAppOnVd(): Boolean
     fun setRestartAppOnVd(enabled: Boolean)

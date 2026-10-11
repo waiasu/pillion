@@ -85,6 +85,9 @@ fun App(
         val savedOcr2Top = remember { settingsStore?.ocr2TopPercent() ?: 56 }
         val savedOcr2Right = remember { settingsStore?.ocr2RightPercent() ?: 98 }
         val savedOcr2Bottom = remember { settingsStore?.ocr2BottomPercent() ?: 64 }
+        val savedAutoDriveMode = remember { settingsStore?.autoDriveModeEnabled() ?: false }
+        val savedDriveTapX = remember { settingsStore?.driveTapXPercent() ?: 10 }
+        val savedDriveTapY = remember { settingsStore?.driveTapYPercent() ?: 50 }
         val savedRestartAppOnVd = remember { settingsStore?.restartAppOnVd() ?: false }
         val savedFixedDashAppEnabled = remember { settingsStore?.fixedDashAppEnabled() ?: false }
         val savedFixedDashAppPackage = remember { settingsStore?.fixedDashAppPackage() }
@@ -110,6 +113,9 @@ fun App(
         var draftOcr2Top by rememberSaveable { mutableStateOf(savedOcr2Top) }
         var draftOcr2Right by rememberSaveable { mutableStateOf(savedOcr2Right) }
         var draftOcr2Bottom by rememberSaveable { mutableStateOf(savedOcr2Bottom) }
+        var draftAutoDriveMode by rememberSaveable { mutableStateOf(savedAutoDriveMode) }
+        var draftDriveTapX by rememberSaveable { mutableStateOf(savedDriveTapX) }
+        var draftDriveTapY by rememberSaveable { mutableStateOf(savedDriveTapY) }
         var draftRestartAppOnVd by rememberSaveable { mutableStateOf(savedRestartAppOnVd) }
         var draftFixedDashAppEnabled by rememberSaveable { mutableStateOf(savedFixedDashAppEnabled) }
         var draftFixedDashAppPackage by rememberSaveable { mutableStateOf(savedFixedDashAppPackage) }
@@ -145,6 +151,9 @@ fun App(
             draftOcr2Top != savedOcr2Top ||
             draftOcr2Right != savedOcr2Right ||
             draftOcr2Bottom != savedOcr2Bottom ||
+            draftAutoDriveMode != savedAutoDriveMode ||
+            draftDriveTapX != savedDriveTapX ||
+            draftDriveTapY != savedDriveTapY ||
             draftRestartAppOnVd != savedRestartAppOnVd ||
             draftFixedDashAppEnabled != savedFixedDashAppEnabled ||
             draftFixedDashAppPackage != savedFixedDashAppPackage
@@ -206,7 +215,7 @@ fun App(
                 draftStickZoomOutY = draftStickZoomOutY,
                 onDraftStickZoomOutY = { draftStickZoomOutY = it },
                 draftOcrEnabled = draftOcrEnabled,
-                onDraftOcrEnabled = { draftOcrEnabled = it },
+                onDraftOcrEnabled = { draftOcrEnabled = it; if (!it) draftAutoDriveMode = false },
                 draftOcrShowArea = draftOcrShowArea,
                 onDraftOcrShowArea = { draftOcrShowArea = it },
                 draftOcrLeft = draftOcrLeft,
@@ -226,11 +235,17 @@ fun App(
                 draftOcr2Bottom = draftOcr2Bottom,
                 onDraftOcr2Bottom = { draftOcr2Bottom = it },
                 draftRestartAppOnVd = draftRestartAppOnVd,
-                onDraftRestartAppOnVd = { draftRestartAppOnVd = it },
+                onDraftRestartAppOnVd = { draftRestartAppOnVd = it; if (!it) draftAutoDriveMode = false },
+                draftAutoDriveMode = draftAutoDriveMode,
+                onDraftAutoDriveMode = { draftAutoDriveMode = it },
+                draftDriveTapX = draftDriveTapX,
+                onDraftDriveTapX = { draftDriveTapX = it },
+                draftDriveTapY = draftDriveTapY,
+                onDraftDriveTapY = { draftDriveTapY = it },
                 draftFixedDashAppEnabled = draftFixedDashAppEnabled,
-                onDraftFixedDashAppEnabled = { draftFixedDashAppEnabled = it },
+                onDraftFixedDashAppEnabled = { draftFixedDashAppEnabled = it; if (!it) draftAutoDriveMode = false },
                 draftFixedDashAppPackage = draftFixedDashAppPackage,
-                onDraftFixedDashAppPackage = { draftFixedDashAppPackage = it },
+                onDraftFixedDashAppPackage = { draftFixedDashAppPackage = it; if (it != "jp.co.yahoo.android.apps.navi") draftAutoDriveMode = false },
                 launchableApps = launchableApps,
                 restartPending = restartPending,
                 onSaveAndRestart = {
@@ -260,6 +275,11 @@ fun App(
                             draftOcr2Bottom,
                         )
                         settingsStore?.setRestartAppOnVd(draftRestartAppOnVd)
+                        settingsStore?.setAutoDriveMode(
+                            draftAutoDriveMode && draftOcrEnabled && draftRestartAppOnVd &&
+                                draftFixedDashAppEnabled && draftFixedDashAppPackage == "jp.co.yahoo.android.apps.navi",
+                            draftDriveTapX, draftDriveTapY,
+                        )
                         settingsStore?.setFixedDashApp(draftFixedDashAppEnabled, draftFixedDashAppPackage)
                         // Cover Settings immediately; the helper performs the final force-stop and
                         // fresh launch after the existing cleanup/settle sequence completes.
@@ -304,6 +324,9 @@ fun App(
                             ocr2RightPercent = savedOcr2Right,
                             ocr2BottomPercent = savedOcr2Bottom,
                             restartAppOnVd = savedRestartAppOnVd,
+                            autoDriveModeEnabled = savedAutoDriveMode,
+                            driveTapXPercent = savedDriveTapX,
+                            driveTapYPercent = savedDriveTapY,
                             fixedDashAppEnabled = savedFixedDashAppEnabled,
                             fixedDashAppPackage = savedFixedDashAppPackage,
                         ),

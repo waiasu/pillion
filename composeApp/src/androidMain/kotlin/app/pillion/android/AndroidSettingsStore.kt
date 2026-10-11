@@ -114,6 +114,18 @@ class AndroidSettingsStore(context: Context) : SettingsStore {
             .commit()
     }
 
+    override fun autoDriveModeEnabled(): Boolean = prefs.getBoolean(KEY_AUTO_DRIVE_MODE, false)
+    override fun driveTapXPercent(): Int = prefs.getInt(KEY_DRIVE_TAP_X, 10).coerceIn(0, 100)
+    override fun driveTapYPercent(): Int = prefs.getInt(KEY_DRIVE_TAP_Y, 50).coerceIn(0, 100)
+
+    override fun setAutoDriveMode(enabled: Boolean, xPercent: Int, yPercent: Int) {
+        prefs.edit()
+            .putBoolean(KEY_AUTO_DRIVE_MODE, enabled)
+            .putInt(KEY_DRIVE_TAP_X, xPercent.coerceIn(0, 100))
+            .putInt(KEY_DRIVE_TAP_Y, yPercent.coerceIn(0, 100))
+            .commit()
+    }
+
     override fun restartAppOnVd(): Boolean = prefs.getBoolean(KEY_RESTART_APP_ON_VD, false)
 
     override fun setRestartAppOnVd(enabled: Boolean) {
@@ -168,6 +180,9 @@ class AndroidSettingsStore(context: Context) : SettingsStore {
         const val KEY_OCR2_TOP = "ocr2_top_percent"
         const val KEY_OCR2_RIGHT = "ocr2_right_percent"
         const val KEY_OCR2_BOTTOM = "ocr2_bottom_percent"
+        const val KEY_AUTO_DRIVE_MODE = "auto_drive_mode"
+        const val KEY_DRIVE_TAP_X = "drive_tap_x_percent"
+        const val KEY_DRIVE_TAP_Y = "drive_tap_y_percent"
         const val KEY_RESTART_APP_ON_VD = "restart_app_on_vd"
         const val KEY_FIXED_DASH_APP_ENABLED = "fixed_dash_app_enabled"
         const val KEY_FIXED_DASH_APP_PACKAGE = "fixed_dash_app_package"

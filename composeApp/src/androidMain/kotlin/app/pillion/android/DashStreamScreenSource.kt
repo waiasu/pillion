@@ -37,6 +37,9 @@ class DashStreamScreenSource(
     private val zoomOutYPercent: Int = 74,
     private val ocrEnabled: Boolean = false,
     private val restartAppOnVd: Boolean = false,
+    private val autoDriveMode: Boolean = false,
+    private val driveTapXPercent: Int = 10,
+    private val driveTapYPercent: Int = 50,
     private val appContext: Context? = null,
 ) : ScreenSource {
     private val thread = Thread(::readLoop).apply { isDaemon = true }
@@ -72,6 +75,13 @@ class DashStreamScreenSource(
     private var hasPublishedRoadText = false
     @Volatile private var cachedOcrArea1Jpeg: ByteArray? = null
     @Volatile private var cachedOcrArea1Text = ""
+
+    // Independent of the OCR gate so Bluetooth transport reconnects never re-arm a tap.
+    private enum class DriveState { INACTIVE, CHECKING, NAV, DRIVE }
+    @Volatile private var driveState = DriveState.INACTIVE
+    @Volatile private var driveGeneration = 0L
+    @Volatile private var driveSampleAtMs = 0L
+    @Volatile private var driveEmptyCount = 0
 
     private val markerFillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.WHITE
@@ -350,12 +360,17 @@ class DashStreamScreenSource(
         // one-second Area 2 payloads. Compare the bytes before decoding so Tesseract only sees
         // Area 1 when that ten-second sample actually changed.
         val area1Changed = cachedOcrArea1Jpeg?.contentEquals(areas.first) != true
-        val bitmap1 = if (area1Changed) {
+        // Two independent checks must occur ~10 s apart even when Yahoo's crop is identical.
+        val driveSampleDue = driveState == DriveState.CHECKING &&
+            (driveSampleAtMs == 0L ||
+                SystemClock.elapsedRealtime() - driveSampleAtMs >= DRIVE_CHECK_INTERVAL_MS)
+        val driveSession = driveGeneration
+        val bitmap1 = if (area1Changed || driveSampleDue) {
             BitmapFactory.decodeByteArray(areas.first, 0, areas.first.size)
         } else {
             null
         }
-        if (area1Changed && bitmap1 == null) {
+        if ((area1Changed || driveSampleDue) && bitmap1 == null) {
             Log.w(TAG, "OCR: Area 1 crop decode failed; keeping cached Area 1")
         }
         val bitmap2 = BitmapFactory.decodeByteArray(areas.second, 0, areas.second.size)
@@ -378,6 +393,10 @@ class DashStreamScreenSource(
                     if (bitmap1 != null) {
                         val area1StartedAt = SystemClock.elapsedRealtime()
                         val raw1 = recognizeBitmap(bitmap1)
+                        if (raw1 == null) {
+                            bitmap2.recycle()
+                            return@execute
+                        }
                         Log.i(TAG, "OCR raw area1='${raw1.replace("\r", "\\r").replace("\n", "\\n").replace("'", "’")}'")
                         area1Ms = SystemClock.elapsedRealtime() - area1StartedAt
                         if (!ocrGateActive) {
@@ -388,6 +407,32 @@ class DashStreamScreenSource(
                         cachedOcrArea1Text = area1
                         cachedOcrArea1Jpeg = areas.first
                         area1Cached = false
+
+                        if (driveSampleDue && driveSession == driveGeneration &&
+                            driveState == DriveState.CHECKING) {
+                            driveSampleAtMs = SystemClock.elapsedRealtime()
+                            if (area1.isNotEmpty()) {
+                                driveEmptyCount = 0
+                                driveState = DriveState.NAV
+                                DiagnosticFlightRecorder.record("DRIVE", "NAV confirmed: Area 1 valid")
+                            } else {
+                                driveEmptyCount++
+                                DiagnosticFlightRecorder.record("DRIVE", "Area 1 empty ${driveEmptyCount}/2")
+                                if (driveEmptyCount >= 2) {
+                                    // Tap only once per PROMOTE, without touching the power or task flow.
+                                    if (socket != null) {
+                                        send("TAP_PERCENT ${driveTapXPercent.coerceIn(0, 100)} ${driveTapYPercent.coerceIn(0, 100)} DRIVE\n")
+                                        driveState = DriveState.DRIVE
+                                        DiagnosticFlightRecorder.record(
+                                            "DRIVE", "MODE DRIVE tap H=$driveTapXPercent V=$driveTapYPercent",
+                                        )
+                                    } else {
+                                        driveState = DriveState.NAV
+                                        DiagnosticFlightRecorder.record("DRIVE", "tap skipped: helper unavailable")
+                                    }
+                                }
+                            }
+                        }
                     }
 
                     if (!ocrGateActive) {
@@ -395,7 +440,7 @@ class DashStreamScreenSource(
                         return@execute
                     }
                     val area2StartedAt = SystemClock.elapsedRealtime()
-                    val raw2 = recognizeBitmap(bitmap2)
+                    val raw2 = recognizeBitmap(bitmap2) ?: return@execute
                     Log.i(TAG, "OCR raw area2='${raw2.replace("\r", "\\r").replace("\n", "\\n").replace("'", "’")}'")
                     val area2Ms = SystemClock.elapsedRealtime() - area2StartedAt
                     val totalMs = SystemClock.elapsedRealtime() - ocrCycleStartedAt
@@ -406,7 +451,8 @@ class DashStreamScreenSource(
                     if (!ocrGateActive) return@execute
 
                     val area2 = extractDistance(raw2) ?: ""
-                    val combined = area2 + OCR_AREA_SEPARATOR + area1
+                    val combined = area2 + OCR_AREA_SEPARATOR +
+                        (if (driveState == DriveState.DRIVE) "DRIVE MODE" else area1)
                     val safe = sanitizeRoadText(combined)
                     var queued = false
                     synchronized(roadTextLock) {
@@ -440,13 +486,13 @@ class DashStreamScreenSource(
         }
     }
 
-    private fun recognizeBitmap(bitmap: Bitmap): String {
+    private fun recognizeBitmap(bitmap: Bitmap): String? {
         val tess = try {
             tesseract()
         } catch (t: Throwable) {
             bitmap.recycle()
             Log.w(TAG, "OCR: Tesseract init failed: ${t.javaClass.simpleName}: ${t.message}")
-            return ""
+            return null
         }
 
         return try {
@@ -454,7 +500,7 @@ class DashStreamScreenSource(
             tess.getUTF8Text().orEmpty()
         } catch (t: Throwable) {
             Log.w(TAG, "OCR: Tesseract recognition failed: ${t.javaClass.simpleName}: ${t.message}")
-            ""
+            null
         } finally {
             runCatching { tess.clear() }
             bitmap.recycle()
@@ -552,6 +598,14 @@ class DashStreamScreenSource(
     fun promote(component: String) {
         DiagnosticFlightRecorder.record("VD", "PROMOTE component=$component restart=$restartAppOnVd")
         resetOcrGate("promote")
+        driveGeneration++
+        driveSampleAtMs = 0L
+        driveEmptyCount = 0
+        driveState = if (autoDriveMode &&
+            component.substringBefore('/') == "jp.co.yahoo.android.apps.navi") {
+            DiagnosticFlightRecorder.record("DRIVE", "CHECKING after PROMOTE")
+            DriveState.CHECKING
+        } else DriveState.INACTIVE
         desiredComponent = component
         send("PROMOTE $component ${if (restartAppOnVd) 1 else 0}\n")
     }
@@ -614,6 +668,10 @@ class DashStreamScreenSource(
     fun demote() {
         DiagnosticFlightRecorder.record("VD", "DEMOTE")
         resetOcrGate("demote")
+        driveGeneration++
+        driveState = DriveState.INACTIVE
+        driveSampleAtMs = 0L
+        driveEmptyCount = 0
         desiredComponent = null
         latest = null
         staticFrameLogged = false
@@ -716,6 +774,7 @@ class DashStreamScreenSource(
         const val RETRY_MS = 300L
         const val OCR_IDLE_POLL_MS = 250L
         const val OCR_START_DELAY_MS = 5_000L
+        const val DRIVE_CHECK_INTERVAL_MS = 10_000L
 
         const val TAP_MARKER_RADIUS_PX = 12f
         const val TAP_MARKER_JPEG_QUALITY = 90

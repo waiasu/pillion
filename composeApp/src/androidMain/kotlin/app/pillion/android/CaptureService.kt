@@ -119,6 +119,9 @@ class CaptureService : Service() {
         val ocr2Right = intent?.getIntExtra(EXTRA_OCR2_RIGHT, 98)?.coerceIn(0, 100) ?: 98
         val ocr2Bottom = intent?.getIntExtra(EXTRA_OCR2_BOTTOM, 64)?.coerceIn(0, 100) ?: 64
         val restartAppOnVd = intent?.getBooleanExtra(EXTRA_RESTART_APP_ON_VD, false) ?: false
+        val autoDriveMode = intent?.getBooleanExtra(EXTRA_AUTO_DRIVE_MODE, false) ?: false
+        val driveTapX = intent?.getIntExtra(EXTRA_DRIVE_TAP_X, 10)?.coerceIn(0, 100) ?: 10
+        val driveTapY = intent?.getIntExtra(EXTRA_DRIVE_TAP_Y, 50)?.coerceIn(0, 100) ?: 50
         fixedDashAppEnabled = intent?.getBooleanExtra(EXTRA_FIXED_DASH_APP_ENABLED, false) ?: false
         fixedDashAppPackage = intent?.getStringExtra(EXTRA_FIXED_DASH_APP_PACKAGE)
             ?.trim()
@@ -152,6 +155,10 @@ class CaptureService : Service() {
             ocr2Right,
             ocr2Bottom,
             restartAppOnVd,
+            autoDriveMode && ocrEnabled && restartAppOnVd && fixedDashAppEnabled &&
+                fixedDashAppPackage == "jp.co.yahoo.android.apps.navi",
+            driveTapX,
+            driveTapY,
         )
         return START_NOT_STICKY
     }
@@ -185,6 +192,9 @@ class CaptureService : Service() {
         ocr2Right: Int,
         ocr2Bottom: Int,
         restartAppOnVd: Boolean,
+        autoDriveMode: Boolean,
+        driveTapX: Int,
+        driveTapY: Int,
     ) {
         // A screen-capture grant is single-use. If it's missing or stale (e.g. cleared when the app
         // crashed + restarted), starting a mediaProjection foreground service throws SecurityException
@@ -226,6 +236,9 @@ class CaptureService : Service() {
                     zoomOutYPercent = stickZoomOutY,
                     ocrEnabled = ocrEnabled,
                     restartAppOnVd = restartAppOnVd,
+                    autoDriveMode = autoDriveMode,
+                    driveTapXPercent = driveTapX,
+                    driveTapYPercent = driveTapY,
                     appContext = applicationContext,
                 ),
                 restartAppOnVd = restartAppOnVd,
@@ -969,6 +982,9 @@ class CaptureService : Service() {
         const val EXTRA_OCR2_RIGHT = "ocr2RightPercent"
         const val EXTRA_OCR2_BOTTOM = "ocr2BottomPercent"
         const val EXTRA_RESTART_APP_ON_VD = "restartAppOnVd"
+        const val EXTRA_AUTO_DRIVE_MODE = "autoDriveMode"
+        const val EXTRA_DRIVE_TAP_X = "driveTapXPercent"
+        const val EXTRA_DRIVE_TAP_Y = "driveTapYPercent"
         const val EXTRA_FIXED_DASH_APP_ENABLED = "fixedDashAppEnabled"
         const val EXTRA_FIXED_DASH_APP_PACKAGE = "fixedDashAppPackage"
 
