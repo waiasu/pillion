@@ -87,6 +87,7 @@ class MainActivity : ComponentActivity() {
                     .putExtra(CaptureService.EXTRA_DASH_LEFT_MARGIN, pendingSettings.dashLeftMargin)
                     .putExtra(CaptureService.EXTRA_DASH_BOTTOM_MARGIN, pendingSettings.dashBottomMargin)
                     .putExtra(CaptureService.EXTRA_DASH_MARGIN_COLOR, pendingSettings.dashMarginColor.rgb)
+                    .putExtra(CaptureService.EXTRA_STICK_TAP_ENABLED, pendingSettings.stickTapEnabled)
                     .putExtra(CaptureService.EXTRA_STICK_ZOOM_IN_X, pendingSettings.stickZoomInXPercent)
                     .putExtra(CaptureService.EXTRA_STICK_ZOOM_IN_Y, pendingSettings.stickZoomInYPercent)
                     .putExtra(CaptureService.EXTRA_STICK_ZOOM_OUT_X, pendingSettings.stickZoomOutXPercent)
@@ -177,6 +178,9 @@ class MainActivity : ComponentActivity() {
             requestNotificationPermission = ::requestNotificationPermission,
         )
         val launchableApps = loadLaunchableApps()
+        settingsStore.initializeFirstRun(
+            yahooNaviInstalled = launchableApps.any { it.packageName == "jp.co.yahoo.android.apps.navi" },
+        )
         setContent {
             App(
                 controllerFor = ::controllerFor,

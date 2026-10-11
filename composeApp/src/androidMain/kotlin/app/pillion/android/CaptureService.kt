@@ -104,6 +104,7 @@ class CaptureService : Service() {
             it.rgb == (intent?.getIntExtra(EXTRA_DASH_MARGIN_COLOR, DashMarginColor.Black.rgb)
                 ?: DashMarginColor.Black.rgb)
         } ?: DashMarginColor.Black
+        val stickTapEnabled = intent?.getBooleanExtra(EXTRA_STICK_TAP_ENABLED, false) ?: false
         val stickZoomInX = intent?.getIntExtra(EXTRA_STICK_ZOOM_IN_X, 93)?.coerceIn(0, 100) ?: 93
         val stickZoomInY = intent?.getIntExtra(EXTRA_STICK_ZOOM_IN_Y, 47)?.coerceIn(0, 100) ?: 47
         val stickZoomOutX = intent?.getIntExtra(EXTRA_STICK_ZOOM_OUT_X, 93)?.coerceIn(0, 100) ?: 93
@@ -146,6 +147,7 @@ class CaptureService : Service() {
             dashLeftMargin,
             dashBottomMargin,
             dashMarginColor,
+            stickTapEnabled,
             stickZoomInX,
             stickZoomInY,
             stickZoomOutX,
@@ -188,6 +190,7 @@ class CaptureService : Service() {
         dashLeftMargin: Int,
         dashBottomMargin: Int,
         dashMarginColor: DashMarginColor,
+        stickTapEnabled: Boolean,
         stickZoomInX: Int,
         stickZoomInY: Int,
         stickZoomOutX: Int,
@@ -246,6 +249,7 @@ class CaptureService : Service() {
                 DashStreamScreenSource(
                     leftMargin = dashLeftMargin,
                     bottomMargin = dashBottomMargin,
+                    stickTapEnabled = stickTapEnabled,
                     zoomInXPercent = stickZoomInX,
                     zoomInYPercent = stickZoomInY,
                     zoomOutXPercent = stickZoomOutX,
@@ -989,6 +993,7 @@ class CaptureService : Service() {
         const val EXTRA_DASH_LEFT_MARGIN = "dashLeftMargin"
         const val EXTRA_DASH_BOTTOM_MARGIN = "dashBottomMargin"
         const val EXTRA_DASH_MARGIN_COLOR = "dashMarginColor"
+        const val EXTRA_STICK_TAP_ENABLED = "stickTapEnabled"
         const val EXTRA_STICK_ZOOM_IN_X = "stickZoomInXPercent"
         const val EXTRA_STICK_ZOOM_IN_Y = "stickZoomInYPercent"
         const val EXTRA_STICK_ZOOM_OUT_X = "stickZoomOutXPercent"

@@ -72,6 +72,7 @@ fun App(
         val savedLeftMargin = remember { settingsStore?.dashLeftMargin() ?: 50 }
         val savedBottomMargin = remember { settingsStore?.dashBottomMargin() ?: 20 }
         val savedMarginColor = remember { settingsStore?.dashMarginColor() ?: DashMarginColor.Black }
+        val savedStickTapEnabled = remember { settingsStore?.stickTapEnabled() ?: false }
         val savedStickZoomInX = remember { settingsStore?.stickZoomInXPercent() ?: 94 }
         val savedStickZoomInY = remember { settingsStore?.stickZoomInYPercent() ?: 48 }
         val savedStickZoomOutX = remember { settingsStore?.stickZoomOutXPercent() ?: 94 }
@@ -93,7 +94,7 @@ fun App(
         val savedDriveStickInY = remember { settingsStore?.driveStickZoomInYPercent() ?: 13 }
         val savedDriveStickOutX = remember { settingsStore?.driveStickZoomOutXPercent() ?: 93 }
         val savedDriveStickOutY = remember { settingsStore?.driveStickZoomOutYPercent() ?: 30 }
-        val savedDriveImageShift = remember { settingsStore?.driveImageShiftPx() ?: 0 }
+        val savedDriveImageShift = remember { settingsStore?.driveImageShiftPx() ?: 5 }
         val savedRestartAppOnVd = remember { settingsStore?.restartAppOnVd() ?: false }
         val savedFixedDashAppEnabled = remember { settingsStore?.fixedDashAppEnabled() ?: false }
         val savedFixedDashAppPackage = remember { settingsStore?.fixedDashAppPackage() }
@@ -105,6 +106,7 @@ fun App(
         var draftLeftMargin by rememberSaveable { mutableStateOf(savedLeftMargin) }
         var draftBottomMargin by rememberSaveable { mutableStateOf(savedBottomMargin) }
         var draftMarginColor by remember { mutableStateOf(savedMarginColor) }
+        var draftStickTapEnabled by rememberSaveable { mutableStateOf(savedStickTapEnabled) }
         var draftStickZoomInX by rememberSaveable { mutableStateOf(savedStickZoomInX) }
         var draftStickZoomInY by rememberSaveable { mutableStateOf(savedStickZoomInY) }
         var draftStickZoomOutX by rememberSaveable { mutableStateOf(savedStickZoomOutX) }
@@ -148,6 +150,7 @@ fun App(
             draftLeftMargin != savedLeftMargin ||
             draftBottomMargin != savedBottomMargin ||
             draftMarginColor != savedMarginColor ||
+            draftStickTapEnabled != savedStickTapEnabled ||
             draftStickZoomInX != savedStickZoomInX ||
             draftStickZoomInY != savedStickZoomInY ||
             draftStickZoomOutX != savedStickZoomOutX ||
@@ -222,6 +225,8 @@ fun App(
                 onDraftBottomMargin = { draftBottomMargin = it },
                 draftMarginColor = draftMarginColor,
                 onDraftMarginColor = { draftMarginColor = it },
+                draftStickTapEnabled = draftStickTapEnabled,
+                onDraftStickTapEnabled = { draftStickTapEnabled = it },
                 draftStickZoomInX = draftStickZoomInX,
                 onDraftStickZoomInX = { draftStickZoomInX = it },
                 draftStickZoomInY = draftStickZoomInY,
@@ -283,6 +288,7 @@ fun App(
                         settingsStore?.setMaxFps(draftMaxFps)
                         settingsStore?.setDashScaleTenths(draftDashScale.tenths)
                         settingsStore?.setDashLayout(draftLeftMargin, draftBottomMargin, draftMarginColor)
+                        settingsStore?.setStickTapEnabled(draftStickTapEnabled)
                         settingsStore?.setStickTapPositions(
                             draftStickZoomInX,
                             draftStickZoomInY,
@@ -343,6 +349,7 @@ fun App(
                             dashLeftMargin = savedLeftMargin,
                             dashBottomMargin = savedBottomMargin,
                             dashMarginColor = savedMarginColor,
+                            stickTapEnabled = savedStickTapEnabled,
                             stickZoomInXPercent = savedStickZoomInX,
                             stickZoomInYPercent = savedStickZoomInY,
                             stickZoomOutXPercent = savedStickZoomOutX,

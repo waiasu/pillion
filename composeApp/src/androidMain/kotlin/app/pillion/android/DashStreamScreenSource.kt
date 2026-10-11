@@ -31,6 +31,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 class DashStreamScreenSource(
     private val leftMargin: Int = 50,
     private val bottomMargin: Int = 16,
+    private val stickTapEnabled: Boolean = false,
     private val zoomInXPercent: Int = 93,
     private val zoomInYPercent: Int = 47,
     private val zoomOutXPercent: Int = 93,
@@ -633,6 +634,8 @@ class DashStreamScreenSource(
      * test. UP/DOWN only select a different final-output point.
      */
     override fun tapDashPoint(up: Boolean, markerFrames: Int): Boolean {
+        // Never gate Auto DRIVE's own tap: that goes directly to tapDashPercentWithMarker.
+        if (!stickTapEnabled) return false
         val isDrive = driveState == DriveState.DRIVE
         if (isDrive && SystemClock.elapsedRealtime() < driveStickReadyAtMs) {
             DiagnosticFlightRecorder.record("DRIVE", "stick input ignored during settle")

@@ -33,6 +33,10 @@ interface SettingsStore {
     /** Persist all restart-required dash-layout settings as one operation. */
     fun setDashLayout(leftMargin: Int, bottomMargin: Int, color: DashMarginColor)
 
+    /** Global gate for vehicle stick-injected taps (Auto DRIVE tap is independent). */
+    fun stickTapEnabled(): Boolean
+    fun setStickTapEnabled(enabled: Boolean)
+
     /** X/Y positions within the usable dash image, expressed as percentages (0..100). */
     fun stickZoomInXPercent(): Int
     fun stickZoomInYPercent(): Int
