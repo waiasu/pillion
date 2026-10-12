@@ -36,6 +36,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.lang.reflect.Proxy
 import java.util.concurrent.Executor
 
@@ -79,16 +80,27 @@ class CaptureService : Service() {
                 "explicit STOP requested keepHelper=$keepDashHelperOnDestroy",
             )
             if (keepDashHelperOnDestroy && dashEnabled) {
-                // Move the promoted app back to display 0 before tearing the service down. Prefer a
-                // fresh command connection so this still works when the frame-stream socket is the
-                // thing that failed; fall back to that existing stream only if direct control fails.
-                if (!DashHelper.demoteExisting(applicationContext)) {
-                    runCatching { dashSwitch?.demote() }
+                // onStartCommand runs on the main thread. Authentication and DEMOTE both use
+                // loopback TCP, so finish the control command on IO before stopping the service;
+                // onDestroy must not close the stream socket before the fallback gets a chance.
+                scope.launch(Dispatchers.IO) {
+                    try {
+                        // Prefer an independent authenticated connection in case the stream failed.
+                        if (!DashHelper.demoteExisting(applicationContext)) {
+                            runCatching { dashSwitch?.demote() }
+                        }
+                        DiagnosticFlightRecorder.record("HELPER", "PRESERVE requested on stop")
+                    } finally {
+                        withContext(Dispatchers.Main) {
+                            removeForegroundNotification()
+                            stopSelf()
+                        }
+                    }
                 }
-                DiagnosticFlightRecorder.record("HELPER", "PRESERVE requested on stop")
+            } else {
+                removeForegroundNotification()
+                stopSelf()
             }
-            removeForegroundNotification()
-            stopSelf()
             return START_NOT_STICKY
         }
         acquireWakeLock()
