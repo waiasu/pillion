@@ -15,6 +15,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import app.pillion.core.DashMarginColor
+import app.pillion.core.DashMargins
 import app.pillion.core.DashResolution
 import app.pillion.core.DashScale
 import app.pillion.core.DashSetup
@@ -71,6 +72,7 @@ fun App(
         val savedLeftMargin = remember { settingsStore?.dashLeftMargin() ?: 50 }
         val savedBottomMargin = remember { settingsStore?.dashBottomMargin() ?: 20 }
         val savedMarginColor = remember { settingsStore?.dashMarginColor() ?: DashMarginColor.Black }
+        val savedStickTapEnabled = remember { settingsStore?.stickTapEnabled() ?: false }
         val savedStickZoomInX = remember { settingsStore?.stickZoomInXPercent() ?: 94 }
         val savedStickZoomInY = remember { settingsStore?.stickZoomInYPercent() ?: 48 }
         val savedStickZoomOutX = remember { settingsStore?.stickZoomOutXPercent() ?: 94 }
@@ -85,6 +87,14 @@ fun App(
         val savedOcr2Top = remember { settingsStore?.ocr2TopPercent() ?: 56 }
         val savedOcr2Right = remember { settingsStore?.ocr2RightPercent() ?: 98 }
         val savedOcr2Bottom = remember { settingsStore?.ocr2BottomPercent() ?: 64 }
+        val savedAutoDriveMode = remember { settingsStore?.autoDriveModeEnabled() ?: false }
+        val savedDriveTapX = remember { settingsStore?.driveTapXPercent() ?: 7 }
+        val savedDriveTapY = remember { settingsStore?.driveTapYPercent() ?: 54 }
+        val savedDriveStickInX = remember { settingsStore?.driveStickZoomInXPercent() ?: 93 }
+        val savedDriveStickInY = remember { settingsStore?.driveStickZoomInYPercent() ?: 13 }
+        val savedDriveStickOutX = remember { settingsStore?.driveStickZoomOutXPercent() ?: 93 }
+        val savedDriveStickOutY = remember { settingsStore?.driveStickZoomOutYPercent() ?: 30 }
+        val savedDriveImageShift = remember { settingsStore?.driveImageShiftPx() ?: 5 }
         val savedRestartAppOnVd = remember { settingsStore?.restartAppOnVd() ?: false }
         val savedFixedDashAppEnabled = remember { settingsStore?.fixedDashAppEnabled() ?: false }
         val savedFixedDashAppPackage = remember { settingsStore?.fixedDashAppPackage() }
@@ -96,6 +106,7 @@ fun App(
         var draftLeftMargin by rememberSaveable { mutableStateOf(savedLeftMargin) }
         var draftBottomMargin by rememberSaveable { mutableStateOf(savedBottomMargin) }
         var draftMarginColor by remember { mutableStateOf(savedMarginColor) }
+        var draftStickTapEnabled by rememberSaveable { mutableStateOf(savedStickTapEnabled) }
         var draftStickZoomInX by rememberSaveable { mutableStateOf(savedStickZoomInX) }
         var draftStickZoomInY by rememberSaveable { mutableStateOf(savedStickZoomInY) }
         var draftStickZoomOutX by rememberSaveable { mutableStateOf(savedStickZoomOutX) }
@@ -110,6 +121,14 @@ fun App(
         var draftOcr2Top by rememberSaveable { mutableStateOf(savedOcr2Top) }
         var draftOcr2Right by rememberSaveable { mutableStateOf(savedOcr2Right) }
         var draftOcr2Bottom by rememberSaveable { mutableStateOf(savedOcr2Bottom) }
+        var draftAutoDriveMode by rememberSaveable { mutableStateOf(savedAutoDriveMode) }
+        var draftDriveTapX by rememberSaveable { mutableStateOf(savedDriveTapX) }
+        var draftDriveTapY by rememberSaveable { mutableStateOf(savedDriveTapY) }
+        var draftDriveStickInX by rememberSaveable { mutableStateOf(savedDriveStickInX) }
+        var draftDriveStickInY by rememberSaveable { mutableStateOf(savedDriveStickInY) }
+        var draftDriveStickOutX by rememberSaveable { mutableStateOf(savedDriveStickOutX) }
+        var draftDriveStickOutY by rememberSaveable { mutableStateOf(savedDriveStickOutY) }
+        var draftDriveImageShift by rememberSaveable { mutableStateOf(savedDriveImageShift) }
         var draftRestartAppOnVd by rememberSaveable { mutableStateOf(savedRestartAppOnVd) }
         var draftFixedDashAppEnabled by rememberSaveable { mutableStateOf(savedFixedDashAppEnabled) }
         var draftFixedDashAppPackage by rememberSaveable { mutableStateOf(savedFixedDashAppPackage) }
@@ -131,6 +150,7 @@ fun App(
             draftLeftMargin != savedLeftMargin ||
             draftBottomMargin != savedBottomMargin ||
             draftMarginColor != savedMarginColor ||
+            draftStickTapEnabled != savedStickTapEnabled ||
             draftStickZoomInX != savedStickZoomInX ||
             draftStickZoomInY != savedStickZoomInY ||
             draftStickZoomOutX != savedStickZoomOutX ||
@@ -145,6 +165,14 @@ fun App(
             draftOcr2Top != savedOcr2Top ||
             draftOcr2Right != savedOcr2Right ||
             draftOcr2Bottom != savedOcr2Bottom ||
+            draftAutoDriveMode != savedAutoDriveMode ||
+            draftDriveTapX != savedDriveTapX ||
+            draftDriveTapY != savedDriveTapY ||
+            draftDriveStickInX != savedDriveStickInX ||
+            draftDriveStickInY != savedDriveStickInY ||
+            draftDriveStickOutX != savedDriveStickOutX ||
+            draftDriveStickOutY != savedDriveStickOutY ||
+            draftDriveImageShift.coerceIn(0, DashMargins.clampBottom(draftBottomMargin)) != savedDriveImageShift ||
             draftRestartAppOnVd != savedRestartAppOnVd ||
             draftFixedDashAppEnabled != savedFixedDashAppEnabled ||
             draftFixedDashAppPackage != savedFixedDashAppPackage
@@ -197,6 +225,8 @@ fun App(
                 onDraftBottomMargin = { draftBottomMargin = it },
                 draftMarginColor = draftMarginColor,
                 onDraftMarginColor = { draftMarginColor = it },
+                draftStickTapEnabled = draftStickTapEnabled,
+                onDraftStickTapEnabled = { draftStickTapEnabled = it },
                 draftStickZoomInX = draftStickZoomInX,
                 onDraftStickZoomInX = { draftStickZoomInX = it },
                 draftStickZoomInY = draftStickZoomInY,
@@ -206,7 +236,7 @@ fun App(
                 draftStickZoomOutY = draftStickZoomOutY,
                 onDraftStickZoomOutY = { draftStickZoomOutY = it },
                 draftOcrEnabled = draftOcrEnabled,
-                onDraftOcrEnabled = { draftOcrEnabled = it },
+                onDraftOcrEnabled = { draftOcrEnabled = it; if (!it) draftAutoDriveMode = false },
                 draftOcrShowArea = draftOcrShowArea,
                 onDraftOcrShowArea = { draftOcrShowArea = it },
                 draftOcrLeft = draftOcrLeft,
@@ -226,11 +256,28 @@ fun App(
                 draftOcr2Bottom = draftOcr2Bottom,
                 onDraftOcr2Bottom = { draftOcr2Bottom = it },
                 draftRestartAppOnVd = draftRestartAppOnVd,
-                onDraftRestartAppOnVd = { draftRestartAppOnVd = it },
+                onDraftRestartAppOnVd = { draftRestartAppOnVd = it; if (!it) draftAutoDriveMode = false },
+                draftAutoDriveMode = draftAutoDriveMode,
+                onDraftAutoDriveMode = { draftAutoDriveMode = it },
+                draftDriveTapX = draftDriveTapX,
+                onDraftDriveTapX = { draftDriveTapX = it },
+                draftDriveTapY = draftDriveTapY,
+                onDraftDriveTapY = { draftDriveTapY = it },
+                draftDriveStickInX = draftDriveStickInX,
+                onDraftDriveStickInX = { draftDriveStickInX = it },
+                draftDriveStickInY = draftDriveStickInY,
+                onDraftDriveStickInY = { draftDriveStickInY = it },
+                draftDriveStickOutX = draftDriveStickOutX,
+                onDraftDriveStickOutX = { draftDriveStickOutX = it },
+                draftDriveStickOutY = draftDriveStickOutY,
+                onDraftDriveStickOutY = { draftDriveStickOutY = it },
+                draftDriveImageShift = draftDriveImageShift,
+                onDraftDriveImageShift = { draftDriveImageShift = it },
+                driveImageShiftMaxPx = savedBottomMargin,
                 draftFixedDashAppEnabled = draftFixedDashAppEnabled,
-                onDraftFixedDashAppEnabled = { draftFixedDashAppEnabled = it },
+                onDraftFixedDashAppEnabled = { draftFixedDashAppEnabled = it; if (!it) draftAutoDriveMode = false },
                 draftFixedDashAppPackage = draftFixedDashAppPackage,
-                onDraftFixedDashAppPackage = { draftFixedDashAppPackage = it },
+                onDraftFixedDashAppPackage = { draftFixedDashAppPackage = it; if (it != "jp.co.yahoo.android.apps.navi") draftAutoDriveMode = false },
                 launchableApps = launchableApps,
                 restartPending = restartPending,
                 onSaveAndRestart = {
@@ -241,6 +288,7 @@ fun App(
                         settingsStore?.setMaxFps(draftMaxFps)
                         settingsStore?.setDashScaleTenths(draftDashScale.tenths)
                         settingsStore?.setDashLayout(draftLeftMargin, draftBottomMargin, draftMarginColor)
+                        settingsStore?.setStickTapEnabled(draftStickTapEnabled)
                         settingsStore?.setStickTapPositions(
                             draftStickZoomInX,
                             draftStickZoomInY,
@@ -260,6 +308,18 @@ fun App(
                             draftOcr2Bottom,
                         )
                         settingsStore?.setRestartAppOnVd(draftRestartAppOnVd)
+                        settingsStore?.setAutoDriveMode(
+                            draftAutoDriveMode && draftOcrEnabled && draftRestartAppOnVd &&
+                                draftFixedDashAppEnabled && draftFixedDashAppPackage == "jp.co.yahoo.android.apps.navi",
+                            draftDriveTapX, draftDriveTapY,
+                        )
+                        settingsStore?.setDriveStickTapPositions(
+                            draftDriveStickInX, draftDriveStickInY,
+                            draftDriveStickOutX, draftDriveStickOutY,
+                        )
+                        settingsStore?.setDriveImageShiftPx(
+                            draftDriveImageShift.coerceIn(0, DashMargins.clampBottom(draftBottomMargin)),
+                        )
                         settingsStore?.setFixedDashApp(draftFixedDashAppEnabled, draftFixedDashAppPackage)
                         // Cover Settings immediately; the helper performs the final force-stop and
                         // fresh launch after the existing cleanup/settle sequence completes.
@@ -289,6 +349,7 @@ fun App(
                             dashLeftMargin = savedLeftMargin,
                             dashBottomMargin = savedBottomMargin,
                             dashMarginColor = savedMarginColor,
+                            stickTapEnabled = savedStickTapEnabled,
                             stickZoomInXPercent = savedStickZoomInX,
                             stickZoomInYPercent = savedStickZoomInY,
                             stickZoomOutXPercent = savedStickZoomOutX,
@@ -304,6 +365,14 @@ fun App(
                             ocr2RightPercent = savedOcr2Right,
                             ocr2BottomPercent = savedOcr2Bottom,
                             restartAppOnVd = savedRestartAppOnVd,
+                            autoDriveModeEnabled = savedAutoDriveMode,
+                            driveTapXPercent = savedDriveTapX,
+                            driveTapYPercent = savedDriveTapY,
+                            driveStickZoomInXPercent = savedDriveStickInX,
+                            driveStickZoomInYPercent = savedDriveStickInY,
+                            driveStickZoomOutXPercent = savedDriveStickOutX,
+                            driveStickZoomOutYPercent = savedDriveStickOutY,
+                            driveImageShiftPx = savedDriveImageShift,
                             fixedDashAppEnabled = savedFixedDashAppEnabled,
                             fixedDashAppPackage = savedFixedDashAppPackage,
                         ),

@@ -11,6 +11,33 @@ import app.pillion.core.ThemeMode
 class AndroidSettingsStore(context: Context) : SettingsStore {
     private val prefs = context.getSharedPreferences("pillion.settings", Context.MODE_PRIVATE)
 
+    /**
+     * Run before composing the UI. Do not apply a new preset to upgrades or saved user data.
+     * A genuinely empty preference file is the only automatic-opt-in opportunity.
+     */
+    fun initializeFirstRun(yahooNaviInstalled: Boolean) {
+        if (prefs.getBoolean(KEY_INITIAL_PRESET_APPLIED, false)) return
+        if (prefs.all.isNotEmpty()) {
+            // An existing installation: preserve every saved setting, including feature toggles.
+            prefs.edit().putBoolean(KEY_INITIAL_PRESET_APPLIED, true).commit()
+            return
+        }
+        val editor = prefs.edit()
+            .putBoolean(KEY_INITIAL_PRESET_APPLIED, true)
+        if (yahooNaviInstalled) {
+            editor
+                .putBoolean(KEY_STICK_TAP_ENABLED, true)
+                .putBoolean(KEY_OCR_ENABLED, true)
+                .putBoolean(KEY_OCR_SHOW_AREA, false)
+                .putBoolean(KEY_RESTART_APP_ON_VD, true)
+                .putBoolean(KEY_FIXED_DASH_APP_ENABLED, true)
+                .putString(KEY_FIXED_DASH_APP_PACKAGE, YAHOO_NAVI_PACKAGE)
+                .putBoolean(KEY_AUTO_DRIVE_MODE, true)
+        }
+        // Defaults for no-Yahoo devices remain OFF; neither branch starts casting.
+        check(editor.commit()) { "Could not save first-run preset" }
+    }
+
     override fun themeMode(): ThemeMode =
         runCatching { ThemeMode.valueOf(prefs.getString(KEY_THEME, null) ?: ThemeMode.SYSTEM.name) }
             .getOrDefault(ThemeMode.SYSTEM)
@@ -73,6 +100,12 @@ class AndroidSettingsStore(context: Context) : SettingsStore {
             .commit()
     }
 
+    override fun stickTapEnabled(): Boolean = prefs.getBoolean(KEY_STICK_TAP_ENABLED, false)
+
+    override fun setStickTapEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_STICK_TAP_ENABLED, enabled).commit()
+    }
+
     override fun stickZoomInXPercent(): Int = prefs.getInt(KEY_STICK_ZOOM_IN_X, 93).coerceIn(0, 100)
     override fun stickZoomInYPercent(): Int = prefs.getInt(KEY_STICK_ZOOM_IN_Y, 47).coerceIn(0, 100)
     override fun stickZoomOutXPercent(): Int = prefs.getInt(KEY_STICK_ZOOM_OUT_X, 93).coerceIn(0, 100)
@@ -111,6 +144,39 @@ class AndroidSettingsStore(context: Context) : SettingsStore {
             .putInt(KEY_OCR2_TOP, area2Top.coerceIn(0, 100))
             .putInt(KEY_OCR2_RIGHT, area2Right.coerceIn(0, 100))
             .putInt(KEY_OCR2_BOTTOM, area2Bottom.coerceIn(0, 100))
+            .commit()
+    }
+
+    override fun autoDriveModeEnabled(): Boolean = prefs.getBoolean(KEY_AUTO_DRIVE_MODE, false)
+    override fun driveTapXPercent(): Int = prefs.getInt(KEY_DRIVE_TAP_X, 7).coerceIn(0, 100)
+    override fun driveTapYPercent(): Int = prefs.getInt(KEY_DRIVE_TAP_Y, 54).coerceIn(0, 100)
+
+    override fun driveStickZoomInXPercent(): Int = prefs.getInt(KEY_DRIVE_STICK_IN_X, 93).coerceIn(0, 100)
+    override fun driveStickZoomInYPercent(): Int = prefs.getInt(KEY_DRIVE_STICK_IN_Y, 13).coerceIn(0, 100)
+    override fun driveStickZoomOutXPercent(): Int = prefs.getInt(KEY_DRIVE_STICK_OUT_X, 93).coerceIn(0, 100)
+    override fun driveStickZoomOutYPercent(): Int = prefs.getInt(KEY_DRIVE_STICK_OUT_Y, 30).coerceIn(0, 100)
+    override fun setDriveStickTapPositions(zoomInX: Int, zoomInY: Int, zoomOutX: Int, zoomOutY: Int) {
+        prefs.edit()
+            .putInt(KEY_DRIVE_STICK_IN_X, zoomInX.coerceIn(0, 100))
+            .putInt(KEY_DRIVE_STICK_IN_Y, zoomInY.coerceIn(0, 100))
+            .putInt(KEY_DRIVE_STICK_OUT_X, zoomOutX.coerceIn(0, 100))
+            .putInt(KEY_DRIVE_STICK_OUT_Y, zoomOutY.coerceIn(0, 100))
+            .commit()
+    }
+
+    override fun driveImageShiftPx(): Int =
+        prefs.getInt(KEY_DRIVE_IMAGE_SHIFT, 5).coerceIn(0, dashBottomMargin())
+
+    override fun setDriveImageShiftPx(value: Int) {
+        // Call after setDashLayout; restart may follow immediately, so commit synchronously.
+        prefs.edit().putInt(KEY_DRIVE_IMAGE_SHIFT, value.coerceIn(0, dashBottomMargin())).commit()
+    }
+
+    override fun setAutoDriveMode(enabled: Boolean, xPercent: Int, yPercent: Int) {
+        prefs.edit()
+            .putBoolean(KEY_AUTO_DRIVE_MODE, enabled)
+            .putInt(KEY_DRIVE_TAP_X, xPercent.coerceIn(0, 100))
+            .putInt(KEY_DRIVE_TAP_Y, yPercent.coerceIn(0, 100))
             .commit()
     }
 
@@ -154,6 +220,7 @@ class AndroidSettingsStore(context: Context) : SettingsStore {
         const val KEY_DASH_LEFT_MARGIN = "dash_left_margin"
         const val KEY_DASH_BOTTOM_MARGIN = "dash_bottom_margin"
         const val KEY_DASH_MARGIN_COLOR = "dash_margin_color"
+        const val KEY_STICK_TAP_ENABLED = "stick_tap_enabled"
         const val KEY_STICK_ZOOM_IN_X = "stick_zoom_in_x_percent"
         const val KEY_STICK_ZOOM_IN_Y = "stick_zoom_in_y_percent"
         const val KEY_STICK_ZOOM_OUT_X = "stick_zoom_out_x_percent"
@@ -168,9 +235,19 @@ class AndroidSettingsStore(context: Context) : SettingsStore {
         const val KEY_OCR2_TOP = "ocr2_top_percent"
         const val KEY_OCR2_RIGHT = "ocr2_right_percent"
         const val KEY_OCR2_BOTTOM = "ocr2_bottom_percent"
+        const val KEY_AUTO_DRIVE_MODE = "auto_drive_mode"
+        const val KEY_DRIVE_TAP_X = "drive_tap_x_percent"
+        const val KEY_DRIVE_TAP_Y = "drive_tap_y_percent"
+        const val KEY_DRIVE_STICK_IN_X = "drive_stick_in_x_percent"
+        const val KEY_DRIVE_STICK_IN_Y = "drive_stick_in_y_percent"
+        const val KEY_DRIVE_STICK_OUT_X = "drive_stick_out_x_percent"
+        const val KEY_DRIVE_STICK_OUT_Y = "drive_stick_out_y_percent"
+        const val KEY_DRIVE_IMAGE_SHIFT = "drive_image_shift_px"
         const val KEY_RESTART_APP_ON_VD = "restart_app_on_vd"
         const val KEY_FIXED_DASH_APP_ENABLED = "fixed_dash_app_enabled"
         const val KEY_FIXED_DASH_APP_PACKAGE = "fixed_dash_app_package"
         const val KEY_BIKE = "selected_bike_id"
+        const val KEY_INITIAL_PRESET_APPLIED = "initial_preset_applied"
+        const val YAHOO_NAVI_PACKAGE = "jp.co.yahoo.android.apps.navi"
     }
 }

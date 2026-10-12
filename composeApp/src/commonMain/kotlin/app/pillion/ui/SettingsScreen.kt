@@ -87,6 +87,8 @@ internal fun SettingsScreen(
     onDraftBottomMargin: (Int) -> Unit = {},
     draftMarginColor: DashMarginColor = DashMarginColor.Black,
     onDraftMarginColor: (DashMarginColor) -> Unit = {},
+    draftStickTapEnabled: Boolean = false,
+    onDraftStickTapEnabled: (Boolean) -> Unit = {},
     draftStickZoomInX: Int = 94,
     onDraftStickZoomInX: (Int) -> Unit = {},
     draftStickZoomInY: Int = 48,
@@ -115,6 +117,23 @@ internal fun SettingsScreen(
     onDraftOcr2Right: (Int) -> Unit = {},
     draftOcr2Bottom: Int = 64,
     onDraftOcr2Bottom: (Int) -> Unit = {},
+    draftAutoDriveMode: Boolean = false,
+    onDraftAutoDriveMode: (Boolean) -> Unit = {},
+    draftDriveTapX: Int = 7,
+    onDraftDriveTapX: (Int) -> Unit = {},
+    draftDriveTapY: Int = 54,
+    onDraftDriveTapY: (Int) -> Unit = {},
+    draftDriveStickInX: Int = 93,
+    onDraftDriveStickInX: (Int) -> Unit = {},
+    draftDriveStickInY: Int = 13,
+    onDraftDriveStickInY: (Int) -> Unit = {},
+    draftDriveStickOutX: Int = 93,
+    onDraftDriveStickOutX: (Int) -> Unit = {},
+    draftDriveStickOutY: Int = 30,
+    onDraftDriveStickOutY: (Int) -> Unit = {},
+    draftDriveImageShift: Int = 5,
+    onDraftDriveImageShift: (Int) -> Unit = {},
+    driveImageShiftMaxPx: Int = 0,
     draftRestartAppOnVd: Boolean = false,
     onDraftRestartAppOnVd: (Boolean) -> Unit = {},
     draftFixedDashAppEnabled: Boolean = false,
@@ -133,6 +152,11 @@ internal fun SettingsScreen(
 ) {
     val uriHandler = LocalUriHandler.current
     var showFixedAppPicker by remember { mutableStateOf(false) }
+    var driveSettingsExpanded by remember { mutableStateOf(false) }
+    var navStickSettingsExpanded by remember { mutableStateOf(false) }
+    var ocrAreaSettingsExpanded by remember { mutableStateOf(false) }
+    val driveEligible = draftOcrEnabled && draftRestartAppOnVd &&
+        draftFixedDashAppEnabled && draftFixedDashAppPackage == "jp.co.yahoo.android.apps.navi"
     val selectedFixedApp = launchableApps.firstOrNull { it.packageName == draftFixedDashAppPackage }
 
     if (showFixedAppPicker) {
@@ -355,19 +379,32 @@ internal fun SettingsScreen(
                 GroupDivider()
                 DashResolutionSelector(dashScale, draftLeftMargin, draftBottomMargin, onDashScale)
                 GroupDivider()
-                Text(
-                    stringResource(Res.string.stick_tap_position),
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
-                )
-                Text(
-                    stringResource(Res.string.stick_tap_position_help),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 6.dp),
-                )
-                SettingSlider(
+                Row(
+                    Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("Stick tap input", modifier = Modifier.weight(1f))
+                    Switch(checked = draftStickTapEnabled, onCheckedChange = onDraftStickTapEnabled)
+                }
+                GroupDivider()
+                Row(
+                    Modifier.fillMaxWidth()
+                        .clickable { navStickSettingsExpanded = !navStickSettingsExpanded }
+                        .padding(vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("NAV mode stick tap position", modifier = Modifier.weight(1f))
+                    Text(if (navStickSettingsExpanded) "▲" else "▼",
+                        color = MaterialTheme.colorScheme.primary)
+                }
+                if (navStickSettingsExpanded) {
+                    Text(
+                        stringResource(Res.string.stick_tap_position_help),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 6.dp),
+                    )
+                    SettingSlider(
                     stringResource(Res.string.zoom_in_horizontal),
                     "$draftStickZoomInX%",
                     draftStickZoomInX.toFloat(),
@@ -402,6 +439,7 @@ internal fun SettingsScreen(
                     100f,
                     step = 1f,
                 ) { onDraftStickZoomOutY(it.roundToInt().coerceIn(0, 100)) }
+                }
                 GroupDivider()
                 Text(
                     stringResource(Res.string.ocr_title),
@@ -435,12 +473,23 @@ internal fun SettingsScreen(
                     )
                 }
                 GroupDivider()
-                Text(
-                    stringResource(Res.string.ocr_area_1),
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.padding(top = 8.dp, bottom = 2.dp),
-                )
+                Row(
+                    Modifier.fillMaxWidth()
+                        .clickable { ocrAreaSettingsExpanded = !ocrAreaSettingsExpanded }
+                        .padding(vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("OCR area settings", modifier = Modifier.weight(1f))
+                    Text(if (ocrAreaSettingsExpanded) "▲" else "▼",
+                        color = MaterialTheme.colorScheme.primary)
+                }
+                if (ocrAreaSettingsExpanded) {
+                    Text(
+                        stringResource(Res.string.ocr_area_1),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(top = 8.dp, bottom = 2.dp),
+                    )
                 SettingSlider(
                     stringResource(Res.string.ocr_left),
                     "$draftOcrLeft%",
@@ -497,6 +546,7 @@ internal fun SettingsScreen(
                 GroupDivider()
                 SettingSlider(stringResource(Res.string.ocr_bottom), "$draftOcr2Bottom%", draftOcr2Bottom.toFloat(), 0f, 100f, step = 1f) {
                     onDraftOcr2Bottom(it.roundToInt().coerceIn(0, 100))
+                }
                 }
                 GroupDivider()
                 Row(
@@ -555,6 +605,87 @@ internal fun SettingsScreen(
                         color = MaterialTheme.colorScheme.primary,
                     )
                 }
+                GroupDivider()
+                Row(
+                    Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Auto DRIVE mode")
+                        Text(
+                            if (driveEligible) "After PROMOTE: switch on two empty Area 1 OCR results."
+                            else "Requires selected Yahoo! Car Navigation, OCR and Restart app on VD.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(
+                        checked = driveEligible && draftAutoDriveMode,
+                        enabled = driveEligible,
+                        onCheckedChange = onDraftAutoDriveMode,
+                    )
+                }
+                GroupDivider()
+                Row(
+                    Modifier.fillMaxWidth()
+                        .clickable { driveSettingsExpanded = !driveSettingsExpanded }
+                        .padding(vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("DRIVE mode settings", modifier = Modifier.weight(1f))
+                    Text(if (driveSettingsExpanded) "▲" else "▼",
+                        color = MaterialTheme.colorScheme.primary)
+                }
+                if (driveSettingsExpanded) {
+                    Text(
+                        "Auto DRIVE button tap (percent of VD content).",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    SettingSlider("DRIVE tap horizontal", "$draftDriveTapX%", draftDriveTapX.toFloat(),
+                        0f, 100f, step = 1f) {
+                        onDraftDriveTapX(it.roundToInt().coerceIn(0, 100))
+                    }
+                    GroupDivider()
+                    SettingSlider("DRIVE tap vertical", "$draftDriveTapY%", draftDriveTapY.toFloat(),
+                        0f, 100f, step = 1f) {
+                        onDraftDriveTapY(it.roundToInt().coerceIn(0, 100))
+                    }
+                    GroupDivider()
+                    Text("DRIVE stick zoom taps (active 1 second after the DRIVE tap).",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    SettingSlider("Stick UP horizontal", "$draftDriveStickInX%", draftDriveStickInX.toFloat(),
+                        0f, 100f, step = 1f) { onDraftDriveStickInX(it.roundToInt().coerceIn(0, 100)) }
+                    GroupDivider()
+                    SettingSlider("Stick UP vertical", "$draftDriveStickInY%", draftDriveStickInY.toFloat(),
+                        0f, 100f, step = 1f) { onDraftDriveStickInY(it.roundToInt().coerceIn(0, 100)) }
+                    GroupDivider()
+                    SettingSlider("Stick DOWN horizontal", "$draftDriveStickOutX%", draftDriveStickOutX.toFloat(),
+                        0f, 100f, step = 1f) { onDraftDriveStickOutX(it.roundToInt().coerceIn(0, 100)) }
+                    GroupDivider()
+                    SettingSlider("Stick DOWN vertical", "$draftDriveStickOutY%", draftDriveStickOutY.toFloat(),
+                        0f, 100f, step = 1f) { onDraftDriveStickOutY(it.roundToInt().coerceIn(0, 100)) }
+                    GroupDivider()
+                    Text(
+                        "DRIVE image shift (up only, after Auto DRIVE tap; 0 = Standard).",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    // Max is the SAVED bottom margin, not the editable draft. Do not resize
+                    // this slider as the user edits the margin; clamp the value on Save & Restart.
+                    if (driveImageShiftMaxPx > 0) {
+                        SettingSlider(
+                            "Upward shift", "$draftDriveImageShift px",
+                            draftDriveImageShift.coerceIn(0, driveImageShiftMaxPx).toFloat(),
+                            0f, driveImageShiftMaxPx.toFloat(), step = 1f,
+                        ) { onDraftDriveImageShift(it.roundToInt().coerceIn(0, driveImageShiftMaxPx)) }
+                    } else {
+                        Text("Standard (Bottom Margin is 0px)",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
             }
             Text(
                 stringResource(Res.string.dash_feature_help),
@@ -596,9 +727,9 @@ internal fun SettingsScreen(
             GroupDivider()
             LinkRow(stringResource(Res.string.source_code)) { uriHandler.openUri(REPO_URL) }
             GroupDivider()
-            LinkRow(stringResource(Res.string.report_issue)) { uriHandler.openUri("$REPO_URL/issues") }
-            GroupDivider()
             LinkRow(stringResource(Res.string.changelog)) { uriHandler.openUri("$REPO_URL/blob/main/CHANGELOG.md") }
+            GroupDivider()
+            LinkRow("XMAX Custom Fork v35") { uriHandler.openUri("https://github.com/waiasu/pillion") }
         }
 
         Spacer(Modifier.height(28.dp))

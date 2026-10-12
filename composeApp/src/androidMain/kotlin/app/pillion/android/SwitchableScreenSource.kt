@@ -26,6 +26,9 @@ class SwitchableScreenSource(
     @Volatile private var reloadMaskStartFrameSeq = 0L
     @Volatile private var mode = Mode.MIRROR
     @Volatile private var dashFallback = Mode.MIRROR
+    // ROAD is a separate meter overlay; STATUS frames alone do not clear its last text.
+    @Volatile private var clearRoadOnStatusAck = false
+    @Volatile private var statusRoadClearReady = false
 
     override fun start() {
         mirror.start()
@@ -74,15 +77,29 @@ class SwitchableScreenSource(
         // Reconnects reuse this ScreenSource. Reset only the optional OCR side; the proven v17
         // mirror/dash source and helper lifecycle stay untouched.
         dash.onTransportConnecting()
+        if (mode == Mode.STATUS) clearRoadOnStatusAck = true
     }
 
     override fun onImageAck() {
-        // ACKs from MIRROR/STATUS must never start OCR. The grace period begins only after DASH is
-        // actually promoted and receiving successful IMAGE_ACKs.
-        if (mode == Mode.DASH) dash.onImageAck()
+        // DASH ACKs drive OCR. STATUS ACKs are only used once to erase stale ROAD text.
+        when (mode) {
+            Mode.DASH -> dash.onImageAck()
+            Mode.STATUS -> if (clearRoadOnStatusAck) {
+                clearRoadOnStatusAck = false
+                statusRoadClearReady = true
+            }
+            Mode.MIRROR -> Unit
+        }
     }
 
-    override fun pollRoadText(): String? = if (mode == Mode.DASH) dash.pollRoadText() else null
+    override fun pollRoadText(): String? = when (mode) {
+        Mode.DASH -> dash.pollRoadText()
+        Mode.STATUS -> if (statusRoadClearReady) {
+            statusRoadClearReady = false
+            ""
+        } else null
+        Mode.MIRROR -> null
+    }
 
     override fun stop() {
         runCatching { mirror.stop() }
@@ -99,6 +116,8 @@ class SwitchableScreenSource(
 
         // The optional restart cover is output-only. Arm it before sending PROMOTE so the meter
         // never exposes the transient VD frame while the task-restart path is preparing to run.
+        clearRoadOnStatusAck = false
+        statusRoadClearReady = false
         scheduleReloadMaskIfNeeded(component)
         dash.promote(component)
         mode = Mode.DASH
@@ -113,6 +132,8 @@ class SwitchableScreenSource(
         status.reset()
         mode = Mode.STATUS
         dashFallback = Mode.STATUS
+        clearRoadOnStatusAck = true
+        statusRoadClearReady = false
         dash.demote()
     }
 

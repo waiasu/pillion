@@ -33,6 +33,10 @@ interface SettingsStore {
     /** Persist all restart-required dash-layout settings as one operation. */
     fun setDashLayout(leftMargin: Int, bottomMargin: Int, color: DashMarginColor)
 
+    /** Global gate for vehicle stick-injected taps (Auto DRIVE tap is independent). */
+    fun stickTapEnabled(): Boolean
+    fun setStickTapEnabled(enabled: Boolean)
+
     /** X/Y positions within the usable dash image, expressed as percentages (0..100). */
     fun stickZoomInXPercent(): Int
     fun stickZoomInYPercent(): Int
@@ -63,6 +67,21 @@ interface SettingsStore {
         area2Right: Int,
         area2Bottom: Int,
     )
+
+    /** Optional first-stage Yahoo! NAVI DRIVE auto-switch after PROMOTE. */
+    fun autoDriveModeEnabled(): Boolean
+    fun driveTapXPercent(): Int
+    fun driveTapYPercent(): Int
+    fun setAutoDriveMode(enabled: Boolean, xPercent: Int, yPercent: Int)
+    fun driveStickZoomInXPercent(): Int
+    fun driveStickZoomInYPercent(): Int
+    fun driveStickZoomOutXPercent(): Int
+    fun driveStickZoomOutYPercent(): Int
+    fun setDriveStickTapPositions(zoomInX: Int, zoomInY: Int, zoomOutX: Int, zoomOutY: Int)
+
+    /** Upward final-canvas translation in DRIVE, bounded by the saved bottom margin. */
+    fun driveImageShiftPx(): Int
+    fun setDriveImageShiftPx(value: Int)
 
     /** Restart the promoted app UI once on the virtual display after the normal move completes. */
     fun restartAppOnVd(): Boolean

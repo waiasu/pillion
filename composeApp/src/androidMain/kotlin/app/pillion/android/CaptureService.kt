@@ -104,6 +104,7 @@ class CaptureService : Service() {
             it.rgb == (intent?.getIntExtra(EXTRA_DASH_MARGIN_COLOR, DashMarginColor.Black.rgb)
                 ?: DashMarginColor.Black.rgb)
         } ?: DashMarginColor.Black
+        val stickTapEnabled = intent?.getBooleanExtra(EXTRA_STICK_TAP_ENABLED, false) ?: false
         val stickZoomInX = intent?.getIntExtra(EXTRA_STICK_ZOOM_IN_X, 93)?.coerceIn(0, 100) ?: 93
         val stickZoomInY = intent?.getIntExtra(EXTRA_STICK_ZOOM_IN_Y, 47)?.coerceIn(0, 100) ?: 47
         val stickZoomOutX = intent?.getIntExtra(EXTRA_STICK_ZOOM_OUT_X, 93)?.coerceIn(0, 100) ?: 93
@@ -119,6 +120,15 @@ class CaptureService : Service() {
         val ocr2Right = intent?.getIntExtra(EXTRA_OCR2_RIGHT, 98)?.coerceIn(0, 100) ?: 98
         val ocr2Bottom = intent?.getIntExtra(EXTRA_OCR2_BOTTOM, 64)?.coerceIn(0, 100) ?: 64
         val restartAppOnVd = intent?.getBooleanExtra(EXTRA_RESTART_APP_ON_VD, false) ?: false
+        val autoDriveMode = intent?.getBooleanExtra(EXTRA_AUTO_DRIVE_MODE, false) ?: false
+        val driveTapX = intent?.getIntExtra(EXTRA_DRIVE_TAP_X, 7)?.coerceIn(0, 100) ?: 7
+        val driveTapY = intent?.getIntExtra(EXTRA_DRIVE_TAP_Y, 54)?.coerceIn(0, 100) ?: 54
+        val driveStickInX = intent?.getIntExtra(EXTRA_DRIVE_STICK_IN_X, 93)?.coerceIn(0, 100) ?: 93
+        val driveStickInY = intent?.getIntExtra(EXTRA_DRIVE_STICK_IN_Y, 13)?.coerceIn(0, 100) ?: 13
+        val driveStickOutX = intent?.getIntExtra(EXTRA_DRIVE_STICK_OUT_X, 93)?.coerceIn(0, 100) ?: 93
+        val driveStickOutY = intent?.getIntExtra(EXTRA_DRIVE_STICK_OUT_Y, 30)?.coerceIn(0, 100) ?: 30
+        val driveImageShift = intent?.getIntExtra(EXTRA_DRIVE_IMAGE_SHIFT, 0)
+            ?.coerceIn(0, dashBottomMargin) ?: 0
         fixedDashAppEnabled = intent?.getBooleanExtra(EXTRA_FIXED_DASH_APP_ENABLED, false) ?: false
         fixedDashAppPackage = intent?.getStringExtra(EXTRA_FIXED_DASH_APP_PACKAGE)
             ?.trim()
@@ -137,6 +147,7 @@ class CaptureService : Service() {
             dashLeftMargin,
             dashBottomMargin,
             dashMarginColor,
+            stickTapEnabled,
             stickZoomInX,
             stickZoomInY,
             stickZoomOutX,
@@ -152,6 +163,15 @@ class CaptureService : Service() {
             ocr2Right,
             ocr2Bottom,
             restartAppOnVd,
+            autoDriveMode && ocrEnabled && restartAppOnVd && fixedDashAppEnabled &&
+                fixedDashAppPackage == "jp.co.yahoo.android.apps.navi",
+            driveTapX,
+            driveTapY,
+            driveStickInX,
+            driveStickInY,
+            driveStickOutX,
+            driveStickOutY,
+            driveImageShift,
         )
         return START_NOT_STICKY
     }
@@ -170,6 +190,7 @@ class CaptureService : Service() {
         dashLeftMargin: Int,
         dashBottomMargin: Int,
         dashMarginColor: DashMarginColor,
+        stickTapEnabled: Boolean,
         stickZoomInX: Int,
         stickZoomInY: Int,
         stickZoomOutX: Int,
@@ -185,6 +206,14 @@ class CaptureService : Service() {
         ocr2Right: Int,
         ocr2Bottom: Int,
         restartAppOnVd: Boolean,
+        autoDriveMode: Boolean,
+        driveTapX: Int,
+        driveTapY: Int,
+        driveStickInX: Int,
+        driveStickInY: Int,
+        driveStickOutX: Int,
+        driveStickOutY: Int,
+        driveImageShift: Int,
     ) {
         // A screen-capture grant is single-use. If it's missing or stale (e.g. cleared when the app
         // crashed + restarted), starting a mediaProjection foreground service throws SecurityException
@@ -220,12 +249,22 @@ class CaptureService : Service() {
                 DashStreamScreenSource(
                     leftMargin = dashLeftMargin,
                     bottomMargin = dashBottomMargin,
+                    stickTapEnabled = stickTapEnabled,
                     zoomInXPercent = stickZoomInX,
                     zoomInYPercent = stickZoomInY,
                     zoomOutXPercent = stickZoomOutX,
                     zoomOutYPercent = stickZoomOutY,
                     ocrEnabled = ocrEnabled,
                     restartAppOnVd = restartAppOnVd,
+                    autoDriveMode = autoDriveMode,
+                    driveTapXPercent = driveTapX,
+                    driveTapYPercent = driveTapY,
+                    driveZoomInXPercent = driveStickInX,
+                    driveZoomInYPercent = driveStickInY,
+                    driveZoomOutXPercent = driveStickOutX,
+                    driveZoomOutYPercent = driveStickOutY,
+                    driveImageShiftPx = driveImageShift,
+                    markerMaxFps = maxFps,
                     appContext = applicationContext,
                 ),
                 restartAppOnVd = restartAppOnVd,
@@ -954,6 +993,7 @@ class CaptureService : Service() {
         const val EXTRA_DASH_LEFT_MARGIN = "dashLeftMargin"
         const val EXTRA_DASH_BOTTOM_MARGIN = "dashBottomMargin"
         const val EXTRA_DASH_MARGIN_COLOR = "dashMarginColor"
+        const val EXTRA_STICK_TAP_ENABLED = "stickTapEnabled"
         const val EXTRA_STICK_ZOOM_IN_X = "stickZoomInXPercent"
         const val EXTRA_STICK_ZOOM_IN_Y = "stickZoomInYPercent"
         const val EXTRA_STICK_ZOOM_OUT_X = "stickZoomOutXPercent"
@@ -969,6 +1009,14 @@ class CaptureService : Service() {
         const val EXTRA_OCR2_RIGHT = "ocr2RightPercent"
         const val EXTRA_OCR2_BOTTOM = "ocr2BottomPercent"
         const val EXTRA_RESTART_APP_ON_VD = "restartAppOnVd"
+        const val EXTRA_AUTO_DRIVE_MODE = "autoDriveMode"
+        const val EXTRA_DRIVE_TAP_X = "driveTapXPercent"
+        const val EXTRA_DRIVE_TAP_Y = "driveTapYPercent"
+        const val EXTRA_DRIVE_STICK_IN_X = "driveStickInXPercent"
+        const val EXTRA_DRIVE_STICK_IN_Y = "driveStickInYPercent"
+        const val EXTRA_DRIVE_STICK_OUT_X = "driveStickOutXPercent"
+        const val EXTRA_DRIVE_STICK_OUT_Y = "driveStickOutYPercent"
+        const val EXTRA_DRIVE_IMAGE_SHIFT = "driveImageShiftPx"
         const val EXTRA_FIXED_DASH_APP_ENABLED = "fixedDashAppEnabled"
         const val EXTRA_FIXED_DASH_APP_PACKAGE = "fixedDashAppPackage"
 

@@ -87,6 +87,7 @@ class MainActivity : ComponentActivity() {
                     .putExtra(CaptureService.EXTRA_DASH_LEFT_MARGIN, pendingSettings.dashLeftMargin)
                     .putExtra(CaptureService.EXTRA_DASH_BOTTOM_MARGIN, pendingSettings.dashBottomMargin)
                     .putExtra(CaptureService.EXTRA_DASH_MARGIN_COLOR, pendingSettings.dashMarginColor.rgb)
+                    .putExtra(CaptureService.EXTRA_STICK_TAP_ENABLED, pendingSettings.stickTapEnabled)
                     .putExtra(CaptureService.EXTRA_STICK_ZOOM_IN_X, pendingSettings.stickZoomInXPercent)
                     .putExtra(CaptureService.EXTRA_STICK_ZOOM_IN_Y, pendingSettings.stickZoomInYPercent)
                     .putExtra(CaptureService.EXTRA_STICK_ZOOM_OUT_X, pendingSettings.stickZoomOutXPercent)
@@ -102,6 +103,14 @@ class MainActivity : ComponentActivity() {
                     .putExtra(CaptureService.EXTRA_OCR2_RIGHT, pendingSettings.ocr2RightPercent)
                     .putExtra(CaptureService.EXTRA_OCR2_BOTTOM, pendingSettings.ocr2BottomPercent)
                     .putExtra(CaptureService.EXTRA_RESTART_APP_ON_VD, pendingSettings.restartAppOnVd)
+                    .putExtra(CaptureService.EXTRA_AUTO_DRIVE_MODE, pendingSettings.autoDriveModeEnabled)
+                    .putExtra(CaptureService.EXTRA_DRIVE_TAP_X, pendingSettings.driveTapXPercent)
+                    .putExtra(CaptureService.EXTRA_DRIVE_TAP_Y, pendingSettings.driveTapYPercent)
+                    .putExtra(CaptureService.EXTRA_DRIVE_STICK_IN_X, pendingSettings.driveStickZoomInXPercent)
+                    .putExtra(CaptureService.EXTRA_DRIVE_STICK_IN_Y, pendingSettings.driveStickZoomInYPercent)
+                    .putExtra(CaptureService.EXTRA_DRIVE_STICK_OUT_X, pendingSettings.driveStickZoomOutXPercent)
+                    .putExtra(CaptureService.EXTRA_DRIVE_STICK_OUT_Y, pendingSettings.driveStickZoomOutYPercent)
+                    .putExtra(CaptureService.EXTRA_DRIVE_IMAGE_SHIFT, pendingSettings.driveImageShiftPx)
                     .putExtra(CaptureService.EXTRA_FIXED_DASH_APP_ENABLED, pendingSettings.fixedDashAppEnabled)
                     .putExtra(CaptureService.EXTRA_FIXED_DASH_APP_PACKAGE, pendingSettings.fixedDashAppPackage)
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(intent)
@@ -169,6 +178,9 @@ class MainActivity : ComponentActivity() {
             requestNotificationPermission = ::requestNotificationPermission,
         )
         val launchableApps = loadLaunchableApps()
+        settingsStore.initializeFirstRun(
+            yahooNaviInstalled = launchableApps.any { it.packageName == "jp.co.yahoo.android.apps.navi" },
+        )
         setContent {
             App(
                 controllerFor = ::controllerFor,
