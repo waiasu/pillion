@@ -25,6 +25,7 @@ object DashHelper {
     private const val CONNECT_TIMEOUT_MS = 250
     private const val AUTH_TIMEOUT_MS = 2_000
     private const val TOKEN_FILE = "dash_helper_token"
+    @Volatile private var restartHelperToken: String? = null
     private const val START_TIMEOUT_MS = 5_000L
     private const val WATCHDOG_INTERVAL_MS = 3_000L
     private const val LOOPBACK_CONNECT_TRIES = 10
@@ -265,11 +266,14 @@ object DashHelper {
 
     /** Rotate per helper spawn; the private file lets Pillion reconnect after app process death. */
     internal fun newToken(context: Context): String {
-        val bytes = ByteArray(32).also { SecureRandom().nextBytes(it) }
-        val token = bytes.joinToString("") { "%02x".format(it) }
+        val token = randomSecret()
         File(context.filesDir, TOKEN_FILE).writeText(token)
         return token
     }
+
+    private fun randomSecret(): String =
+        ByteArray(32).also { SecureRandom().nextBytes(it) }
+            .joinToString("") { "%02x".format(it) }
 
     /** Demote an already-running helper without requiring ADB or the frame-stream socket. */
     fun demoteExisting(context: Context): Boolean =
@@ -333,7 +337,8 @@ object DashHelper {
         }
 
         DiagnosticFlightRecorder.record("APP", "RESTART_HELPER_START")
-        if (!launchRestartHelper(adb, appContext.packageName)) {
+        restartHelperToken = randomSecret()
+        if (!launchRestartHelper(adb, appContext.packageName, checkNotNull(restartHelperToken))) {
             Log.w(TAG, "app restart: restart helper launch failed")
             DiagnosticFlightRecorder.record("APP", "RESTART_FAILED restart-helper launch")
             return false
@@ -390,13 +395,13 @@ object DashHelper {
         return !isListening()
     }
 
-    private fun launchRestartHelper(adb: PillionAdb, packageName: String): Boolean {
+    private fun launchRestartHelper(adb: PillionAdb, packageName: String, token: String): Boolean {
         return runCatching {
             // This is intentionally the same proven detach shape used to launch DashServer. The
             // long-lived process is app_process itself; unlike the old fallback, no detached shell
             // has to survive while sleeping before it executes am force-stop.
             val command =
-                "setsid sh -c 'CLASSPATH=\$(pm path $packageName | grep base.apk | cut -d: -f2):\$SYSTEMSERVERCLASSPATH " +
+                "setsid sh -c '${app.pillion.server.RestartHelper.TOKEN_ENV}=$token CLASSPATH=\$(pm path $packageName | grep base.apk | cut -d: -f2):\$SYSTEMSERVERCLASSPATH " +
                     "app_process / app.pillion.server.RestartHelper </dev/null >/dev/null 2>&1 &'"
             val stream = adb.openShellStream(command)
             runCatching { stream.openInputStream().readBytes() }
@@ -413,9 +418,12 @@ object DashHelper {
 
     private fun sendRestartHelperCommand(command: String, expectedReply: String): Boolean {
         return runCatching {
+            val token = checkNotNull(restartHelperToken) { "Restart helper token missing" }
             Socket().use { socket ->
                 socket.connect(InetSocketAddress("127.0.0.1", RESTART_HELPER_PORT), CONNECT_TIMEOUT_MS)
                 socket.soTimeout = RESTART_HELPER_SOCKET_TIMEOUT_MS
+                socket.getOutputStream().apply { write("AUTH $token\n".encodeToByteArray()); flush() }
+                check(socket.getInputStream().bufferedReader().readLine() == "OK") { "Restart helper authentication failed" }
                 socket.getOutputStream().write("$command\n".encodeToByteArray())
                 socket.getOutputStream().flush()
                 socket.getInputStream().bufferedReader().readLine() == expectedReply

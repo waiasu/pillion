@@ -3,6 +3,7 @@ package app.pillion.server
 import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.net.SocketTimeoutException
+import java.security.MessageDigest
 
 /**
  * Tiny shell-UID helper used only when the normal DashServer helper is not alive during
@@ -14,6 +15,7 @@ import java.net.SocketTimeoutException
  */
 object RestartHelper {
     const val PORT = 28118
+    const val TOKEN_ENV = "PILLION_RESTART_TOKEN"
 
     private const val PACKAGE_NAME = "app.pillion"
     private const val COMPONENT_NAME = "app.pillion/app.pillion.MainActivity"
@@ -28,6 +30,7 @@ object RestartHelper {
 
     @JvmStatic
     fun main(args: Array<String>) {
+        val secret = System.getenv(TOKEN_ENV)?.takeIf { it.isNotBlank() } ?: return
         val server = ServerSocket()
         try {
             server.reuseAddress = true
@@ -38,8 +41,16 @@ object RestartHelper {
                 val action = try {
                     server.accept().use { socket ->
                         socket.soTimeout = SOCKET_TIMEOUT_MS
-                        val request = socket.getInputStream().bufferedReader().readLine()
+                        val reader = socket.getInputStream().bufferedReader()
                         val writer = socket.getOutputStream().bufferedWriter()
+                        val authLine = reader.readLine()?.trim().orEmpty()
+                        val candidate = authLine.takeIf { it.startsWith("AUTH ") }?.removePrefix("AUTH ") ?: ""
+                        if (!MessageDigest.isEqual(candidate.toByteArray(), secret.toByteArray())) {
+                            ACTION_NONE
+                        } else {
+                        writer.write("OK\n")
+                        writer.flush()
+                        val request = reader.readLine()
                         when (request) {
                             "PING" -> {
                                 writer.write("READY\n")
@@ -63,6 +74,7 @@ object RestartHelper {
                                 writer.flush()
                                 ACTION_NONE
                             }
+                        }
                         }
                     }
                 } catch (_: SocketTimeoutException) {
