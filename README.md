@@ -45,7 +45,11 @@ Compatibility with other Android devices, Yamaha models, or navigation apps is n
 - Automatic Bluetooth reconnect and recovery after ignition OFF / ON
 - Yahoo! Car Navigation restart-on-VD handling for rendering and DPI stability
 - OCR overlays for arrival information and map scale
-- XMAX stick up/down input support
+- XMAX stick up/down input support with separate NAV / DRIVE zoom positions
+- Optional Yahoo! Car Navigation Auto DRIVE mode based on OCR Area 1 after PROMOTE
+- DRIVE-only upward image shift and a guarded DRIVE stick zoom profile
+- First-run Yahoo! Car Navigation preset on clean installations (existing settings preserved)
+- Compact, collapsible NAV / DRIVE / OCR settings and XMAX Custom Fork v35 link in About
 - Pixel SecureCamera detection and physical display wake handling
 - Start mirroring race / duplicate-start prevention
 - Reset Pillion and Save & Restart workflows
@@ -59,7 +63,11 @@ Compatibility with other Android devices, Yamaha models, or navigation apps is n
 - Bluetooth再接続、およびキーOFF / ON後の自動復帰
 - Yahoo!カーナビの描画・DPI安定化を目的としたVD移動時のアプリ再起動
 - 到着情報・地図縮尺のOCRオーバーレイ
-- XMAXスティック上下入力対応
+- XMAXスティック上下入力対応（NAV/DRIVE別のズーム座標）
+- OCRエリア1の判定によるYahoo!カーナビのAuto DRIVEモード
+- DRIVE時限定の映像上方向シフトとスティック入力の切替直後ガード
+- 初回クリーンインストール時のYahoo!カーナビ向け設定プリセット（既存設定は維持）
+- NAV/DRIVE/OCR設定の折りたたみ表示、About内のXMAX Custom Fork v35リンク
 - Pixel SecureCamera検出と物理ディスプレイ復帰処理
 - Start mirroring の二重発火・レース対策
 - Reset Pillion / Save & Restart
@@ -68,7 +76,7 @@ Compatibility with other Android devices, Yamaha models, or navigation apps is n
 
 ---
 
-## Branches and tags / ブランチとタグ
+## Branches and milestones / ブランチとバージョン履歴
 
 - `xmax-pillion`  
   Daily-use XMAX / Pixel build.  
@@ -85,6 +93,10 @@ Compatibility with other Android devices, Yamaha models, or navigation apps is n
 - `xmax-v34`  
   Stable working snapshot of the v34 build used on the actual bike.  
   実車で運用確認済みのv34を保存した固定タグ。
+
+- `v35` (release commit [`ea564aa`](https://github.com/waiasu/pillion/commit/ea564aa9b513f8553b002450ca34f15e6d0fd5db))  
+  Tested NAV / DRIVE behavior, Yahoo! Navi clean-install preset, settings updates, and About link. This is a release commit, not a tag.  
+  NAV/DRIVE動作、初回プリセット、設定UI、Aboutリンクを実車確認して反映したコミット（タグではありません）。
 
 ---
 
