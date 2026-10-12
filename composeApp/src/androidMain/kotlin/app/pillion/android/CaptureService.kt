@@ -82,7 +82,7 @@ class CaptureService : Service() {
                 // Move the promoted app back to display 0 before tearing the service down. Prefer a
                 // fresh command connection so this still works when the frame-stream socket is the
                 // thing that failed; fall back to that existing stream only if direct control fails.
-                if (!DashHelper.demoteExisting()) {
+                if (!DashHelper.demoteExisting(applicationContext)) {
                     runCatching { dashSwitch?.demote() }
                 }
                 DiagnosticFlightRecorder.record("HELPER", "PRESERVE requested on stop")

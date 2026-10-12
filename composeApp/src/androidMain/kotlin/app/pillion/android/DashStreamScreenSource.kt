@@ -112,10 +112,10 @@ class DashStreamScreenSource(
     private fun readLoop() {
         while (running) {
             try {
-                val s = Socket().apply {
-                    tcpNoDelay = true
-                    connect(InetSocketAddress("127.0.0.1", DashServer.PORT), CONNECT_TIMEOUT_MS)
-                }
+                val s = DashHelper.connectAuthenticated(
+                    checkNotNull(appContext) { "Dash stream needs app context for authentication" },
+                    CONNECT_TIMEOUT_MS,
+                )
                 socket = s
                 helperConnectFailureLogged = false
                 Log.d(TAG, "dash stream: connected to 127.0.0.1:${DashServer.PORT} local=${s.localPort}")
@@ -177,10 +177,11 @@ class DashStreamScreenSource(
                 continue
             }
             try {
-                val s = Socket().apply {
-                    tcpNoDelay = true
-                    connect(InetSocketAddress("127.0.0.1", DashServer.OCR_PORT), CONNECT_TIMEOUT_MS)
-                }
+                val s = DashHelper.connectAuthenticated(
+                    checkNotNull(appContext) { "OCR stream needs app context for authentication" },
+                    CONNECT_TIMEOUT_MS,
+                    DashServer.OCR_PORT,
+                )
                 ocrSocket = s
                 Log.i(TAG, "OCR: side-channel connected to 127.0.0.1:${DashServer.OCR_PORT}")
                 val data = DataInputStream(s.getInputStream().buffered())

@@ -20,6 +20,8 @@ import android.os.Looper
 import android.util.Log
 import android.view.Surface
 import java.io.BufferedOutputStream
+import java.io.BufferedReader
+import java.security.MessageDigest
 import java.io.ByteArrayOutputStream
 import java.io.DataOutputStream
 import java.net.InetAddress
@@ -54,6 +56,9 @@ object DashServer {
     private const val TAG = "PillionDash"
     const val PORT = 28117 // v17 main frame protocol: [length][JPEG], intentionally unchanged
     const val OCR_PORT = 28119 // isolated raw-VD OCR crop side-channel
+    const val TOKEN_ENV = "PILLION_DASH_TOKEN"
+    private const val AUTH_TIMEOUT_MS = 2_000
+    private lateinit var authToken: String
 
     // Public flags exist on DisplayManager; the trusted/own-group/always-unlocked ones are @hide,
     // so use their raw bit values (matched exactly to scrcpy's NewDisplayCapture on Android 14+).
@@ -147,6 +152,11 @@ object DashServer {
     @JvmStatic
     fun main(args: Array<String>) {
         if (Looper.myLooper() == null) Looper.prepareMainLooper()
+        // No unauthenticated developer fallback for the privileged shell helper.
+        authToken = System.getenv(TOKEN_ENV)?.takeIf { it.isNotBlank() } ?: run {
+            Log.e(TAG, "missing dash authentication secret; refusing to start")
+            return
+        }
 
         virtualWidth = args.getOrNull(0)?.toIntOrNull() ?: 480
         virtualHeight = args.getOrNull(1)?.toIntOrNull() ?: 240
@@ -269,10 +279,16 @@ object DashServer {
 
     private fun serveClient(client: Socket) {
         val clientId = "${client.inetAddress.hostAddress}:${client.port}"
-        Log.i(TAG, "client connected: $clientId")
+        val reader = runCatching { authenticate(client) }.getOrNull()
+        if (reader == null) {
+            Log.w(TAG, "client authentication rejected: $clientId")
+            runCatching { client.close() }
+            return
+        }
+        Log.i(TAG, "client authenticated: $clientId")
         // Reverse channel: PROMOTE/DEMOTE/TAP plus OCR_START/STOP commands. The writer remains the
         // exact v17 byte stream: [4-byte length][JPEG], with no OCR framing added here.
-        Thread { readCommands(client) }.apply { isDaemon = true; start() }
+        Thread { readCommands(client, reader) }.apply { isDaemon = true; start() }
         var sentSeq = -1L
         try {
             client.tcpNoDelay = true
@@ -320,7 +336,12 @@ object DashServer {
     /** OCR is output-only and completely separate from the proven main frame socket. */
     private fun serveOcrClient(client: Socket) {
         val clientId = "${client.inetAddress.hostAddress}:${client.port}"
-        Log.i(TAG, "OCR client connected: $clientId")
+        if (runCatching { authenticate(client) }.getOrNull() == null) {
+            Log.w(TAG, "OCR client authentication rejected: $clientId")
+            runCatching { client.close() }
+            return
+        }
+        Log.i(TAG, "OCR client authenticated: $clientId")
         var sentSeq = -1L
         var lastSentMs = 0L
         try {
@@ -353,9 +374,21 @@ object DashServer {
         }
     }
 
-    private fun readCommands(client: Socket) {
+    /** Require authentication before either output channel or any privileged command is active. */
+    private fun authenticate(client: Socket): BufferedReader? {
+        client.soTimeout = AUTH_TIMEOUT_MS
+        val input = client.getInputStream().bufferedReader()
+        val line = input.readLine()?.trim() ?: return null
+        if (!line.startsWith("AUTH ")) return null
+        val supplied = line.removePrefix("AUTH ").trim()
+        if (!MessageDigest.isEqual(supplied.toByteArray(), authToken.toByteArray())) return null
+        client.soTimeout = 0
+        client.getOutputStream().apply { write("OK\n".encodeToByteArray()); flush() }
+        return input
+    }
+
+    private fun readCommands(client: Socket, input: BufferedReader) {
         try {
-            val input = client.getInputStream().bufferedReader()
             while (true) {
                 val line = input.readLine()?.trim() ?: break
                 when {
