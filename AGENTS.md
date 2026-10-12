@@ -51,3 +51,15 @@ For behavior changes, prefer this order:
 4. Treat on-bike XMAX testing as the final validation for power/lock, Bluetooth reconnect, stick input, camera wake, and rendering timing.
 
 When a stable fork milestone is reached, update `CHANGELOG-XMAX.md` and `XMAX-CURRENT.md` as needed.
+
+## Branch / merge workflow
+
+- `xmax-pillion` is the stable release branch. Do not commit, push, or merge changes into it without explicit user approval.
+- Begin each new development cycle on a fresh test branch created from the latest `xmax-pillion`. Do not reuse an older test branch after a release.
+- Keep experiments, intermediate fixes, failed attempts, and their individual commits on the test branch.
+- Before proposing a release, ensure rejected experiments are fully reverted from the **final code**, not merely omitted from a summary. Review the full diff against `xmax-pillion` and complete the applicable build, bench, and on-bike validation.
+- Only after explicit approval, open a Pull Request from the test branch into `xmax-pillion` and use **Squash and merge** to integrate the completed changes as a single release commit.
+- Do not use a regular merge or rebase merge unless explicitly requested. Never rewrite the stable branch's existing history just to tidy older commits.
+- Do not automatically delete the test branch after merging. Retain it until the user approves cleanup; create a tag first if its detailed experimental history needs to remain accessible.
+- After a release, start the next test branch from the updated `xmax-pillion`.
+
