@@ -637,7 +637,14 @@ class DashStreamScreenSource(
     override fun tapDashPoint(up: Boolean, markerFrames: Int): Boolean {
         // Never gate Auto DRIVE's own tap: that goes directly to tapDashPercentWithMarker.
         if (!stickTapEnabled) return false
-        val isDrive = driveState == DriveState.DRIVE
+        // The app's initial layout is not guaranteed to match NAV until OCR has identified the
+        // mode. Avoid sending NAV coordinates to Yahoo's initial/DRIVE-selection screen.
+        val state = driveState
+        if (state == DriveState.CHECKING) {
+            DiagnosticFlightRecorder.record("DRIVE", "stick input ignored while checking mode")
+            return false
+        }
+        val isDrive = state == DriveState.DRIVE
         if (isDrive && SystemClock.elapsedRealtime() < driveStickReadyAtMs) {
             DiagnosticFlightRecorder.record("DRIVE", "stick input ignored during settle")
             return false
