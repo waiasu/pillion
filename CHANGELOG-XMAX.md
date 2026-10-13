@@ -8,7 +8,12 @@ The upstream Pillion changelog remains in `CHANGELOG.md` unchanged. Historical e
 
 ## [Unreleased]
 
-No unreleased XMAX changes at the v36 release checkpoint.
+### v37 test branch — dedicated VD without MediaProjection
+
+- When dedicated NaviLite VD is enabled, bypass screen-capture consent, create no phone-mirror MediaProjection/ImageReader, and show the existing `Please lock the phone` STATUS frame immediately.
+- Keep VD OFF normal mirror, SDL/USB, helper control, PROMOTE/DEMOTE, OCR/Auto DRIVE, Bluetooth reconnect, Stop and Save/Reset behaviors intact.
+- Experimental until build and Pixel/XMAX field tests; stable `xmax-pillion` remains v36.
+
 
 ## [v36] - 2026-10-13
 

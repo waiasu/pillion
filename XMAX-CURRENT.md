@@ -72,6 +72,10 @@ Changing VD size/DPI while Yahoo! Car Navigation is already alive can produce pa
 
 ---
 
+## Experimental test/v37 — dedicated VD-only startup (not yet stable)
+
+When Android NaviLite dedicated VD is ON, Start bypasses MediaProjection consent and the phone-mirror VirtualDisplay/ImageReader. The service runs as `connectedDevice`, and `SwitchableScreenSource` begins in STATUS (`Please lock the phone`). Existing PROMOTE uses the helper-owned trusted VD, and DEMOTE returns to STATUS. VD OFF and SDL/USB retain their original capture path. Validate early lock, helper delay, initial STATUS IMAGE_ACK, Stop during reconnect, camera, reconnect, and Save/Reset on Pixel/XMAX before release.
+
 ## MediaProjection consent / Android 14+
 
 The Android 14+ whole-screen capture selection is **already implemented** for the normal NaviLite / dedicated-dash path.
