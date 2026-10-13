@@ -177,7 +177,8 @@ class AdbBootstrapActivity : ComponentActivity() {
                             runCatching {
                                 // nohup + & : the helper outlives this ADB stream, so it keeps serving
                                 // frames after Wi-Fi drops on the bike.
-                                val cmd = "CLASSPATH=\$(pm path app.pillion | grep base.apk | cut -d: -f2) " +
+                                val token = DashHelper.newToken(applicationContext)
+                                val cmd = "${app.pillion.server.DashServer.TOKEN_ENV}=$token CLASSPATH=\$(pm path app.pillion | grep base.apk | cut -d: -f2) " +
                                     "nohup app_process / app.pillion.server.DashServer " +
                                     "960 480 160 40 480 234 $component >/dev/null 2>&1 &"
                                 val stream = PillionAdb.getInstance(applicationContext).openExecStream(cmd)
@@ -196,7 +197,7 @@ class AdbBootstrapActivity : ComponentActivity() {
                     scope.launch {
                         append("Reading frames over loopback TCP…")
                         withContext(Dispatchers.IO) {
-                            val src = DashStreamScreenSource()
+                            val src = DashStreamScreenSource(appContext = applicationContext)
                             src.start()
                             var got = 0
                             repeat(20) {

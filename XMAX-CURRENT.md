@@ -4,7 +4,7 @@ This file is the current-state reference for the XMAX / Pixel fork.
 
 このファイルは XMAX / Pixel fork の「現在どうなっているか」を確認するための基準メモです。
 
-The values and behavior below were checked against the actual `xmax-pillion` source at the v35 stable milestone (release commit `ea564aa`, 2026-10-12; subsequent `AGENTS.md` update only changed development guidance). The earlier `xmax-v34` tag points to commit `4d994e3`. This document describes **stable v35**, not the ongoing `test/v36` changes.
+The implementation described here covers **stable v36 (2026-10-13)**, including v35 NAV/DRIVE behavior and v36 helper security/bootstrapping/Stop/stick-guard updates. The v35 release commit was `ea564aa`; the `xmax-v34` tag points to commit `4d994e3`. As always, source code takes precedence over these notes.
 
 If this file and the source ever disagree, **the source code wins**.
 
@@ -148,6 +148,7 @@ Only the XMAX UP/DOWN NaviLite zoom requests are consumed.
 - Current NAV stick coordinates: Zoom In H93/V47, Zoom Out H93/V74.
 - When DRIVE is active: Zoom In H93/V13, Zoom Out H93/V30, configurable independently.
 - Stick input can be disabled using `Stick tap input` without disabling Auto DRIVE's own tap.
+- **v36:** while Auto DRIVE is in `CHECKING`, stick UP/DOWN still receives the NaviLite protocol reply but does **not** inject any app tap. This prevents NAV-position taps on Yahoo Navi's differently arranged initial/DRIVE-selection screen. Once OCR confirms NAV, NAV tap positions work normally.
 - After the Auto DRIVE tap, stick input is ignored for **1 second** to avoid tapping the wrong control while Yahoo! Navi changes mode.
 - Tap percentages are relative to the usable navigation/VD logical space, not raw 480 × 234 output pixels.
 - A temporary visual tap marker uses a 12 px radius and approximately 0.5 s worth of outgoing frames.
@@ -186,6 +187,7 @@ The Tesseract model/license is part of the fork. Keep `THIRD_PARTY_TESSERACT_LIC
 Auto DRIVE is optional. It is enabled in the first-run Yahoo! Navi preset, but the raw settings fallback is **Off**. The runtime gate requires all of the following: Auto DRIVE enabled, OCR enabled, Restart-on-VD enabled, and fixed dash-app mode enabled with `jp.co.yahoo.android.apps.navi` selected. Without these, ordinary NAV/fixed-app behavior remains unchanged.
 
 - Each suitable Yahoo! Navi **PROMOTE** starts a fresh `CHECKING` decision. The behavior never modifies PROMOTE/DEMOTE or the selected VD task lifecycle.
+- **v36:** physical UP/DOWN stick taps are withheld in `CHECKING` until the mode is identified. This can temporarily delay NAV zoom controls until OCR has confirmed NAV; the automatic DRIVE-switch tap uses a separate path and is not blocked.
 - OCR Area 1 is checked independently at roughly **10-second intervals**, even if its crop has not changed. A valid formatted arrival/distance value confirms **NAV** and disables further Auto DRIVE decisions for that promotion.
 - **Two empty Area 1 results** trigger a single virtual-display `TAP_PERCENT` at the configured DRIVE button position (Android fallback **H7/V54**). A failed tap is not endlessly retried in that promotion.
 - The successful tap selects **DRIVE**. Subsequent UP/DOWN stick requests use the DRIVE-specific positions (defaults **H93/V13** and **H93/V30**) after a **1-second** settling interval. The XMAX center press remains untouched.
@@ -215,6 +217,8 @@ Notification-triggered panel wake experiments and the older VD-fixed-camera expe
 
 - The one-time dedicated-dash setup uses the Android wireless-ADB bootstrap/pairing flow.
 - Helper prepare timeout is **20 s**.
+- **v36:** `adb tcpip` waits at most **2 s** for the old wireless-ADB stream acknowledgement; an adbd restart can otherwise leave this read hanging. The remaining setup timeout/progress/Retry flow is unchanged.
+- **v36:** DASH frame/control and OCR loopback sockets require a per-session authentication token; the separate temporary RestartHelper command channel is also authenticated. This is not a change to NaviLite Bluetooth/JPEG framing.
 - Normal runtime helper/reconnect behavior is separate from the one-time setup coordinator.
 - The helper is designed to survive normal transport reconnects.
 - Restart fallback can launch the small `RestartHelper` through ADB when the main DashServer helper is unavailable.
@@ -226,6 +230,8 @@ Notification-triggered panel wake experiments and the older VD-fixed-camera expe
 Start mirroring has an in-flight guard so repeated taps cannot start overlapping MediaProjection requests. The Compose fallback guard is 1.2 s when an external Android request-lifetime flag is not supplied.
 
 Save & Restart and Reset & Restart share the same orderly shutdown/restart path.
+
+- **v36:** the Stop-preserve helper DEMOTE is executed on a background IO dispatcher instead of the main thread to prevent Android `NetworkOnMainThreadException`.
 
 Reset additionally clears only transient cache files. It intentionally preserves:
 
@@ -258,7 +264,7 @@ The following are intentionally recorded so future work does not accidentally re
 - Bottom margin is represented in **pixels**; Android clean-install default is **16 px**.
 - OCR area 1 is **10 s** and area 2 is **1 s** in the current helper.
 - Current OCR area 2 default is **88 / 56 / 98 / 64**.
-- Current NAV stick taps are **93/47** and **93/74**; DRIVE has separate **93/13**, **93/30** coordinates and a **1-second** guard.
+- Current NAV stick taps are **93/47** and **93/74**; DRIVE has separate **93/13**, **93/30** coordinates and a **1-second** guard. While Auto DRIVE is `CHECKING`, stick taps are ignored (v36).
 - Auto DRIVE raw default is **Off**, but the first-run Yahoo! Navi preset enables it alongside its prerequisites.
 - Current OCR ROAD output has **no ▲ prefix**; DRIVE shows `DRIVE MODE`.
 - `MirrorSettings.kt` still contains older fallback defaults; Android persisted defaults come from `AndroidSettingsStore.kt`.
@@ -271,6 +277,6 @@ These are documentation observations only; this cleanup intentionally does not c
 
 Keep this section short. Ideas are not commitments.
 
-- Review selected upstream security/compatibility changes only after stable XMAX behavior is validated. The separate `test/v36` branch contains later experiments and is not the v35 source of truth.
+- Revisit upstream changes when newer commits appear or the XMAX target environment changes. On **2026-10-13**, upstream `main` was reviewed through `29497f4ea3bccc5cd40c4647f8e4d8345eeddda3`; all changes considered necessary for this XMAX configuration were incorporated, adapted, or already covered. Unrelated upstream commits were intentionally not merged.
 
 Do not turn speculative ideas into implementation requirements without a separate task and validation plan.

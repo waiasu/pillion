@@ -112,10 +112,10 @@ class DashStreamScreenSource(
     private fun readLoop() {
         while (running) {
             try {
-                val s = Socket().apply {
-                    tcpNoDelay = true
-                    connect(InetSocketAddress("127.0.0.1", DashServer.PORT), CONNECT_TIMEOUT_MS)
-                }
+                val s = DashHelper.connectAuthenticated(
+                    checkNotNull(appContext) { "Dash stream needs app context for authentication" },
+                    CONNECT_TIMEOUT_MS,
+                )
                 socket = s
                 helperConnectFailureLogged = false
                 Log.d(TAG, "dash stream: connected to 127.0.0.1:${DashServer.PORT} local=${s.localPort}")
@@ -177,10 +177,11 @@ class DashStreamScreenSource(
                 continue
             }
             try {
-                val s = Socket().apply {
-                    tcpNoDelay = true
-                    connect(InetSocketAddress("127.0.0.1", DashServer.OCR_PORT), CONNECT_TIMEOUT_MS)
-                }
+                val s = DashHelper.connectAuthenticated(
+                    checkNotNull(appContext) { "OCR stream needs app context for authentication" },
+                    CONNECT_TIMEOUT_MS,
+                    DashServer.OCR_PORT,
+                )
                 ocrSocket = s
                 Log.i(TAG, "OCR: side-channel connected to 127.0.0.1:${DashServer.OCR_PORT}")
                 val data = DataInputStream(s.getInputStream().buffered())
@@ -636,7 +637,14 @@ class DashStreamScreenSource(
     override fun tapDashPoint(up: Boolean, markerFrames: Int): Boolean {
         // Never gate Auto DRIVE's own tap: that goes directly to tapDashPercentWithMarker.
         if (!stickTapEnabled) return false
-        val isDrive = driveState == DriveState.DRIVE
+        // The app's initial layout is not guaranteed to match NAV until OCR has identified the
+        // mode. Avoid sending NAV coordinates to Yahoo's initial/DRIVE-selection screen.
+        val state = driveState
+        if (state == DriveState.CHECKING) {
+            DiagnosticFlightRecorder.record("DRIVE", "stick input ignored while checking mode")
+            return false
+        }
+        val isDrive = state == DriveState.DRIVE
         if (isDrive && SystemClock.elapsedRealtime() < driveStickReadyAtMs) {
             DiagnosticFlightRecorder.record("DRIVE", "stick input ignored during settle")
             return false

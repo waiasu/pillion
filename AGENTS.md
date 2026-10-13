@@ -17,7 +17,7 @@ Before changing XMAX-specific behavior, read:
 
 ## Stability constraints
 
-The stable `xmax-pillion` line includes v35 Auto DRIVE / NAV behavior (release commit `ea564aa`) and has been validated primarily on Yamaha XMAX + Google Pixel 10a + Yahoo! Car Navigation.
+The stable `xmax-pillion` line includes v35 Auto DRIVE / NAV behavior (release commit `ea564aa`) and v36 helper security/bootstrapping/stick safety, validated primarily on Yamaha XMAX + Google Pixel 10a + Yahoo! Car Navigation.
 
 Unless a task explicitly requires it:
 
@@ -30,6 +30,9 @@ Unless a task explicitly requires it:
 - Keep XMAX center-press handling untouched; only UP/DOWN zoom requests are consumed.
 - Preserve v35 Auto DRIVE's **strict Yahoo! Navi gate** (OCR + Restart-on-VD + selected fixed Yahoo! Navi target), once-per-PROMOTE decision, two independent ~10-second Area 1 checks, and one-second DRIVE stick guard.
 - Keep DRIVE tap/ROAD filtering and the optional output-only upward shift isolated from the NAV canvas, VD sizing, OCR crop coordinates, and PROMOTE/DEMOTE state flow.
+- While Auto DRIVE state is `CHECKING`, do not inject physical stick taps into the VD; keep the Auto DRIVE switching tap independent. Preserve NAV and DRIVE position selection and the one-second DRIVE guard.
+- Preserve v36 authentication on DASH/OCR sockets and the RestartHelper channel; avoid weakening local command access or exposing secrets in diagnostic logs.
+- Keep the 2-second ADB tcpip ACK wait separate from the 20-second helper prepare timeout, and do not move Stop helper network operations back onto the UI thread.
 - Do not overwrite existing installations' preferences with the v35 clean-install Yahoo! Navi preset; the preset applies only when the preference file is genuinely empty and Yahoo! Navi is installed.
 
 ## Build / validation
@@ -53,7 +56,7 @@ For behavior changes, prefer this order:
 3. Bench-test when possible.
 4. Treat on-bike XMAX testing as the final validation for power/lock, Bluetooth reconnect, stick input, camera wake, and rendering timing.
 
-When a stable fork milestone is reached, update `CHANGELOG-XMAX.md` and `XMAX-CURRENT.md` as needed, and keep the fork-specific README feature summary accurate. v35 is the current stable milestone; development on `test/v36` is separate and must not be documented as released until approved.
+When a stable fork milestone is reached, update `CHANGELOG-XMAX.md`, `XMAX-CURRENT.md`, and the README feature summary as needed, and update the in-app XMAX fork version label when applicable. v36 is the current stable milestone; create a fresh test branch for subsequent development.
 
 ## Branch / merge workflow
 
@@ -61,8 +64,8 @@ When a stable fork milestone is reached, update `CHANGELOG-XMAX.md` and `XMAX-CU
 - Begin each new development cycle on a fresh test branch created from the latest `xmax-pillion`. Do not reuse an older test branch after a release.
 - Keep experiments, intermediate fixes, failed attempts, and their individual commits on the test branch.
 - Before proposing a release, ensure rejected experiments are fully reverted from the **final code**, not merely omitted from a summary. Review the full diff against `xmax-pillion` and complete the applicable build, bench, and on-bike validation.
-- Only after explicit approval, open a Pull Request from the test branch into `xmax-pillion` and use **Squash and merge** to integrate the completed changes as a single release commit.
-- Do not use a regular merge or rebase merge unless explicitly requested. Never rewrite the stable branch's existing history just to tidy older commits.
-- Do not automatically delete the test branch after merging. Retain it until the user approves cleanup; create a tag first if its detailed experimental history needs to remain accessible.
-- After a release, start the next test branch from the updated `xmax-pillion`.
+- Only after explicit user approval, open a Pull Request from the test branch into `xmax-pillion`. Prefer **Create a merge commit** so individual development/fix commits remain inspectable; do not squash by default. If a different method is desired, follow the explicit release instruction.
+- Preserve full Git history, including experiments and reverts, for retrospective inspection. Rejected experiments must not remain active in the final code. Never rewrite existing stable-branch history merely to tidy commits.
+- Keep release documentation and upstream-review checkpoints accurate. As of 2026-10-13, upstream `alexandrevega/pillion` `main` through `29497f4ea3bccc5cd40c4647f8e4d8345eeddda3` has been reviewed; necessary XMAX changes are addressed, but not every upstream commit is merged verbatim.
+- After a successful merge and verification, retain or delete the old test branch according to the user's cleanup instruction. When deleting, ensure its commits are reachable from stable history, then create a fresh next-version test branch from the updated `xmax-pillion`.
 
