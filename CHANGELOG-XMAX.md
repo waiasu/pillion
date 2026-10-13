@@ -8,7 +8,54 @@ The upstream Pillion changelog remains in `CHANGELOG.md` unchanged. Historical e
 
 ## [Unreleased]
 
-No stable fork release has been recorded after `xmax-v34` yet.
+No unreleased XMAX changes at the v36 release checkpoint.
+
+## [v36] - 2026-10-13
+
+Security, bootstrap reliability, Stop handling, and Auto DRIVE stick safety.
+
+### Added / changed
+
+- Added token authentication to local DASH frame/control and OCR side-channel connections, following the security principles in upstream `d256c58d1aa492085175afd57b0df903140792b1` while preserving XMAX protocol and reconnect behavior.
+- Authenticated temporary `RestartHelper` commands.
+- Moved helper DEMOTE on the Stop path off the Android main thread (IO dispatcher), fixing a potential `NetworkOnMainThreadException`.
+- Bounded the `adb tcpip` stream acknowledgement wait to **2 seconds**, adapting upstream `d52f7572af4e17f32665fcd76cf5f1fd15f37914` and retaining the existing **20-second** overall helper prepare window and Retry setup flow.
+- Disabled stick-generated taps while Auto DRIVE is in `CHECKING` (mode not yet known); existing NAV coordinates remain active after NAV confirmation, while DRIVE coordinates and the existing one-second post-switch guard remain unchanged.
+- Updated the About link label to **XMAX Custom Fork v36** without changing Android package version metadata.
+
+### Validation
+
+- GitHub Actions Android debug build and unit tests passed for the v36 functional fixes.
+- XMAX / Pixel 10a field use confirmed the authenticated connection/Stop flow and the CHECKING stick safety change; no regression reported before release.
+- The full history of feature and fix commits is intentionally retained through a regular merge commit.
+
+### Upstream review checkpoint
+
+As of **2026-10-13**, upstream `alexandrevega/pillion` `main` was reviewed through commit `29497f4ea3bccc5cd40c4647f8e4d8345eeddda3` (2026-09-29). **All upstream changes judged relevant and necessary for this XMAX / Android configuration have been incorporated, adapted, or already addressed.** This does not mean every upstream commit was merged verbatim: unrelated iOS/build changes and differing strategies are intentionally not adopted. The GitHub behind count is a history comparison, not a count of unaddressed fixes.
+
+
+
+## [v35] - 2026-10-12
+
+Tested XMAX / Pixel fork milestone for Yahoo! Car Navigation NAV/DRIVE behavior.
+
+Release commit: [`ea564aa`](https://github.com/waiasu/pillion/commit/ea564aa9b513f8553b002450ca34f15e6d0fd5db) (not a tag).
+
+### Added
+
+- Optional Auto DRIVE mode for the fixed Yahoo! Car Navigation target. After PROMOTE, two empty OCR Area 1 checks roughly 10 seconds apart trigger one simulated DRIVE button tap; valid Area 1 text confirms NAV and skips the automatic tap.
+- Independent NAV and DRIVE UP/DOWN stick zoom coordinates, with a one-second input guard after the automatic DRIVE tap and the existing visual tap marker.
+- Configurable upward shift of the encoded dashboard image for DRIVE mode only, default 5 px and limited by the bottom margin; NAV geometry and VD/OCR crop sizes remain unchanged.
+- First-run settings preset when Yahoo! Car Navigation is installed and preferences are genuinely empty: stick taps, OCR, Restart-on-VD, fixed Yahoo! target, and Auto DRIVE enabled. Existing installations and devices without Yahoo! Navi are not silently migrated.
+- An XMAX Custom Fork v35 link in the About section.
+
+### Changed / stabilized
+
+- Clear ROAD overlay text in DRIVE mode (`DRIVE MODE`) instead of showing navigation arrival/scale OCR output there.
+- Added configurable Auto DRIVE tap position (default H7/V54) and DRIVE stick defaults: UP H93/V13, DOWN H93/V30. Existing NAV stick defaults remain UP H93/V47 and DOWN H93/V74.
+- Grouped NAV stick, DRIVE and OCR-area settings behind expandable rows to keep Settings manageable.
+- DRIVE state/shift reset on DEMOTE; transport reconnect continues to preserve the existing display/session behavior.
+- XMAX v35 changes were built and exercised on the Yamaha XMAX + Pixel 10a setup.
 
 ## [xmax-v34] - 2026-10-09
 

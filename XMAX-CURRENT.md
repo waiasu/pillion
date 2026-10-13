@@ -4,7 +4,7 @@ This file is the current-state reference for the XMAX / Pixel fork.
 
 このファイルは XMAX / Pixel fork の「現在どうなっているか」を確認するための基準メモです。
 
-The values and behavior below were checked against the actual `xmax-pillion` source after the `xmax-v34` baseline. The `xmax-v34` tag points to commit `4d994e3`; the later README commit did not change implementation code.
+The implementation described here covers **stable v36 (2026-10-13)**, including v35 NAV/DRIVE behavior and v36 helper security/bootstrapping/Stop/stick-guard updates. The v35 release commit was `ea564aa`; the `xmax-v34` tag points to commit `4d994e3`. As always, source code takes precedence over these notes.
 
 If this file and the source ever disagree, **the source code wins**.
 
@@ -34,8 +34,14 @@ The authoritative Android defaults are in `AndroidSettingsStore.kt`.
 | Left margin | 50 px |
 | Bottom margin | 16 px |
 | Margin color | Black |
-| Zoom in tap | H 93% / V 47% |
-| Zoom out tap | H 93% / V 74% |
+| NAV stick Zoom In | H 93% / V 47% |
+| NAV stick Zoom Out | H 93% / V 74% |
+| Stick tap input | Off |
+| Auto DRIVE | Off |
+| Auto DRIVE button tap | H 7% / V 54% |
+| DRIVE stick Zoom In | H 93% / V 13% |
+| DRIVE stick Zoom Out | H 93% / V 30% |
+| DRIVE image shift | 5 px upward (clamped to bottom margin) |
 | OCR | Off |
 | Show OCR area | Off |
 | OCR area 1 | L30 / T89 / R70 / B100 |
@@ -46,6 +52,8 @@ The authoritative Android defaults are in `AndroidSettingsStore.kt`.
 Max FPS is normalized to **whole values from 1 through 15 fps**.
 
 VD scale choices are **1.0x through 3.0x in 0.2x steps**.
+
+These are the **raw Android fallback defaults** before first-run initialization. In v35, if preferences are truly empty and Yahoo! Car Navigation is installed, `initializeFirstRun()` enables stick taps, OCR, Restart-on-VD, fixed-app mode targeting Yahoo! Navi, and Auto DRIVE. It does **not** automatically start casting. An upgrade or any existing saved preferences are left unchanged; a clean install without Yahoo! Navi keeps these toggles off.
 
 Important code-maintenance note: some common fallback/default values in `MirrorSettings.kt` and UI fallback expressions are older than the Android values above. On Android, `AndroidSettingsStore` is the persisted-settings authority. Do not use the stale common fallbacks as documentation for a clean Android install.
 
@@ -137,9 +145,11 @@ Only the XMAX UP/DOWN NaviLite zoom requests are consumed.
 - Service 51 / UP → configured Zoom In tap.
 - Service 52 / DOWN → configured Zoom Out tap.
 - Center press and other dash-side requests are deliberately ignored so the vehicle menu behavior remains untouched.
-- Current Android default tap coordinates:
-  - Zoom In: H 93% / V 47%
-  - Zoom Out: H 93% / V 74%
+- Current NAV stick coordinates: Zoom In H93/V47, Zoom Out H93/V74.
+- When DRIVE is active: Zoom In H93/V13, Zoom Out H93/V30, configurable independently.
+- Stick input can be disabled using `Stick tap input` without disabling Auto DRIVE's own tap.
+- **v36:** while Auto DRIVE is in `CHECKING`, stick UP/DOWN still receives the NaviLite protocol reply but does **not** inject any app tap. This prevents NAV-position taps on Yahoo Navi's differently arranged initial/DRIVE-selection screen. Once OCR confirms NAV, NAV tap positions work normally.
+- After the Auto DRIVE tap, stick input is ignored for **1 second** to avoid tapping the wrong control while Yahoo! Navi changes mode.
 - Tap percentages are relative to the usable navigation/VD logical space, not raw 480 × 234 output pixels.
 - A temporary visual tap marker uses a 12 px radius and approximately 0.5 s worth of outgoing frames.
 
@@ -161,13 +171,31 @@ Current architecture:
 - Area 2 crop cadence: **1 s**.
 - Area 1 is cached between its slower updates while Area 2 continues at the faster cadence.
 - Area 1 formatting is `hh:mm着・distance` when a valid time and trailing distance are parsed.
-- Area 2 currently contributes the recognized distance text directly.
-- Published ROAD text is currently: **area 2 + two ideographic spaces + area 1**.
+- Area 2 contributes an extracted distance when recognized.
+- In NAV mode, published ROAD text is **area 2 distance + two ideographic spaces + area 1**.
+- In DRIVE mode, ROAD text is **`DRIVE MODE`** instead of the NAV OCR values.
 - There is **no code-added ▲ prefix** in the current implementation.
 
 Historical notes describing a single 10 s OCR loop, a 2 s loop, older area-2 coordinates, or a decorative prefix are stale.
 
 The Tesseract model/license is part of the fork. Keep `THIRD_PARTY_TESSERACT_LICENSE.txt` and any required third-party notices.
+
+---
+
+## Yahoo! Car Navigation Auto DRIVE (v35)
+
+Auto DRIVE is optional. It is enabled in the first-run Yahoo! Navi preset, but the raw settings fallback is **Off**. The runtime gate requires all of the following: Auto DRIVE enabled, OCR enabled, Restart-on-VD enabled, and fixed dash-app mode enabled with `jp.co.yahoo.android.apps.navi` selected. Without these, ordinary NAV/fixed-app behavior remains unchanged.
+
+- Each suitable Yahoo! Navi **PROMOTE** starts a fresh `CHECKING` decision. The behavior never modifies PROMOTE/DEMOTE or the selected VD task lifecycle.
+- **v36:** physical UP/DOWN stick taps are withheld in `CHECKING` until the mode is identified. This can temporarily delay NAV zoom controls until OCR has confirmed NAV; the automatic DRIVE-switch tap uses a separate path and is not blocked.
+- OCR Area 1 is checked independently at roughly **10-second intervals**, even if its crop has not changed. A valid formatted arrival/distance value confirms **NAV** and disables further Auto DRIVE decisions for that promotion.
+- **Two empty Area 1 results** trigger a single virtual-display `TAP_PERCENT` at the configured DRIVE button position (Android fallback **H7/V54**). A failed tap is not endlessly retried in that promotion.
+- The successful tap selects **DRIVE**. Subsequent UP/DOWN stick requests use the DRIVE-specific positions (defaults **H93/V13** and **H93/V30**) after a **1-second** settling interval. The XMAX center press remains untouched.
+- An optional DRIVE-only upward output-canvas shift defaults to **5 px** and is clamped to the configured bottom margin. The VD size, OCR crops and NAV layout do not shift; DEMOTE removes the shift.
+- ROAD output in DRIVE is the literal `DRIVE MODE`, suppressing NAV arrival/map-scale OCR presentation. OCR still runs on the isolated side channel.
+- The DRIVE/NAV decision is re-armed on a new PROMOTE, not automatically on each Bluetooth reconnect. Diagnostic flight breadcrumbs record CHECKING, NAV confirmation, empty sample counts and DRIVE transition.
+
+Settings UI groups NAV stick coordinates, DRIVE options and OCR-area controls in expandable sections. Only new installations with an empty preference set and Yahoo! Navi detected receive the Yahoo! preset; saved settings are not rewritten on upgrade.
 
 ---
 
@@ -189,6 +217,8 @@ Notification-triggered panel wake experiments and the older VD-fixed-camera expe
 
 - The one-time dedicated-dash setup uses the Android wireless-ADB bootstrap/pairing flow.
 - Helper prepare timeout is **20 s**.
+- **v36:** `adb tcpip` waits at most **2 s** for the old wireless-ADB stream acknowledgement; an adbd restart can otherwise leave this read hanging. The remaining setup timeout/progress/Retry flow is unchanged.
+- **v36:** DASH frame/control and OCR loopback sockets require a per-session authentication token; the separate temporary RestartHelper command channel is also authenticated. This is not a change to NaviLite Bluetooth/JPEG framing.
 - Normal runtime helper/reconnect behavior is separate from the one-time setup coordinator.
 - The helper is designed to survive normal transport reconnects.
 - Restart fallback can launch the small `RestartHelper` through ADB when the main DashServer helper is unavailable.
@@ -200,6 +230,8 @@ Notification-triggered panel wake experiments and the older VD-fixed-camera expe
 Start mirroring has an in-flight guard so repeated taps cannot start overlapping MediaProjection requests. The Compose fallback guard is 1.2 s when an external Android request-lifetime flag is not supplied.
 
 Save & Restart and Reset & Restart share the same orderly shutdown/restart path.
+
+- **v36:** the Stop-preserve helper DEMOTE is executed on a background IO dispatcher instead of the main thread to prevent Android `NetworkOnMainThreadException`.
 
 Reset additionally clears only transient cache files. It intentionally preserves:
 
@@ -232,8 +264,9 @@ The following are intentionally recorded so future work does not accidentally re
 - Bottom margin is represented in **pixels**; Android clean-install default is **16 px**.
 - OCR area 1 is **10 s** and area 2 is **1 s** in the current helper.
 - Current OCR area 2 default is **88 / 56 / 98 / 64**.
-- Current default stick taps are **93/47** and **93/74**.
-- Current OCR ROAD output has **no ▲ prefix**.
+- Current NAV stick taps are **93/47** and **93/74**; DRIVE has separate **93/13**, **93/30** coordinates and a **1-second** guard. While Auto DRIVE is `CHECKING`, stick taps are ignored (v36).
+- Auto DRIVE raw default is **Off**, but the first-run Yahoo! Navi preset enables it alongside its prerequisites.
+- Current OCR ROAD output has **no ▲ prefix**; DRIVE shows `DRIVE MODE`.
 - `MirrorSettings.kt` still contains older fallback defaults; Android persisted defaults come from `AndroidSettingsStore.kt`.
 
 These are documentation observations only; this cleanup intentionally does not change implementation code.
@@ -244,7 +277,6 @@ These are documentation observations only; this cleanup intentionally does not c
 
 Keep this section short. Ideas are not commitments.
 
-- Optional drive-mode profile for Yahoo! Car Navigation, if it proves useful in real riding.
-- Review selected upstream security/compatibility changes after the current XMAX line remains stable.
+- Revisit upstream changes when newer commits appear or the XMAX target environment changes. On **2026-10-13**, upstream `main` was reviewed through `29497f4ea3bccc5cd40c4647f8e4d8345eeddda3`; all changes considered necessary for this XMAX configuration were incorporated, adapted, or already covered. Unrelated upstream commits were intentionally not merged.
 
 Do not turn speculative ideas into implementation requirements without a separate task and validation plan.
