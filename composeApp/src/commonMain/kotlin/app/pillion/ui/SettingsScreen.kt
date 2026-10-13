@@ -729,7 +729,7 @@ internal fun SettingsScreen(
             GroupDivider()
             LinkRow(stringResource(Res.string.changelog)) { uriHandler.openUri("$REPO_URL/blob/main/CHANGELOG.md") }
             GroupDivider()
-            LinkRow("XMAX Custom Fork v35") { uriHandler.openUri("https://github.com/waiasu/pillion") }
+            LinkRow("XMAX Custom Fork v36") { uriHandler.openUri("https://github.com/waiasu/pillion") }
         }
 
         Spacer(Modifier.height(28.dp))
