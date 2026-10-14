@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -79,6 +80,7 @@ internal fun SettingsScreen(
     onThemeMode: (ThemeMode) -> Unit,
     dashSupported: Boolean = false,
     dashEnabled: Boolean = false,
+    dashChecking: Boolean = false,
     dashScale: DashScale = DashScale.DEFAULT,
     onDashScale: (DashScale) -> Unit = {},
     draftLeftMargin: Int = 0,
@@ -288,20 +290,10 @@ internal fun SettingsScreen(
         }
 
         Spacer(Modifier.height(24.dp))
-        SectionHeader(stringResource(Res.string.mirroring))
+        SectionHeader(stringResource(Res.string.display_and_image))
         SettingsGroup {
+            // Both phone mirroring and dedicated VD send JPEG frames at the chosen cap.
             SettingSlider(stringResource(Res.string.image_quality), "$quality", quality.toFloat(), 10f, 80f) { onQuality(it.roundToInt()) }
-            if (dashSupported) {
-                GroupDivider()
-                SettingSlider(
-                    stringResource(Res.string.dpi),
-                    "$dashDpi dpi",
-                    dashDpi.toFloat(),
-                    160f,
-                    480f,
-                    step = 10f,
-                ) { onDashDpi((it.roundToInt() / 10) * 10) }
-            }
             GroupDivider()
             val fpsChoices = (1..15).map { it.toDouble() }
             val fpsIndex = fpsChoices.indexOf(maxFps).takeIf { it >= 0 } ?: 2
@@ -316,6 +308,21 @@ internal fun SettingsScreen(
                 onMaxFps(fpsChoices[rawIndex.roundToInt().coerceIn(0, fpsChoices.lastIndex)])
             }
             if (dashSupported) {
+                GroupDivider()
+                Text(
+                    stringResource(Res.string.vd_display_only),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 12.dp, bottom = 4.dp),
+                )
+                SettingSlider(
+                    stringResource(Res.string.dpi),
+                    "$dashDpi dpi",
+                    dashDpi.toFloat(),
+                    160f,
+                    480f,
+                    step = 10f,
+                ) { onDashDpi((it.roundToInt() / 10) * 10) }
                 GroupDivider()
                 SettingSlider(
                     stringResource(Res.string.left_margin),
@@ -336,6 +343,8 @@ internal fun SettingsScreen(
                 ) { onDraftBottomMargin(DashMargins.clampBottom(it.roundToInt())) }
                 GroupDivider()
                 MarginColorSelector(draftMarginColor, onDraftMarginColor)
+                GroupDivider()
+                DashResolutionSelector(dashScale, draftLeftMargin, draftBottomMargin, onDashScale)
             }
         }
         if (!dashSupported) {
@@ -357,7 +366,11 @@ internal fun SettingsScreen(
                 ) {
                     Column(Modifier.weight(1f)) {
                         Text(
-                            if (dashEnabled) stringResource(Res.string.on) else stringResource(Res.string.off),
+                            when {
+                                dashChecking -> "Checking VD..."
+                                dashEnabled -> stringResource(Res.string.on)
+                                else -> stringResource(Res.string.off)
+                            },
                             style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
                         )
                         Text(
@@ -366,18 +379,71 @@ internal fun SettingsScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                    if (dashEnabled) {
+                    if (dashChecking) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                    } else if (dashEnabled) {
                         OutlinedButton(onClick = onDisableDash, shape = RoundedCornerShape(12.dp)) { Text(stringResource(Res.string.disable)) }
                     } else {
                         Button(onClick = onSetUpDash, shape = RoundedCornerShape(12.dp)) { Text(stringResource(Res.string.set_up)) }
                     }
                 }
-                if (dashEnabled) {
-                    GroupDivider()
-                    LinkRow(stringResource(Res.string.rerun_setup)) { onSetUpDash() }
+                GroupDivider()
+                Row(
+                    Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Always use selected app on VD")
+                        Text(
+                            "Promote the selected app instead of the current foreground app.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(
+                        checked = draftFixedDashAppEnabled,
+                        onCheckedChange = onDraftFixedDashAppEnabled,
+                    )
                 }
                 GroupDivider()
-                DashResolutionSelector(dashScale, draftLeftMargin, draftBottomMargin, onDashScale)
+                Row(
+                    Modifier.fillMaxWidth()
+                        .clickable { showFixedAppPicker = true }
+                        .padding(vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Selected app")
+                        Text(
+                            selectedFixedApp?.label
+                                ?: draftFixedDashAppPackage
+                                ?: stringResource(Res.string.not_selected),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Text(
+                        stringResource(Res.string.change),
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+                GroupDivider()
+                Row(
+                    Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Restart app on VD")
+                        Text(
+                            "Restart the app after moving it to the virtual display.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(checked = draftRestartAppOnVd, onCheckedChange = onDraftRestartAppOnVd)
+                }
                 GroupDivider()
                 Row(
                     Modifier.fillMaxWidth().padding(vertical = 8.dp),
@@ -554,63 +620,6 @@ internal fun SettingsScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(Modifier.weight(1f)) {
-                        Text("Restart app on VD")
-                        Text(
-                            "Restart the app after moving it to the virtual display.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    Switch(checked = draftRestartAppOnVd, onCheckedChange = onDraftRestartAppOnVd)
-                }
-                GroupDivider()
-                Row(
-                    Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text("Always use selected app on VD")
-                        Text(
-                            "Promote the selected app instead of the current foreground app.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    Switch(
-                        checked = draftFixedDashAppEnabled,
-                        onCheckedChange = onDraftFixedDashAppEnabled,
-                    )
-                }
-                GroupDivider()
-                Row(
-                    Modifier.fillMaxWidth()
-                        .clickable { showFixedAppPicker = true }
-                        .padding(vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text("Selected app")
-                        Text(
-                            selectedFixedApp?.label
-                                ?: draftFixedDashAppPackage
-                                ?: stringResource(Res.string.not_selected),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    Text(
-                        stringResource(Res.string.change),
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                }
-                GroupDivider()
-                Row(
-                    Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(Modifier.weight(1f)) {
                         Text("Auto DRIVE mode")
                         Text(
                             if (driveEligible) "After PROMOTE: switch on two empty Area 1 OCR results."
@@ -697,6 +706,7 @@ internal fun SettingsScreen(
 
         if (dashSupported) {
             Spacer(Modifier.height(24.dp))
+            SectionHeader(stringResource(Res.string.maintenance))
             SettingsGroup {
                 RestartRow(restartPending, onSaveAndRestart)
             }
@@ -729,7 +739,7 @@ internal fun SettingsScreen(
             GroupDivider()
             LinkRow(stringResource(Res.string.changelog)) { uriHandler.openUri("$REPO_URL/blob/main/CHANGELOG.md") }
             GroupDivider()
-            LinkRow("XMAX Custom Fork v36") { uriHandler.openUri("https://github.com/waiasu/pillion") }
+            LinkRow("XMAX Custom Fork v37") { uriHandler.openUri("https://github.com/waiasu/pillion") }
         }
 
         Spacer(Modifier.height(28.dp))

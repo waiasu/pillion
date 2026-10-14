@@ -22,6 +22,7 @@ import app.pillion.android.AndroidSettingsStore
 import app.pillion.android.AdbPairingCoordinator
 import app.pillion.android.CaptureService
 import app.pillion.android.DashHelper
+import app.pillion.android.PillionAdb
 import app.pillion.android.DiagnosticExporter
 import app.pillion.android.DiagnosticFlightRecorder
 import app.pillion.android.SdlMirrorController
@@ -54,6 +55,7 @@ class MainActivity : ComponentActivity() {
     private var pendingSdl = false // whether the in-flight projection grant is for the SDL/USB path
     @Volatile private var diagnosticExportRunning = false
     private var startRequestInFlight by mutableStateOf(false)
+    private var dashSettingsRevision by mutableStateOf(0)
     private val settingsStore by lazy { AndroidSettingsStore(applicationContext) }
 
     private val projectionLauncher = registerForActivityResult(
@@ -75,46 +77,7 @@ class MainActivity : ComponentActivity() {
                 ProjectionHolder.projection = null
                 startSdlService()
             } else {
-                CaptureService.resultCode = result.resultCode
-                CaptureService.resultData = data
-                val intent = Intent(this, CaptureService::class.java)
-                    .putExtra(CaptureService.EXTRA_QUALITY, pendingSettings.quality)
-                    .putExtra(CaptureService.EXTRA_DASH_DPI, pendingSettings.dashDpi)
-                    .putExtra(CaptureService.EXTRA_MAX_FPS, pendingSettings.maxFps)
-                    .putExtra(CaptureService.EXTRA_DASH_ENABLED, settingsStore.dashEnabled())
-                    .putExtra(CaptureService.EXTRA_DASH_WIDTH, pendingSettings.dashResolution.width)
-                    .putExtra(CaptureService.EXTRA_DASH_HEIGHT, pendingSettings.dashResolution.height)
-                    .putExtra(CaptureService.EXTRA_DASH_LEFT_MARGIN, pendingSettings.dashLeftMargin)
-                    .putExtra(CaptureService.EXTRA_DASH_BOTTOM_MARGIN, pendingSettings.dashBottomMargin)
-                    .putExtra(CaptureService.EXTRA_DASH_MARGIN_COLOR, pendingSettings.dashMarginColor.rgb)
-                    .putExtra(CaptureService.EXTRA_STICK_TAP_ENABLED, pendingSettings.stickTapEnabled)
-                    .putExtra(CaptureService.EXTRA_STICK_ZOOM_IN_X, pendingSettings.stickZoomInXPercent)
-                    .putExtra(CaptureService.EXTRA_STICK_ZOOM_IN_Y, pendingSettings.stickZoomInYPercent)
-                    .putExtra(CaptureService.EXTRA_STICK_ZOOM_OUT_X, pendingSettings.stickZoomOutXPercent)
-                    .putExtra(CaptureService.EXTRA_STICK_ZOOM_OUT_Y, pendingSettings.stickZoomOutYPercent)
-                    .putExtra(CaptureService.EXTRA_OCR_ENABLED, pendingSettings.ocrEnabled)
-                    .putExtra(CaptureService.EXTRA_OCR_SHOW_AREA, pendingSettings.ocrShowArea)
-                    .putExtra(CaptureService.EXTRA_OCR_LEFT, pendingSettings.ocrLeftPercent)
-                    .putExtra(CaptureService.EXTRA_OCR_TOP, pendingSettings.ocrTopPercent)
-                    .putExtra(CaptureService.EXTRA_OCR_RIGHT, pendingSettings.ocrRightPercent)
-                    .putExtra(CaptureService.EXTRA_OCR_BOTTOM, pendingSettings.ocrBottomPercent)
-                    .putExtra(CaptureService.EXTRA_OCR2_LEFT, pendingSettings.ocr2LeftPercent)
-                    .putExtra(CaptureService.EXTRA_OCR2_TOP, pendingSettings.ocr2TopPercent)
-                    .putExtra(CaptureService.EXTRA_OCR2_RIGHT, pendingSettings.ocr2RightPercent)
-                    .putExtra(CaptureService.EXTRA_OCR2_BOTTOM, pendingSettings.ocr2BottomPercent)
-                    .putExtra(CaptureService.EXTRA_RESTART_APP_ON_VD, pendingSettings.restartAppOnVd)
-                    .putExtra(CaptureService.EXTRA_AUTO_DRIVE_MODE, pendingSettings.autoDriveModeEnabled)
-                    .putExtra(CaptureService.EXTRA_DRIVE_TAP_X, pendingSettings.driveTapXPercent)
-                    .putExtra(CaptureService.EXTRA_DRIVE_TAP_Y, pendingSettings.driveTapYPercent)
-                    .putExtra(CaptureService.EXTRA_DRIVE_STICK_IN_X, pendingSettings.driveStickZoomInXPercent)
-                    .putExtra(CaptureService.EXTRA_DRIVE_STICK_IN_Y, pendingSettings.driveStickZoomInYPercent)
-                    .putExtra(CaptureService.EXTRA_DRIVE_STICK_OUT_X, pendingSettings.driveStickZoomOutXPercent)
-                    .putExtra(CaptureService.EXTRA_DRIVE_STICK_OUT_Y, pendingSettings.driveStickZoomOutYPercent)
-                    .putExtra(CaptureService.EXTRA_DRIVE_IMAGE_SHIFT, pendingSettings.driveImageShiftPx)
-                    .putExtra(CaptureService.EXTRA_FIXED_DASH_APP_ENABLED, pendingSettings.fixedDashAppEnabled)
-                    .putExtra(CaptureService.EXTRA_FIXED_DASH_APP_PACKAGE, pendingSettings.fixedDashAppPackage)
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(intent)
-                else startService(intent)
+                startCaptureService(pendingSettings, result.resultCode, data)
             }
             releaseStartLockWhenSessionBegins()
         } catch (t: Throwable) {
@@ -123,11 +86,62 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    /** One service intent for both normal mirroring and the consent-free helper VD. */
+    private fun startCaptureService(
+        settings: MirrorSettings,
+        projectionCode: Int? = null,
+        projectionData: Intent? = null,
+    ) {
+        CaptureService.resultCode = projectionCode ?: 0
+        CaptureService.resultData = projectionData
+        val intent = Intent(this, CaptureService::class.java)
+            .putExtra(CaptureService.EXTRA_QUALITY, settings.quality)
+            .putExtra(CaptureService.EXTRA_DASH_DPI, settings.dashDpi)
+            .putExtra(CaptureService.EXTRA_MAX_FPS, settings.maxFps)
+            .putExtra(CaptureService.EXTRA_DASH_ENABLED, settingsStore.dashEnabled())
+            .putExtra(CaptureService.EXTRA_DASH_WIDTH, settings.dashResolution.width)
+            .putExtra(CaptureService.EXTRA_DASH_HEIGHT, settings.dashResolution.height)
+            .putExtra(CaptureService.EXTRA_DASH_LEFT_MARGIN, settings.dashLeftMargin)
+            .putExtra(CaptureService.EXTRA_DASH_BOTTOM_MARGIN, settings.dashBottomMargin)
+            .putExtra(CaptureService.EXTRA_DASH_MARGIN_COLOR, settings.dashMarginColor.rgb)
+            .putExtra(CaptureService.EXTRA_STICK_TAP_ENABLED, settings.stickTapEnabled)
+            .putExtra(CaptureService.EXTRA_STICK_ZOOM_IN_X, settings.stickZoomInXPercent)
+            .putExtra(CaptureService.EXTRA_STICK_ZOOM_IN_Y, settings.stickZoomInYPercent)
+            .putExtra(CaptureService.EXTRA_STICK_ZOOM_OUT_X, settings.stickZoomOutXPercent)
+            .putExtra(CaptureService.EXTRA_STICK_ZOOM_OUT_Y, settings.stickZoomOutYPercent)
+            .putExtra(CaptureService.EXTRA_OCR_ENABLED, settings.ocrEnabled)
+            .putExtra(CaptureService.EXTRA_OCR_SHOW_AREA, settings.ocrShowArea)
+            .putExtra(CaptureService.EXTRA_OCR_LEFT, settings.ocrLeftPercent)
+            .putExtra(CaptureService.EXTRA_OCR_TOP, settings.ocrTopPercent)
+            .putExtra(CaptureService.EXTRA_OCR_RIGHT, settings.ocrRightPercent)
+            .putExtra(CaptureService.EXTRA_OCR_BOTTOM, settings.ocrBottomPercent)
+            .putExtra(CaptureService.EXTRA_OCR2_LEFT, settings.ocr2LeftPercent)
+            .putExtra(CaptureService.EXTRA_OCR2_TOP, settings.ocr2TopPercent)
+            .putExtra(CaptureService.EXTRA_OCR2_RIGHT, settings.ocr2RightPercent)
+            .putExtra(CaptureService.EXTRA_OCR2_BOTTOM, settings.ocr2BottomPercent)
+            .putExtra(CaptureService.EXTRA_RESTART_APP_ON_VD, settings.restartAppOnVd)
+            .putExtra(CaptureService.EXTRA_AUTO_DRIVE_MODE, settings.autoDriveModeEnabled)
+            .putExtra(CaptureService.EXTRA_DRIVE_TAP_X, settings.driveTapXPercent)
+            .putExtra(CaptureService.EXTRA_DRIVE_TAP_Y, settings.driveTapYPercent)
+            .putExtra(CaptureService.EXTRA_DRIVE_STICK_IN_X, settings.driveStickZoomInXPercent)
+            .putExtra(CaptureService.EXTRA_DRIVE_STICK_IN_Y, settings.driveStickZoomInYPercent)
+            .putExtra(CaptureService.EXTRA_DRIVE_STICK_OUT_X, settings.driveStickZoomOutXPercent)
+            .putExtra(CaptureService.EXTRA_DRIVE_STICK_OUT_Y, settings.driveStickZoomOutYPercent)
+            .putExtra(CaptureService.EXTRA_DRIVE_IMAGE_SHIFT, settings.driveImageShiftPx)
+            .putExtra(CaptureService.EXTRA_FIXED_DASH_APP_ENABLED, settings.fixedDashAppEnabled)
+            .putExtra(CaptureService.EXTRA_FIXED_DASH_APP_PACKAGE, settings.fixedDashAppPackage)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(intent)
+        else startService(intent)
+    }
+
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
     ) { granted ->
         if (granted.values.all { it }) {
-            requestProjection()
+            try { startSelectedMode() } catch (t: Throwable) {
+                startRequestInFlight = false
+                throw t
+            }
         } else {
             startRequestInFlight = false
         }
@@ -191,6 +205,8 @@ class MainActivity : ComponentActivity() {
                 onResetAndRestartApp = { restartPillion(clearCache = true) },
                 onExportDiagnostics = ::exportDiagnostics,
                 startRequestInFlight = startRequestInFlight,
+                dashSettingsRevision = dashSettingsRevision,
+                onCheckDashAvailability = ::checkDashAvailability,
             )
         }
         if (savedInstanceState == null) {
@@ -340,6 +356,61 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    /**
+     * Entry-only check. Do not discover Wi-Fi ADB or spawn a Helper in this preflight:
+     * existing DashHelper.ensureRunning() retains responsibility for normal startup.
+     */
+    private suspend fun checkDashAvailability(): Boolean {
+        if (!settingsStore.dashEnabled()) return false
+        val available = withContext(Dispatchers.IO) {
+            if (DashHelper.isRunning(applicationContext)) {
+                DiagnosticFlightRecorder.record("VD", "PREFLIGHT helper ready")
+                true
+            } else {
+                val adbReady = runCatching {
+                    val adb = PillionAdb.getInstance(applicationContext)
+                    // connect() returns false when this libadb manager is *already* connected.
+                    // Only reuse a live loopback session, not an unrelated Wi-Fi ADB session.
+                    (adb.isConnected() && adb.getHostAddress() == PillionAdb.LOOPBACK_HOST) ||
+                        adb.connectDevice(PillionAdb.LOOPBACK_HOST, PillionAdb.TCPIP_PORT)
+                }.getOrDefault(false)
+                DiagnosticFlightRecorder.record("VD", if (adbReady) "PREFLIGHT local ADB ready" else "PREFLIGHT unavailable")
+                adbReady
+            }
+        }
+        if (!available && settingsStore.dashEnabled()) {
+            settingsStore.setDashEnabled(false)
+            dashSettingsRevision++
+            DiagnosticFlightRecorder.record("VD", "DISABLED after failed preflight")
+        }
+        return available && settingsStore.dashEnabled()
+    }
+
+    /** Dedicated NaviLite VD bypasses MediaProjection only while local prerequisites are usable. */
+    private fun startSelectedMode() {
+        if (pendingSdl || !settingsStore.dashEnabled()) {
+            requestProjection()
+            return
+        }
+        // The existing START in-flight lock stays active until this asynchronous check completes.
+        lifecycleScope.launch {
+            try {
+                val dashReady = checkDashAvailability()
+                if (!startRequestInFlight) return@launch
+                if (dashReady) {
+                    startCaptureService(pendingSettings)
+                    releaseStartLockWhenSessionBegins()
+                } else {
+                    // Same Start press, normal Android consent flow. Never change CaptureService.
+                    requestProjection()
+                }
+            } catch (t: Throwable) {
+                startRequestInFlight = false
+                throw t
+            }
+        }
+    }
+
     private fun startMirroring(settings: MirrorSettings) {
         // One START request at a time. Keep the UI and framework guard locked until the request
         // either fails/cancels or the selected mirror session actually leaves Idle.
@@ -350,7 +421,7 @@ class MainActivity : ComponentActivity() {
             checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED
         }
         try {
-            if (missing.isEmpty()) requestProjection() else permissionLauncher.launch(missing.toTypedArray())
+            if (missing.isEmpty()) startSelectedMode() else permissionLauncher.launch(missing.toTypedArray())
         } catch (t: Throwable) {
             startRequestInFlight = false
             throw t

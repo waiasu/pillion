@@ -12,7 +12,7 @@ import app.pillion.core.ScreenSource
  * MediaProjection grant.
  */
 class SwitchableScreenSource(
-    private val mirror: ScreenSource,
+    private val mirror: ScreenSource?,
     private val dash: DashStreamScreenSource,
     private val restartAppOnVd: Boolean = false,
 ) : ScreenSource {
@@ -24,14 +24,14 @@ class SwitchableScreenSource(
     @Volatile private var reloadMask = false
     @Volatile private var reloadMaskGeneration = 0L
     @Volatile private var reloadMaskStartFrameSeq = 0L
-    @Volatile private var mode = Mode.MIRROR
-    @Volatile private var dashFallback = Mode.MIRROR
+    @Volatile private var mode = if (mirror == null) Mode.STATUS else Mode.MIRROR
+    @Volatile private var dashFallback = if (mirror == null) Mode.STATUS else Mode.MIRROR
     // ROAD is a separate meter overlay; STATUS frames alone do not clear its last text.
     @Volatile private var clearRoadOnStatusAck = false
     @Volatile private var statusRoadClearReady = false
 
     override fun start() {
-        mirror.start()
+        mirror?.start()
         dash.start() // connects to the helper's loopback socket; stays idle until promoted
         status.start()
         reloadStatus.start()
@@ -49,7 +49,7 @@ class SwitchableScreenSource(
             }
         }
         return when (mode) {
-        Mode.MIRROR -> mirror.latestFrame()
+        Mode.MIRROR -> mirror?.latestFrame() ?: status.latestFrame()
         Mode.STATUS -> status.latestFrame()
         Mode.DASH -> {
             val frame = dash.latestFrame()
@@ -60,7 +60,7 @@ class SwitchableScreenSource(
                 frame
             } else {
                 when (dashFallback) {
-                    Mode.MIRROR -> mirror.latestFrame()
+                    Mode.MIRROR -> mirror?.latestFrame() ?: status.latestFrame()
                     Mode.STATUS, Mode.DASH -> status.latestFrame()
                 }
             }
@@ -102,7 +102,7 @@ class SwitchableScreenSource(
     }
 
     override fun stop() {
-        runCatching { mirror.stop() }
+        runCatching { mirror?.stop() }
         runCatching { dash.stop() }
         runCatching { status.stop() }
         runCatching { reloadStatus.stop() }
@@ -178,7 +178,7 @@ class SwitchableScreenSource(
 
     /** End the session: stop mirroring and tell the (detached) helper to release the display + exit. */
     fun quit() {
-        runCatching { mirror.stop() }
+        runCatching { mirror?.stop() }
         runCatching { status.stop() }
         runCatching { reloadStatus.stop() }
         runCatching { dash.quit() }

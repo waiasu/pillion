@@ -4,7 +4,7 @@ This file is the current-state reference for the XMAX / Pixel fork.
 
 このファイルは XMAX / Pixel fork の「現在どうなっているか」を確認するための基準メモです。
 
-The implementation described here covers **stable v36 (2026-10-13)**, including v35 NAV/DRIVE behavior and v36 helper security/bootstrapping/Stop/stick-guard updates. The v35 release commit was `ea564aa`; the `xmax-v34` tag points to commit `4d994e3`. As always, source code takes precedence over these notes.
+The implementation described here covers **stable v37 (2026-10-14)**, including v35 NAV/DRIVE behavior and v36 helper security/bootstrapping/Stop/stick-guard updates. The v35 release commit was `ea564aa`; the `xmax-v34` tag points to commit `4d994e3`. As always, source code takes precedence over these notes.
 
 If this file and the source ever disagree, **the source code wins**.
 
@@ -71,6 +71,20 @@ Important code-maintenance note: some common fallback/default values in `MirrorS
 Changing VD size/DPI while Yahoo! Car Navigation is already alive can produce partial rendering/DPI oddities. The existing Restart-on-VD path exists specifically to avoid carrying a live task through that transition when the option is enabled.
 
 ---
+
+## v37 — dedicated VD-only startup
+
+When Android NaviLite dedicated VD is ON, Start bypasses MediaProjection consent and the phone-mirror VirtualDisplay/ImageReader. The service runs as `connectedDevice`, and `SwitchableScreenSource` begins in STATUS (`Please lock the phone`). Existing PROMOTE uses the helper-owned trusted VD, and DEMOTE returns to STATUS. VD OFF and SDL/USB retain their original capture path. A shared non-blocking Start/Settings-entry preflight checks authenticated Helper first, then local ADB at 127.0.0.1:5555 only. If both are unavailable, disable VD in saved settings, synchronize Compose UI, and use normal MediaProjection consent for the same Start tap. Settings removes the Rerun setup link and shows Checking while probing. Both preflight and Helper bootstrap accept a live existing loopback connection: libadb-android connect() returns false when already connected. A Wi-Fi-only connection is not treated as local loopback. Preflight performs no Wi-Fi/mDNS discovery or Helper spawn; existing VD lifecycle and Bluetooth reconnect mechanisms remain intact. v37 bench and XMAX field tests passed.
+
+### Regular mirroring screen-off cleanup (v37)
+
+When dedicated VD is OFF, the phone-mirror service subscribes to `ACTION_SCREEN_OFF`; `MediaProjection.Callback.onStop` is an independent fallback for projection revocation. The first trigger ends the normal capture service via its ordinary cleanup (notification removal, engine/socket shutdown, wake-lock release, Idle UI) without changing the VD preference. A one-shot guard suppresses duplicate stop requests and callbacks caused by intentional teardown. On unlocking, the user can tap Start again for fresh MediaProjection consent. The dedicated VD receiver and its PROMOTE/DEMOTE/reconnect behavior are untouched.
+
+## v37 Settings and Home presentation
+
+- Settings groups: Appearance and Motorcycle unchanged; Display & Image contains shared Image quality and Max FPS, then a VD-only subsection with DPI, Left/Bottom margin, Margin color and Map layout size. VD Features contains VD On/Off, selected app targeting, Restart app on VD, stick taps, OCR and Auto DRIVE. Maintenance contains Save & Restart and diagnostic export. About shows XMAX Custom Fork v37.
+- The “experimental” VD heading and old Wi-Fi-until-restart guidance are replaced with current v37 copy; the Save & Restart caption distinguishes draft settings from immediate theme/VD enable.
+- The Android NaviLite Home Idle state shows a mode title, emphasized one-line Start instructions, and muted behavior notes without numbered steps. VD ON: Start then lock, automatically resume when the bike reconnects or the phone is re-locked after use. VD OFF: use landscape orientation, Start and consent, keep the screen on (lock stops mirroring); the bike may connect later in either mode. Other head-unit guides and session states/actions remain untouched. The UI follows the remembered/persisted `dashEnabled` state, including preflight disable and setup completion.
 
 ## MediaProjection consent / Android 14+
 

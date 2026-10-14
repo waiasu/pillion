@@ -6,6 +6,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -22,12 +24,14 @@ import app.pillion.core.DashSetup
 import app.pillion.core.MirrorController
 import app.pillion.core.LaunchableApp
 import app.pillion.core.MirrorSettings
+import app.pillion.core.MirrorState
 import app.pillion.core.SettingsStore
 import app.pillion.core.ThemeMode
 import app.pillion.core.headunit.HeadUnitProfile
 import app.pillion.core.headunit.HeadUnitRegistry
 import app.pillion.resources.*
 import org.jetbrains.compose.resources.stringResource
+import kotlinx.coroutines.launch
 
 /** The public GitHub repository — shown in-app so anyone can read the source. */
 const val REPO_URL = "https://github.com/alexandrevega/pillion"
@@ -42,6 +46,8 @@ fun App(
     onResetAndRestartApp: () -> Unit = {},
     onExportDiagnostics: () -> Unit = {},
     startRequestInFlight: Boolean? = null,
+    dashSettingsRevision: Int = 0,
+    onCheckDashAvailability: suspend () -> Boolean = { true },
 ) {
     var themeMode by remember { mutableStateOf(settingsStore?.themeMode() ?: ThemeMode.SYSTEM) }
     PillionTheme(themeMode) {
@@ -137,6 +143,12 @@ fun App(
         var showDashOnboarding by rememberSaveable { mutableStateOf(false) }
         var restartAction by remember { mutableStateOf<RestartAction?>(null) }
         var dashEnabled by remember { mutableStateOf(settingsStore?.dashEnabled() ?: false) }
+        var checkingDash by remember { mutableStateOf(false) }
+        val scope = rememberCoroutineScope()
+        // A failed Start preflight can disable the stored toggle while Home is visible.
+        LaunchedEffect(dashSettingsRevision) {
+            dashEnabled = settingsStore?.dashEnabled() ?: false
+        }
 
         val activeDashResolution = DashResolution.forLayout(
             savedLeftMargin,
@@ -217,6 +229,7 @@ fun App(
                 onThemeMode = { themeMode = it; settingsStore?.setThemeMode(it) },
                 dashSupported = dashSetup != null,
                 dashEnabled = dashEnabled,
+                dashChecking = checkingDash,
                 dashScale = draftDashScale,
                 onDashScale = { draftDashScale = it },
                 draftLeftMargin = draftLeftMargin,
@@ -338,7 +351,27 @@ fun App(
             HomeScreen(
                 state = state,
                 startRequestInFlight = startRequestInFlight,
-                onOpenSettings = { showSettings = true },
+                dashSupported = dashSetup != null && !profile.requiresUsb,
+                dashEnabled = dashEnabled,
+                onOpenSettings = {
+                    showSettings = true
+                    // Check once per entry, not on every recomposition. Never turn off VD
+                    // while a session is active, and do not start ADB setup in Settings.
+                    if (dashEnabled && dashSetup != null &&
+                        state !is MirrorState.Streaming && state != MirrorState.Connecting &&
+                        state != MirrorState.Broadcasting && !checkingDash
+                    ) {
+                        checkingDash = true
+                        scope.launch {
+                            try {
+                                onCheckDashAvailability()
+                                dashEnabled = settingsStore?.dashEnabled() ?: false
+                            } finally {
+                                checkingDash = false
+                            }
+                        }
+                    }
+                },
                 onStart = {
                     controller.start(
                         MirrorSettings(
