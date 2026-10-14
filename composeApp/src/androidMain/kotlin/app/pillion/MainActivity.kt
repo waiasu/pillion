@@ -22,6 +22,7 @@ import app.pillion.android.AndroidSettingsStore
 import app.pillion.android.AdbPairingCoordinator
 import app.pillion.android.CaptureService
 import app.pillion.android.DashHelper
+import app.pillion.android.PillionAdb
 import app.pillion.android.DiagnosticExporter
 import app.pillion.android.DiagnosticFlightRecorder
 import app.pillion.android.SdlMirrorController
@@ -54,6 +55,7 @@ class MainActivity : ComponentActivity() {
     private var pendingSdl = false // whether the in-flight projection grant is for the SDL/USB path
     @Volatile private var diagnosticExportRunning = false
     private var startRequestInFlight by mutableStateOf(false)
+    private var dashSettingsRevision by mutableStateOf(0)
     private val settingsStore by lazy { AndroidSettingsStore(applicationContext) }
 
     private val projectionLauncher = registerForActivityResult(
@@ -203,6 +205,8 @@ class MainActivity : ComponentActivity() {
                 onResetAndRestartApp = { restartPillion(clearCache = true) },
                 onExportDiagnostics = ::exportDiagnostics,
                 startRequestInFlight = startRequestInFlight,
+                dashSettingsRevision = dashSettingsRevision,
+                onCheckDashAvailability = ::checkDashAvailability,
             )
         }
         if (savedInstanceState == null) {
@@ -352,13 +356,56 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /** Dedicated NaviLite VD uses a shell helper, not Android screen-capture consent. */
+    /**
+     * Entry-only check. Do not discover Wi-Fi ADB or spawn a Helper in this preflight:
+     * existing DashHelper.ensureRunning() retains responsibility for normal startup.
+     */
+    private suspend fun checkDashAvailability(): Boolean {
+        if (!settingsStore.dashEnabled()) return false
+        val available = withContext(Dispatchers.IO) {
+            if (DashHelper.isRunning(applicationContext)) {
+                DiagnosticFlightRecorder.record("VD", "PREFLIGHT helper ready")
+                true
+            } else {
+                val adbReady = runCatching {
+                    PillionAdb.getInstance(applicationContext).connectDevice(
+                        PillionAdb.LOOPBACK_HOST, PillionAdb.TCPIP_PORT,
+                    )
+                }.getOrDefault(false)
+                DiagnosticFlightRecorder.record("VD", if (adbReady) "PREFLIGHT local ADB ready" else "PREFLIGHT unavailable")
+                adbReady
+            }
+        }
+        if (!available && settingsStore.dashEnabled()) {
+            settingsStore.setDashEnabled(false)
+            dashSettingsRevision++
+            DiagnosticFlightRecorder.record("VD", "DISABLED after failed preflight")
+        }
+        return available && settingsStore.dashEnabled()
+    }
+
+    /** Dedicated NaviLite VD bypasses MediaProjection only while local prerequisites are usable. */
     private fun startSelectedMode() {
-        if (!pendingSdl && settingsStore.dashEnabled()) {
-            startCaptureService(pendingSettings)
-            releaseStartLockWhenSessionBegins()
-        } else {
+        if (pendingSdl || !settingsStore.dashEnabled()) {
             requestProjection()
+            return
+        }
+        // The existing START in-flight lock stays active until this asynchronous check completes.
+        lifecycleScope.launch {
+            try {
+                val dashReady = checkDashAvailability()
+                if (!startRequestInFlight) return@launch
+                if (dashReady) {
+                    startCaptureService(pendingSettings)
+                    releaseStartLockWhenSessionBegins()
+                } else {
+                    // Same Start press, normal Android consent flow. Never change CaptureService.
+                    requestProjection()
+                }
+            } catch (t: Throwable) {
+                startRequestInFlight = false
+                throw t
+            }
         }
     }
 

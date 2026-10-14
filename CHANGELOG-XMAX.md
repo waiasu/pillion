@@ -12,6 +12,9 @@ The upstream Pillion changelog remains in `CHANGELOG.md` unchanged. Historical e
 
 - When dedicated NaviLite VD is enabled, bypass screen-capture consent, create no phone-mirror MediaProjection/ImageReader, and show the existing `Please lock the phone` STATUS frame immediately.
 - Keep VD OFF normal mirror, SDL/USB, helper control, PROMOTE/DEMOTE, OCR/Auto DRIVE, Bluetooth reconnect, Stop and Save/Reset behaviors intact.
+- At Start or Settings entry, check authenticated Helper, then local ADB (127.0.0.1:5555) only. If neither is available, persist VD OFF and update the UI. Start immediately continues through normal MediaProjection consent without a second tap.
+- Settings displays a brief disabled Checking state, then either Disable (ON) or Set up (OFF); remove the Rerun setup link.
+- Do not probe Wi-Fi/mDNS or fingerprint, track boot counts, or change Helper initialization, CaptureService, or reconnection.
 - Experimental until build and Pixel/XMAX field tests; stable `xmax-pillion` remains v36.
 
 

@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -79,6 +80,7 @@ internal fun SettingsScreen(
     onThemeMode: (ThemeMode) -> Unit,
     dashSupported: Boolean = false,
     dashEnabled: Boolean = false,
+    dashChecking: Boolean = false,
     dashScale: DashScale = DashScale.DEFAULT,
     onDashScale: (DashScale) -> Unit = {},
     draftLeftMargin: Int = 0,
@@ -357,7 +359,11 @@ internal fun SettingsScreen(
                 ) {
                     Column(Modifier.weight(1f)) {
                         Text(
-                            if (dashEnabled) stringResource(Res.string.on) else stringResource(Res.string.off),
+                            when {
+                                dashChecking -> "Checking VD..."
+                                dashEnabled -> stringResource(Res.string.on)
+                                else -> stringResource(Res.string.off)
+                            },
                             style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
                         )
                         Text(
@@ -366,15 +372,13 @@ internal fun SettingsScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                    if (dashEnabled) {
+                    if (dashChecking) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                    } else if (dashEnabled) {
                         OutlinedButton(onClick = onDisableDash, shape = RoundedCornerShape(12.dp)) { Text(stringResource(Res.string.disable)) }
                     } else {
                         Button(onClick = onSetUpDash, shape = RoundedCornerShape(12.dp)) { Text(stringResource(Res.string.set_up)) }
                     }
-                }
-                if (dashEnabled) {
-                    GroupDivider()
-                    LinkRow(stringResource(Res.string.rerun_setup)) { onSetUpDash() }
                 }
                 GroupDivider()
                 DashResolutionSelector(dashScale, draftLeftMargin, draftBottomMargin, onDashScale)
