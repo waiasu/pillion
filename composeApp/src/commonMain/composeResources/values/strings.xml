@@ -39,6 +39,10 @@
 
     <!-- [Visible UI] Normal mirroring uses whole-screen capture only. -->
     <string name="guide_start_mirroring">Tap Start mirroring, then allow screen capture.</string>
+    <string name="home_vd_mode">Virtual Display</string>
+    <string name="home_phone_mirror_mode">Screen mirroring</string>
+    <string name="guide_start_vd">Tap Start mirroring, then lock your phone to show the app on the dash.</string>
+    <string name="guide_start_phone_mirror">Tap Start mirroring, allow screen capture, and keep your phone screen on.</string>
 
     <!-- [Visible UI] Original: "Open Waze or Google Maps — it appears on your dash." -->
     <string name="guide_open_maps">Open Waze or Google Maps — it appears on your dash.</string>
@@ -87,6 +91,9 @@
 
     <!-- [Visible UI] Original: "Mirroring" -->
     <string name="mirroring">Mirroring</string>
+    <string name="display_and_image">Display &amp; Image</string>
+    <string name="vd_display_only">Virtual Display only</string>
+    <string name="maintenance">Maintenance</string>
 
     <!-- [Visible UI] Original: "Image quality" -->
     <string name="image_quality">Image quality</string>
@@ -112,8 +119,8 @@
     <!-- [Visible UI] Original: "Higher quality looks sharper but makes the picture less smooth (about 15–25 fps at 40% on a fast phone). The cap keeps the frame rate down to save battery and reduce heat." -->
     <string name="image_quality_help">Higher quality looks sharper but makes the picture less smooth (about 15–25 fps at 40% on a fast phone). The cap keeps the frame rate down to save battery and reduce heat.</string>
 
-    <!-- [Visible UI] Original: "Dedicated dash display (experimental)" -->
-    <string name="dedicated_dash_display">Dedicated dash display (experimental)</string>
+    <!-- [Visible UI] XMAX VD settings; no longer experimental. -->
+    <string name="dedicated_dash_display">VD Features</string>
 
     <!-- [Visible UI] Original: "On" -->
     <string name="on">On</string>
@@ -133,8 +140,8 @@
     <!-- [Visible UI] Original: "Re-run setup (after a restart)" -->
     <string name="rerun_setup">Re-run setup (after a restart)</string>
 
-    <!-- [Visible UI] Original: "Casts the real app to the dash in landscape with the screen off. Run setup once while Wi-Fi is connected; after that it can start without Wi-Fi until restart." -->
-    <string name="dash_feature_help">Casts the real app to the dash in landscape with the screen off. Run setup once while Wi-Fi is connected; after that it can start without Wi-Fi until restart.</string>
+    <!-- [Visible UI] Reflects v37 loopback ADB recovery, including after app restart. -->
+    <string name="dash_feature_help">Initial setup uses Wireless debugging. VD can keep working without Wi-Fi while its Helper or local ADB is available.</string>
 
     <!-- [Visible UI] Stick input target positions inside the usable dash image. -->
     <string name="stick_tap_position">Stick tap position</string>
@@ -157,7 +164,7 @@
 
     <string name="save_settings_restart">Save settings &amp; restart</string>
     <string name="save_restart">Save &amp; restart</string>
-    <string name="save_restart_help">Saves all settings, cleanly stops Pillion components, then restarts Pillion to apply the changes.</string>
+    <string name="save_restart_help">Image, layout and VD feature changes apply after Save &amp; Restart. Appearance and VD On/Off apply immediately.</string>
 
     <string name="reset_restart">Reset &amp; restart</string>
     <string name="slide_reset_restart">Slide to Reset &amp; Restart</string>

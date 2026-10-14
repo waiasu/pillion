@@ -80,6 +80,12 @@ When Android NaviLite dedicated VD is ON, Start bypasses MediaProjection consent
 
 When dedicated VD is OFF, the phone-mirror service subscribes to `ACTION_SCREEN_OFF`; `MediaProjection.Callback.onStop` is an independent fallback for projection revocation. The first trigger ends the normal capture service via its ordinary cleanup (notification removal, engine/socket shutdown, wake-lock release, Idle UI) without changing the VD preference. A one-shot guard suppresses duplicate stop requests and callbacks caused by intentional teardown. On unlocking, the user can tap Start again for fresh MediaProjection consent. The dedicated VD receiver and its PROMOTE/DEMOTE/reconnect behavior are untouched.
 
+## v37 Settings and Home presentation (test branch)
+
+- Settings groups: Appearance and Motorcycle unchanged; Display & Image contains shared Image quality and Max FPS, then a VD-only subsection with DPI, Left/Bottom margin, Margin color and Map layout size. VD Features contains VD On/Off, selected app targeting, Restart app on VD, stick taps, OCR and Auto DRIVE. Maintenance contains Save & Restart and diagnostic export. About is unchanged.
+- The “experimental” VD heading and old Wi-Fi-until-restart guidance are replaced with current v37 copy; the Save & Restart caption distinguishes draft settings from immediate theme/VD enable.
+- The Android NaviLite Home Idle state shows two concise instructions appropriate to VD ON (Start then lock) or OFF (Start then grant capture, keep screen on). Non-NaviLite home guides and all existing session states/actions remain untouched. The UI follows the remembered/persisted `dashEnabled` state, including preflight disable and setup completion.
+
 ## MediaProjection consent / Android 14+
 
 The Android 14+ whole-screen capture selection is **already implemented** for the normal NaviLite / dedicated-dash path.

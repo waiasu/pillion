@@ -351,6 +351,8 @@ fun App(
             HomeScreen(
                 state = state,
                 startRequestInFlight = startRequestInFlight,
+                dashSupported = dashSetup != null && !profile.requiresUsb,
+                dashEnabled = dashEnabled,
                 onOpenSettings = {
                     showSettings = true
                     // Check once per entry, not on every recomposition. Never turn off VD

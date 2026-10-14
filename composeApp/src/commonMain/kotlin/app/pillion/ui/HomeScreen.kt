@@ -61,6 +61,8 @@ internal fun HomeScreen(
     onStop: () -> Unit,
     onResetAndRestart: () -> Unit,
     startRequestInFlight: Boolean? = null,
+    dashSupported: Boolean = false,
+    dashEnabled: Boolean = false,
 ) {
     var startTapLocked by remember { mutableStateOf(false) }
 
@@ -109,7 +111,7 @@ internal fun HomeScreen(
                     modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.Center,
                 ) {
-                    ConnectGuide()
+                    if (dashSupported) DashModeGuide(dashEnabled) else ConnectGuide()
                 }
             } else {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -292,6 +294,33 @@ private fun StatusDisplay(state: MirrorState) {
 @Composable
 private fun StatusDot(color: Color) {
     Box(Modifier.size(12.dp).clip(CircleShape).background(color))
+}
+
+/**
+ * NaviLite has two distinct modes with the same Start/Stop buttons. Explain
+ * the currently selected one without repeating the five-step legacy guide.
+ */
+@Composable
+private fun DashModeGuide(dashEnabled: Boolean) {
+    val steps = listOf(
+        stringResource(Res.string.guide_navigation_mode),
+        stringResource(
+            if (dashEnabled) Res.string.guide_start_vd
+            else Res.string.guide_start_phone_mirror,
+        ),
+    )
+    Column(Modifier.fillMaxWidth()) {
+        Text(
+            stringResource(
+                if (dashEnabled) Res.string.home_vd_mode
+                else Res.string.home_phone_mirror_mode,
+            ),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Spacer(Modifier.height(12.dp))
+        steps.forEachIndexed { index, step -> StepRow(index + 1, step) }
+    }
 }
 
 @Composable
