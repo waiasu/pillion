@@ -40,6 +40,8 @@ Compatibility with other Android devices, Yamaha models, or navigation apps is n
 ## Main changes from upstream / 主な変更点
 
 - Virtual Display based casting optimized for Yahoo! Car Navigation
+- Dedicated VD Start without MediaProjection consent and local ADB/Helper fallback preflight
+- Normal screen mirroring stops on screen-off or MediaProjection revocation
 - 480 × 234 XMAX dashboard layout with configurable crop and margins
 - Right-top clamped rendering for the usable dashboard area
 - Automatic Bluetooth reconnect and recovery after ignition OFF / ON
@@ -49,7 +51,7 @@ Compatibility with other Android devices, Yamaha models, or navigation apps is n
 - Optional Yahoo! Car Navigation Auto DRIVE mode based on OCR Area 1 after PROMOTE
 - DRIVE-only upward image shift, mode-specific stick coordinates and input suppression while the initial mode is undecided
 - First-run Yahoo! Car Navigation preset on clean installations (existing settings preserved)
-- Compact, collapsible NAV / DRIVE / OCR settings and XMAX Custom Fork v36 link in About
+- Compact, collapsible NAV / DRIVE / OCR settings and XMAX Custom Fork v37 link in About
 - Pixel SecureCamera detection and physical display wake handling
 - Start mirroring race / duplicate-start prevention
 - Reset Pillion and Save & Restart workflows
@@ -59,6 +61,8 @@ Compatibility with other Android devices, Yamaha models, or navigation apps is n
 <br>
 
 - Yahoo!カーナビ向け Virtual Display キャスト
+- VD専用Startで画面共有許可を省略し、Helper/ローカルADBによる事前判定と通常ミラーへの切り替えに対応
+- 通常ミラーは画面ロック・共有終了時に自動停止
 - XMAXメーター 480 × 234 に合わせたクロップ・余白調整
 - 使用可能領域への右上クランプ描画
 - Bluetooth再接続、およびキーOFF / ON後の自動復帰
@@ -68,13 +72,25 @@ Compatibility with other Android devices, Yamaha models, or navigation apps is n
 - OCRエリア1の判定によるYahoo!カーナビのAuto DRIVEモード
 - DRIVE時限定の映像上方向シフト、モード別スティック座標、モード判定中の誤タップ防止
 - 初回クリーンインストール時のYahoo!カーナビ向け設定プリセット（既存設定は維持）
-- NAV/DRIVE/OCR設定の折りたたみ表示、About内のXMAX Custom Fork v36リンク
+- NAV/DRIVE/OCR設定の折りたたみ表示、About内のXMAX Custom Fork v37リンク
 - Pixel SecureCamera検出と物理ディスプレイ復帰処理
 - Start mirroring の二重発火・レース対策
 - Reset Pillion / Save & Restart
 - DASH/OCR・再起動Helperのローカル通信認証、ADB TCP/IP応答待ちの上限設定、Stop処理の安全化
 - 診断用フライトレコーダーと診断ログExport
 - 長時間運用向けの復帰処理・安定性改善
+
+---
+
+## Modes / 利用モード
+
+**VD ON:** Start mirroring, then lock the phone. The bike may connect later; navigation resumes on reconnection or after using and re-locking the phone. If neither Helper nor loopback ADB is available, Start falls back to normal mirroring.
+
+**VD OFF:** Turn the phone to landscape and allow screen capture after Start. Keep the phone screen on; locking it ends normal mirroring. The bike may connect later.
+
+**VD ON：** Startして画面ロック。キーONは後からでもよく、再接続やスマホ操作後の再ロックでナビが自動復帰します。Helper・ローカルADBが両方利用できない場合は通常ミラーへ切り替えます。
+
+**VD OFF：** スマホを横向きにしてStart、画面共有を許可します。キーONは後からでも可能。画面ロックでミラーは終了します。
 
 ---
 
@@ -105,6 +121,12 @@ Compatibility with other Android devices, Yamaha models, or navigation apps is n
 - `v36` (2026-10-13)  
   Token-authenticated helper channels, ADB bootstrap timeout handling, Stop correction, and safe stick input during Auto DRIVE mode checking. The XMAX v36 release retains the feature/fix commits in Git history.  
   Helper通信認証、ADB開始処理の待ち対策、Stop修正、Auto DRIVE判定中のスティック誤タップ防止。個別修正コミットを履歴に残してリリース。
+
+---
+
+- `v37` (2026-10-14)  
+  VD-only Start without MediaProjection consent, correct loopback ADB reuse, normal-mirror automatic shutdown, and redesigned mode-aware Settings/Home. Bench and XMAX tests passed; test commits kept in history.  
+  VD専用Start、ADB接続済み判定、通常ミラーの自動終了、設定・ホームUIの刷新。机上・実車確認済み、テストコミット履歴も保持。
 
 ---
 

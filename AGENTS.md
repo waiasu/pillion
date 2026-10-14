@@ -17,7 +17,7 @@ Before changing XMAX-specific behavior, read:
 
 ## Stability constraints
 
-The stable `xmax-pillion` line includes v35 Auto DRIVE / NAV behavior (release commit `ea564aa`) and v36 helper security/bootstrapping/stick safety, validated primarily on Yamaha XMAX + Google Pixel 10a + Yahoo! Car Navigation.
+The stable `xmax-pillion` line includes v35 Auto DRIVE/NAV, v36 helper security/stick safety, and v37 dedicated VD-only startup and normal-mirror lifecycle/UI fixes, validated primarily on Yamaha XMAX + Google Pixel 10a + Yahoo! Car Navigation.
 
 Unless a task explicitly requires it:
 
@@ -56,7 +56,7 @@ For behavior changes, prefer this order:
 3. Bench-test when possible.
 4. Treat on-bike XMAX testing as the final validation for power/lock, Bluetooth reconnect, stick input, camera wake, and rendering timing.
 
-When a stable fork milestone is reached, update `CHANGELOG-XMAX.md`, `XMAX-CURRENT.md`, and the README feature summary as needed, and update the in-app XMAX fork version label when applicable. v36 is the current stable milestone; create a fresh test branch for subsequent development.
+When a stable fork milestone is reached, update `CHANGELOG-XMAX.md`, `XMAX-CURRENT.md`, and the README feature summary as needed, and update the in-app XMAX fork version label when applicable. v37 is the current stable milestone; create a fresh test branch only when the next development cycle is requested.
 
 ## Branch / merge workflow
 
@@ -67,5 +67,5 @@ When a stable fork milestone is reached, update `CHANGELOG-XMAX.md`, `XMAX-CURRE
 - Only after explicit user approval, open a Pull Request from the test branch into `xmax-pillion`. Prefer **Create a merge commit** so individual development/fix commits remain inspectable; do not squash by default. If a different method is desired, follow the explicit release instruction.
 - Preserve full Git history, including experiments and reverts, for retrospective inspection. Rejected experiments must not remain active in the final code. Never rewrite existing stable-branch history merely to tidy commits.
 - Keep release documentation and upstream-review checkpoints accurate. As of 2026-10-13, upstream `alexandrevega/pillion` `main` through `29497f4ea3bccc5cd40c4647f8e4d8345eeddda3` has been reviewed; necessary XMAX changes are addressed, but not every upstream commit is merged verbatim.
-- After a successful merge and verification, retain or delete the old test branch according to the user's cleanup instruction. When deleting, ensure its commits are reachable from stable history, then create a fresh next-version test branch from the updated `xmax-pillion`.
+- After a successful merge and verification, retain or delete the old test branch according to the user's cleanup instruction. When deleting, ensure its commits are reachable from stable history, then create a fresh next-version test branch from `xmax-pillion` only when requested. The v37 release explicitly does not create a new test branch.
 

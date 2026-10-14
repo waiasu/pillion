@@ -8,7 +8,13 @@ The upstream Pillion changelog remains in `CHANGELOG.md` unchanged. Historical e
 
 ## [Unreleased]
 
-### v37 test branch — dedicated VD without MediaProjection
+No pending XMAX-specific changes.
+
+## [v37] - 2026-10-14
+
+Dedicated VD without MediaProjection, normal-mirror shutdown, and clearer Settings/Home.
+
+### Changes
 
 - When dedicated NaviLite VD is enabled, bypass screen-capture consent, create no phone-mirror MediaProjection/ImageReader, and show the existing `Please lock the phone` STATUS frame immediately.
 - Keep VD OFF normal mirror, SDL/USB, helper control, PROMOTE/DEMOTE, OCR/Auto DRIVE, Bluetooth reconnect, Stop and Save/Reset behaviors intact.
@@ -20,7 +26,13 @@ The upstream Pillion changelog remains in `CHANGELOG.md` unchanged. Historical e
 - Reorganize Settings into Display & Image (quality/FPS shared; DPI/margins/color/layout VD-only), VD Features (app target/restart, stick, OCR, Auto DRIVE), and Maintenance (Save & Restart, diagnostics). Remove experimental wording and update the Wi-Fi/loopback recovery help text.
 - On Android NaviLite Home in Idle, replace the legacy phone-mirror-only steps with a compact, unnumbered mode title, emphasized Start instructions, and one short behavior note. VD explains lock-to-cast, automatic reconnection, and returning to casting after phone use; normal mirroring explains landscape orientation, screen-capture consent, and its screen-on requirement while pointing to VD for screen-off use. The bike may connect after Start. Preserve Start/Stop controls and other head-unit guides.
 - This is UI presentation only; do not change settings persistence, service startup, Helper/VD behavior, or Bluetooth reconnect.
-- Experimental until build and Pixel/XMAX field tests; stable `xmax-pillion` remains v36.
+- About label is **XMAX Custom Fork v37**; Android package metadata is unchanged.
+
+### Validation
+
+- All test/v37 feature and UI commits passed GitHub Actions Android build and unit tests.
+- User confirmed bench and on-bike XMAX / Pixel 10a testing including Wi-Fi-off startup, Helper recovery, normal mirror auto-stop, reconnect behavior and new Home/Settings.
+- Release preserves each test-branch commit through a regular merge commit.
 
 
 ## [v36] - 2026-10-13
