@@ -24,6 +24,7 @@ import app.pillion.core.DashSetup
 import app.pillion.core.MirrorController
 import app.pillion.core.LaunchableApp
 import app.pillion.core.MirrorSettings
+import app.pillion.core.MirrorState
 import app.pillion.core.SettingsStore
 import app.pillion.core.ThemeMode
 import app.pillion.core.headunit.HeadUnitProfile
@@ -368,7 +369,7 @@ fun App(
                             }
                         }
                     }
-                }
+                },
                 onStart = {
                     controller.start(
                         MirrorSettings(
