@@ -16,6 +16,7 @@ The upstream Pillion changelog remains in `CHANGELOG.md` unchanged. Historical e
 - Settings displays a brief disabled Checking state, then either Disable (ON) or Set up (OFF); remove the Rerun setup link.
 - Fix libadb-android 3.1.1 already-connected semantics: both Start/Settings preflight and the Helper bootstrap now accept an existing live loopback ADB connection. connect() returns false when already connected, which previously caused a false failure and Wireless ADB fallback after a successful preflight.
 - Do not probe Wi-Fi/mDNS or fingerprint in preflight, track boot counts, or change Helper spawning, CaptureService, or transport reconnection.
+- Ordinary phone mirroring (VD OFF) now stops its capture service automatically on screen-off or MediaProjection revocation, rather than indefinitely re-sending the last captured JPEG. Both triggers share a one-shot stop guard; after unlock, Home returns to Start and requests fresh MediaProjection consent on the next start. VD's screen events, Helper, transport reconnect, and PROMOTE/DEMOTE remain unchanged.
 - Experimental until build and Pixel/XMAX field tests; stable `xmax-pillion` remains v36.
 
 

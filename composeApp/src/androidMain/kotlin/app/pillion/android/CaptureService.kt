@@ -39,6 +39,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.lang.reflect.Proxy
 import java.util.concurrent.Executor
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Foreground service that hosts a mirroring session. MediaProjection requires a running
@@ -70,9 +71,11 @@ class CaptureService : Service() {
     @Volatile private var fixedDashAppEnabled = false
     @Volatile private var fixedDashAppPackage: String? = null
     @Volatile private var keepDashHelperOnDestroy = false
+    private val normalMirrorStopRequested = AtomicBoolean(false)
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) {
+            normalMirrorStopRequested.set(true)
             keepDashHelperOnDestroy = intent.getBooleanExtra(EXTRA_KEEP_DASH_HELPER, false)
             Log.i(TAG, "notification: explicit Stop keepHelper=$keepDashHelperOnDestroy")
             DiagnosticFlightRecorder.record(
@@ -103,6 +106,7 @@ class CaptureService : Service() {
             }
             return START_NOT_STICKY
         }
+        normalMirrorStopRequested.set(false)
         acquireWakeLock()
         _state.value = MirrorState.Connecting
 
@@ -264,7 +268,10 @@ class CaptureService : Service() {
             // The grant is single-use; clear it so a later restart can't reuse a dead token (→ crash).
             resultCode = 0; resultData = null
             // Create the mirror display NOW, while the projection token is fresh.
-            val mirror = MediaProjectionScreenSource(this, projection, quality)
+            val mirror = MediaProjectionScreenSource(
+                this, projection, quality,
+                onProjectionStopped = { stopNormalMirror("MediaProjection ended") },
+            )
             runCatching { mirror.start() }
             mirror
         }
@@ -338,12 +345,53 @@ class CaptureService : Service() {
             )
             switch
         } else {
+            // VD has its own power/keyguard receiver. Ordinary MediaProjection stops
+            // on screen-off instead of leaving an indefinitely frozen last frame.
+            registerNormalMirrorScreenOffReceiver()
             checkNotNull(mirror)
         }
         runEngine(source, maxFps)
     }
 
-    /** Mirror while unlocked, dash while locked: promote the foreground app on lock, demote on unlock. */
+    /**
+     * Regular phone mirroring has no display to promote on lock. Stop its session
+     * when the physical screen turns off, even on Android versions where the
+     * MediaProjection callback doesn't fire for screen lock.
+     */
+    private fun registerNormalMirrorScreenOffReceiver() {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                if (intent.action == Intent.ACTION_SCREEN_OFF) {
+                    stopNormalMirror("screen off")
+                }
+            }
+        }
+        val filter = IntentFilter(Intent.ACTION_SCREEN_OFF)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            @Suppress("UnspecifiedRegisterReceiverFlag")
+            registerReceiver(receiver, filter)
+        }
+        screenReceiver = receiver
+    }
+
+    /**
+     * One-shot, ordinary-mirror-only stop. SCREEN_OFF and MediaProjection.onStop
+     * can arrive almost together or during explicit teardown. Preserve VD's
+     * PROMOTE/DEMOTE and Bluetooth reconnection behavior completely.
+     */
+    private fun stopNormalMirror(reason: String) {
+        if (dashEnabled || !normalMirrorStopRequested.compareAndSet(false, true)) return
+        Log.i(TAG, "mirror: automatically stopping after $reason")
+        DiagnosticFlightRecorder.record("SERVICE", "MIRROR_AUTO_STOP reason=$reason")
+        scope.launch(Dispatchers.Main) {
+            removeForegroundNotification()
+            stopSelf()
+        }
+    }
+
+    /** VD-only: promote on lock, demote on unlock. */
     private fun registerScreenReceiver() {
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(c: Context, intent: Intent) {
@@ -863,6 +911,7 @@ class CaptureService : Service() {
     }
 
     override fun onDestroy() {
+        normalMirrorStopRequested.set(true)
         Log.i(TAG, "CaptureService.onDestroy()")
         DiagnosticFlightRecorder.record("SERVICE", "CaptureService destroyed reconnectWait=$reconnectWait")
         reconnectJob?.cancel()

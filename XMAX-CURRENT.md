@@ -76,6 +76,10 @@ Changing VD size/DPI while Yahoo! Car Navigation is already alive can produce pa
 
 When Android NaviLite dedicated VD is ON, Start bypasses MediaProjection consent and the phone-mirror VirtualDisplay/ImageReader. The service runs as `connectedDevice`, and `SwitchableScreenSource` begins in STATUS (`Please lock the phone`). Existing PROMOTE uses the helper-owned trusted VD, and DEMOTE returns to STATUS. VD OFF and SDL/USB retain their original capture path. A shared non-blocking Start/Settings-entry preflight checks authenticated Helper first, then local ADB at 127.0.0.1:5555 only. If both are unavailable, disable VD in saved settings, synchronize Compose UI, and use normal MediaProjection consent for the same Start tap. Settings removes the Rerun setup link and shows Checking while probing. Both preflight and Helper bootstrap accept a live existing loopback connection: libadb-android connect() returns false when already connected. A Wi-Fi-only connection is not treated as local loopback. No boot count/Wi-Fi/mDNS probes/Helper spawn or CaptureService changes. Validate early lock, helper delay, initial STATUS IMAGE_ACK, Stop during reconnect, camera, reconnect and Save/Reset on Pixel/XMAX before release.
 
+### Regular mirroring screen-off cleanup (v37 test)
+
+When dedicated VD is OFF, the phone-mirror service subscribes to `ACTION_SCREEN_OFF`; `MediaProjection.Callback.onStop` is an independent fallback for projection revocation. The first trigger ends the normal capture service via its ordinary cleanup (notification removal, engine/socket shutdown, wake-lock release, Idle UI) without changing the VD preference. A one-shot guard suppresses duplicate stop requests and callbacks caused by intentional teardown. On unlocking, the user can tap Start again for fresh MediaProjection consent. The dedicated VD receiver and its PROMOTE/DEMOTE/reconnect behavior are untouched.
+
 ## MediaProjection consent / Android 14+
 
 The Android 14+ whole-screen capture selection is **already implemented** for the normal NaviLite / dedicated-dash path.

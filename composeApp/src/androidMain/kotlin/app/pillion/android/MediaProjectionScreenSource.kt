@@ -22,6 +22,7 @@ class MediaProjectionScreenSource(
     private val context: Context,
     private val projection: MediaProjection,
     private val quality: Int = DEFAULT_QUALITY,
+    private val onProjectionStopped: () -> Unit = {},
 ) : ScreenSource {
 
     private val thread = HandlerThread("pillion-capture").apply { start() }
@@ -30,6 +31,7 @@ class MediaProjectionScreenSource(
     private var display: VirtualDisplay? = null
     @Volatile private var latest: Bitmap? = null
     @Volatile private var projectionStopped = false
+    @Volatile private var stopping = false
 
     override fun start() {
         if (display != null) return // idempotent: capture may be pre-started by the service
@@ -37,7 +39,10 @@ class MediaProjectionScreenSource(
         projection.registerCallback(object : MediaProjection.Callback() {
             override fun onStop() {
                 projectionStopped = true
-                Log.w(TAG, "screen: projection stopped by the system")
+                Log.w(TAG, "screen: projection stopped")
+                // Android may revoke screen sharing on lock. The capture owner decides
+                // how to terminate the session; never keep sending the last JPEG.
+                if (!stopping) onProjectionStopped()
             }
         }, handler)
         val r = ImageReader.newInstance(WIDTH, HEIGHT, PixelFormat.RGBA_8888, 2)
@@ -88,6 +93,9 @@ class MediaProjectionScreenSource(
             "threadAlive=${thread.isAlive},projectionStopped=$projectionStopped"
 
     override fun stop() {
+        // An intentional Stop also invokes MediaProjection.Callback.onStop on some
+        // Android builds. Don't schedule another service stop from that callback.
+        stopping = true
         Log.d(TAG, "screen: stop requested; state=${debugState()}")
         runCatching { display?.release() }
         runCatching { reader?.close() }
