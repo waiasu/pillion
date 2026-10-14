@@ -14,7 +14,8 @@ The upstream Pillion changelog remains in `CHANGELOG.md` unchanged. Historical e
 - Keep VD OFF normal mirror, SDL/USB, helper control, PROMOTE/DEMOTE, OCR/Auto DRIVE, Bluetooth reconnect, Stop and Save/Reset behaviors intact.
 - At Start or Settings entry, check authenticated Helper, then local ADB (127.0.0.1:5555) only. If neither is available, persist VD OFF and update the UI. Start immediately continues through normal MediaProjection consent without a second tap.
 - Settings displays a brief disabled Checking state, then either Disable (ON) or Set up (OFF); remove the Rerun setup link.
-- Do not probe Wi-Fi/mDNS or fingerprint, track boot counts, or change Helper initialization, CaptureService, or reconnection.
+- Fix libadb-android 3.1.1 already-connected semantics: both Start/Settings preflight and the Helper bootstrap now accept an existing live loopback ADB connection. connect() returns false when already connected, which previously caused a false failure and Wireless ADB fallback after a successful preflight.
+- Do not probe Wi-Fi/mDNS or fingerprint in preflight, track boot counts, or change Helper spawning, CaptureService, or transport reconnection.
 - Experimental until build and Pixel/XMAX field tests; stable `xmax-pillion` remains v36.
 
 

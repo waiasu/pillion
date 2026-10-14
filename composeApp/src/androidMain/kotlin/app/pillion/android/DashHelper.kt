@@ -116,7 +116,13 @@ object DashHelper {
         onProgress: (String) -> Unit,
     ): Boolean {
         progress(onProgress, "Checking loopback ADB :5555...")
-        if (runCatching { adb.connectDevice(PillionAdb.LOOPBACK_HOST, PillionAdb.TCPIP_PORT) }.getOrDefault(false)) {
+        // libadb-android connect() returns false when it has a live connection already.
+        // Accept the existing *loopback* connection established by the VD preflight.
+        val loopbackReady = runCatching {
+            (adb.isConnected() && adb.getHostAddress() == PillionAdb.LOOPBACK_HOST) ||
+                adb.connectDevice(PillionAdb.LOOPBACK_HOST, PillionAdb.TCPIP_PORT)
+        }.getOrDefault(false)
+        if (loopbackReady) {
             Log.d(TAG, "dash: connected over loopback (offline-capable)")
             DiagnosticFlightRecorder.record("ADB", "LOOPBACK_CONNECTED")
             progress(onProgress, "Loopback ADB ready")

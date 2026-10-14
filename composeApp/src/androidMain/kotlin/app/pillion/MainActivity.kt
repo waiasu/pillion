@@ -368,9 +368,11 @@ class MainActivity : ComponentActivity() {
                 true
             } else {
                 val adbReady = runCatching {
-                    PillionAdb.getInstance(applicationContext).connectDevice(
-                        PillionAdb.LOOPBACK_HOST, PillionAdb.TCPIP_PORT,
-                    )
+                    val adb = PillionAdb.getInstance(applicationContext)
+                    // connect() returns false when this libadb manager is *already* connected.
+                    // Only reuse a live loopback session, not an unrelated Wi-Fi ADB session.
+                    (adb.isConnected() && adb.getHostAddress() == PillionAdb.LOOPBACK_HOST) ||
+                        adb.connectDevice(PillionAdb.LOOPBACK_HOST, PillionAdb.TCPIP_PORT)
                 }.getOrDefault(false)
                 DiagnosticFlightRecorder.record("VD", if (adbReady) "PREFLIGHT local ADB ready" else "PREFLIGHT unavailable")
                 adbReady
