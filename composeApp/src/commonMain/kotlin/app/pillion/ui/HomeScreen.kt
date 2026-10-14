@@ -302,13 +302,8 @@ private fun StatusDot(color: Color) {
  */
 @Composable
 private fun DashModeGuide(dashEnabled: Boolean) {
-    val steps = listOf(
-        stringResource(Res.string.guide_navigation_mode),
-        stringResource(
-            if (dashEnabled) Res.string.guide_start_vd
-            else Res.string.guide_start_phone_mirror,
-        ),
-    )
+    // Start can precede the bike's ignition: present the mode and its behavior,
+    // not a sequence that implies the dashboard must already be connected.
     Column(Modifier.fillMaxWidth()) {
         Text(
             stringResource(
@@ -319,7 +314,23 @@ private fun DashModeGuide(dashEnabled: Boolean) {
             fontWeight = FontWeight.SemiBold,
         )
         Spacer(Modifier.height(12.dp))
-        steps.forEachIndexed { index, step -> StepRow(index + 1, step) }
+        Text(
+            stringResource(
+                if (dashEnabled) Res.string.guide_start_vd
+                else Res.string.guide_start_phone_mirror,
+            ),
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            stringResource(
+                if (dashEnabled) Res.string.home_vd_detail
+                else Res.string.home_phone_mirror_detail,
+            ),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 

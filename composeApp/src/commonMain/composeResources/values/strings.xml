@@ -41,8 +41,10 @@
     <string name="guide_start_mirroring">Tap Start mirroring, then allow screen capture.</string>
     <string name="home_vd_mode">Virtual Display</string>
     <string name="home_phone_mirror_mode">Screen mirroring</string>
-    <string name="guide_start_vd">Tap Start mirroring, then lock your phone to show the app on the dash.</string>
-    <string name="guide_start_phone_mirror">Tap Start mirroring, allow screen capture, and keep your phone screen on.</string>
+    <string name="guide_start_vd">Tap Start mirroring, then lock your phone.</string>
+    <string name="home_vd_detail">Navigation resumes automatically when the bike reconnects or you lock your phone again. You can use your phone freely in between.</string>
+    <string name="guide_start_phone_mirror">Turn your phone to landscape, then tap Start mirroring and allow screen capture.</string>
+    <string name="home_phone_mirror_detail">The bike can connect later. Keep your phone screen on — locking it stops mirroring. Virtual Display lets you navigate with the screen off.</string>
 
     <!-- [Visible UI] Original: "Open Waze or Google Maps — it appears on your dash." -->
     <string name="guide_open_maps">Open Waze or Google Maps — it appears on your dash.</string>
