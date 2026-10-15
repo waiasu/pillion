@@ -69,6 +69,8 @@
 
     <!-- [Visible UI] Original: "Appearance" -->
     <string name="appearance">Appearance</string>
+    <string name="language">Language</string>
+    <string name="language_system_default">Use system language</string>
 
     <!-- [Visible UI] Original: "System" -->
     <string name="system">System</string>
@@ -212,10 +214,10 @@
     <string name="continue_text">Continue</string>
 
     <!-- [Visible UI] Original: "Turn your phone into your motorcycle's dash." -->
-    <string name="intro_title">Turn your phone into your motorcycle's dash.</string>
+    <string name="intro_title">Navigation on your XMAX dashboard.</string>
 
     <!-- [Visible UI] Original: "Navigation, speed and maps — projected right onto the screen built into your bike, where you can actually see them at a glance." -->
-    <string name="intro_body">Navigation, speed and maps — projected right onto the screen built into your bike, where you can actually see them at a glance.</string>
+    <string name="intro_body">Pillion sends your navigation display to the XMAX dashboard via StreetCross-compatible Bluetooth. Continue to get started.</string>
 
     <!-- [Visible UI] Original: "How it connects" -->
     <string name="how_it_connects">How it connects</string>

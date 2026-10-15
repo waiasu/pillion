@@ -5,6 +5,10 @@ package app.pillion.core
  * provide it (Android: SharedPreferences). A null store simply means "use defaults" (e.g. previews).
  */
 interface SettingsStore {
+    /** Empty = system language, otherwise a BCP 47 application language (ja/en for now). */
+    fun languageTag(): String = ""
+    fun setLanguageTag(tag: String) {}
+
     fun themeMode(): ThemeMode
     fun setThemeMode(mode: ThemeMode)
 

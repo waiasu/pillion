@@ -26,6 +26,8 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -78,6 +80,8 @@ internal fun SettingsScreen(
     onMaxFps: (Double) -> Unit,
     themeMode: ThemeMode,
     onThemeMode: (ThemeMode) -> Unit,
+    languageTag: String = "",
+    onLanguageTag: (String) -> Unit = {},
     dashSupported: Boolean = false,
     dashEnabled: Boolean = false,
     dashChecking: Boolean = false,
@@ -154,6 +158,8 @@ internal fun SettingsScreen(
 ) {
     val uriHandler = LocalUriHandler.current
     var showFixedAppPicker by remember { mutableStateOf(false) }
+    var languageMenuOpen by remember { mutableStateOf(false) }
+    var manualLanguage by remember { mutableStateOf(languageTag.ifBlank { "ja" }) }
     var driveSettingsExpanded by remember { mutableStateOf(false) }
     var navStickSettingsExpanded by remember { mutableStateOf(false) }
     var ocrAreaSettingsExpanded by remember { mutableStateOf(false) }
@@ -265,30 +271,50 @@ internal fun SettingsScreen(
             }
         }
 
-        Spacer(Modifier.height(24.dp))
-        SectionHeader(stringResource(Res.string.motorcycle))
+
+        Spacer(Modifier.height(18.dp))
+        SectionHeader(stringResource(Res.string.language))
         SettingsGroup {
             Row(
-                Modifier.fillMaxWidth().clickable(onClick = onChangeBike).padding(vertical = 14.dp),
+                Modifier.fillMaxWidth().padding(vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Column(Modifier.weight(1f)) {
-                    Text(if (bikeName.isEmpty()) stringResource(Res.string.not_selected) else bikeName, style = MaterialTheme.typography.bodyLarge)
-                    Text(
-                        stringResource(Res.string.tap_switch_head_unit),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Text(
-                    stringResource(Res.string.change),
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.primary,
+                Text(stringResource(Res.string.language_system_default), modifier = Modifier.weight(1f))
+                Switch(
+                    checked = languageTag.isBlank(),
+                    onCheckedChange = { useSystem ->
+                        if (useSystem) onLanguageTag("")
+                        else onLanguageTag(manualLanguage)
+                    },
                 )
             }
+            if (languageTag.isNotBlank()) {
+                GroupDivider()
+                Box {
+                    Row(
+                        Modifier.fillMaxWidth().clickable { languageMenuOpen = true }
+                            .padding(vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(stringResource(Res.string.language), modifier = Modifier.weight(1f))
+                        Text(if (languageTag == "ja") "日本語" else "English",
+                            color = MaterialTheme.colorScheme.primary)
+                    }
+                    DropdownMenu(
+                        expanded = languageMenuOpen,
+                        onDismissRequest = { languageMenuOpen = false },
+                    ) {
+                        listOf("ja" to "日本語", "en" to "English").forEach { (tag, name) ->
+                            DropdownMenuItem(text = { Text(name) }, onClick = {
+                                manualLanguage = tag
+                                languageMenuOpen = false
+                                onLanguageTag(tag)
+                            })
+                        }
+                    }
+                }
+            }
         }
-
         Spacer(Modifier.height(24.dp))
         SectionHeader(stringResource(Res.string.display_and_image))
         SettingsGroup {

@@ -8,6 +8,9 @@ import android.media.projection.MediaProjectionConfig
 import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.os.Bundle
+import android.os.LocaleList
+import android.app.LocaleManager
+import java.util.Locale
 import android.os.Process
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -186,6 +189,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        applySelectedLanguage(settingsStore.languageTag(), recreateActivity = false)
         registerBuiltInHeadUnits()
         val dashSetup = AndroidDashSetup(
             context = applicationContext,
@@ -204,6 +208,7 @@ class MainActivity : ComponentActivity() {
                 onRestartApp = { restartPillion(clearCache = false) },
                 onResetAndRestartApp = { restartPillion(clearCache = true) },
                 onExportDiagnostics = ::exportDiagnostics,
+                onLanguageChange = { applySelectedLanguage(it, recreateActivity = true) },
                 startRequestInFlight = startRequestInFlight,
                 dashSettingsRevision = dashSettingsRevision,
                 onCheckDashAvailability = ::checkDashAvailability,
@@ -215,6 +220,25 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+
+    /** Resource-only locale switch. Recreating the Activity does not restart an active capture service. */
+    @Suppress("DEPRECATION")
+    private fun applySelectedLanguage(tag: String, recreateActivity: Boolean) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val localeManager = getSystemService(LocaleManager::class.java)
+            val desired = LocaleList.forLanguageTags(tag)
+            if (localeManager.applicationLocales.toLanguageTags() != desired.toLanguageTags()) {
+                localeManager.applicationLocales = desired
+            }
+        } else {
+            val config = resources.configuration
+            val selected = if (tag.isBlank()) Locale.getDefault() else Locale.forLanguageTag(tag)
+            config.setLocale(selected)
+            resources.updateConfiguration(config, resources.displayMetrics)
+            applicationContext.resources.updateConfiguration(config, applicationContext.resources.displayMetrics)
+        }
+        if (recreateActivity) recreate()
+    }
 
     private fun exportDiagnostics() {
         if (diagnosticExportRunning) {
