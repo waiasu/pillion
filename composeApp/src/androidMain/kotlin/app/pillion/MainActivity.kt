@@ -242,7 +242,7 @@ class MainActivity : ComponentActivity() {
 
     private fun exportDiagnostics() {
         if (diagnosticExportRunning) {
-            Toast.makeText(this, "Diagnostic export is already running", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(app.pillion.R.string.diagnostic_export_running), Toast.LENGTH_SHORT).show()
             return
         }
         diagnosticExportRunning = true
@@ -254,8 +254,8 @@ class MainActivity : ComponentActivity() {
             }
             withContext(Dispatchers.Main) {
                 val message = result.fold(
-                    onSuccess = { "Saved: $it" },
-                    onFailure = { "Diagnostic export failed: ${it.message ?: it.javaClass.simpleName}" },
+                    onSuccess = { getString(app.pillion.R.string.diagnostic_saved, it) },
+                    onFailure = { getString(app.pillion.R.string.diagnostic_export_failed, it.message ?: it.javaClass.simpleName) },
                 )
                 Toast.makeText(this@MainActivity, message, Toast.LENGTH_LONG).show()
             }
