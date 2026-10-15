@@ -43,4 +43,12 @@
     <string name="adb_setup_retry_failed">再接続できませんでした。タップしてPillionに戻り、再試行してください。</string>
     <string name="adb_paired_connect_failed_return">ペア設定は完了しましたが、接続できませんでした。タップしてPillionに戻り、再試行してください。</string>
     <string name="adb_discovery_failed_notification">ペア設定ポートを検出できませんでした。Androidの画面に表示された「ポート番号 コード」を入力してください。</string>
+    <string name="diagnostic_export_running">診断ログをすでに書き出し中です</string>
+    <string name="diagnostic_saved">保存しました：%1$s</string>
+    <string name="diagnostic_export_failed">診断ログを書き出せませんでした：%1$s</string>
+    <string name="capture_vd_start_error">VDサービスを起動できませんでした：%1$s</string>
+    <string name="capture_not_granted">画面共有が許可されていません。もう一度投影開始を押してください。</string>
+    <string name="capture_expired">画面共有の許可が無効になりました。もう一度投影開始を押してください。</string>
+    <string name="capture_denied">画面共有が拒否されました</string>
+    <string name="capture_helper_unavailable">VD用Helperを利用できません</string>
 </resources>
