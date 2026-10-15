@@ -170,7 +170,7 @@ internal fun SettingsScreen(
     if (showFixedAppPicker) {
         AlertDialog(
             onDismissRequest = { showFixedAppPicker = false },
-            title = { Text("Select app for VD") },
+            title = { Text(stringResource(Res.string.select_app_vd)) },
             text = {
                 Column(
                     Modifier.fillMaxWidth()
@@ -189,7 +189,7 @@ internal fun SettingsScreen(
                         Column(Modifier.weight(1f)) {
                             Text(stringResource(Res.string.not_selected))
                             Text(
-                                "Falls back to Pillion when fixed-app mode is enabled.",
+                                stringResource(Res.string.fixed_app_fallback),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -393,7 +393,7 @@ internal fun SettingsScreen(
                     Column(Modifier.weight(1f)) {
                         Text(
                             when {
-                                dashChecking -> "Checking VD..."
+                                dashChecking -> stringResource(Res.string.checking_vd)
                                 dashEnabled -> stringResource(Res.string.on)
                                 else -> stringResource(Res.string.off)
                             },
@@ -419,9 +419,9 @@ internal fun SettingsScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(Modifier.weight(1f)) {
-                        Text("Always use selected app on VD")
+                        Text(stringResource(Res.string.always_use_selected_app))
                         Text(
-                            "Promote the selected app instead of the current foreground app.",
+                            stringResource(Res.string.selected_app_explanation),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -439,7 +439,7 @@ internal fun SettingsScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(Modifier.weight(1f)) {
-                        Text("Selected app")
+                        Text(stringResource(Res.string.selected_app))
                         Text(
                             selectedFixedApp?.label
                                 ?: draftFixedDashAppPackage
@@ -461,9 +461,9 @@ internal fun SettingsScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(Modifier.weight(1f)) {
-                        Text("Restart app on VD")
+                        Text(stringResource(Res.string.restart_app_on_vd_label))
                         Text(
-                            "Restart the app after moving it to the virtual display.",
+                            stringResource(Res.string.restart_app_on_vd_explanation),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -475,7 +475,7 @@ internal fun SettingsScreen(
                     Modifier.fillMaxWidth().padding(vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("Stick tap input", modifier = Modifier.weight(1f))
+                    Text(stringResource(Res.string.stick_input), modifier = Modifier.weight(1f))
                     Switch(checked = draftStickTapEnabled, onCheckedChange = onDraftStickTapEnabled)
                 }
                 GroupDivider()
@@ -485,7 +485,7 @@ internal fun SettingsScreen(
                         .padding(vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("NAV mode stick tap position", modifier = Modifier.weight(1f))
+                    Text(stringResource(Res.string.nav_stick_position), modifier = Modifier.weight(1f))
                     Text(if (navStickSettingsExpanded) "▲" else "▼",
                         color = MaterialTheme.colorScheme.primary)
                 }
@@ -571,7 +571,7 @@ internal fun SettingsScreen(
                         .padding(vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("OCR area settings", modifier = Modifier.weight(1f))
+                    Text(stringResource(Res.string.ocr_area_settings), modifier = Modifier.weight(1f))
                     Text(if (ocrAreaSettingsExpanded) "▲" else "▼",
                         color = MaterialTheme.colorScheme.primary)
                 }
@@ -646,10 +646,10 @@ internal fun SettingsScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(Modifier.weight(1f)) {
-                        Text("Auto DRIVE mode")
+                        Text(stringResource(Res.string.auto_drive_mode))
                         Text(
-                            if (driveEligible) "After PROMOTE: switch on two empty Area 1 OCR results."
-                            else "Requires selected Yahoo! Car Navigation, OCR and Restart app on VD.",
+                            if (driveEligible) stringResource(Res.string.auto_drive_help_eligible)
+                            else stringResource(Res.string.auto_drive_help_requirements),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -667,43 +667,43 @@ internal fun SettingsScreen(
                         .padding(vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("DRIVE mode settings", modifier = Modifier.weight(1f))
+                    Text(stringResource(Res.string.drive_settings), modifier = Modifier.weight(1f))
                     Text(if (driveSettingsExpanded) "▲" else "▼",
                         color = MaterialTheme.colorScheme.primary)
                 }
                 if (driveSettingsExpanded) {
                     Text(
-                        "Auto DRIVE button tap (percent of VD content).",
+                        stringResource(Res.string.drive_tap_help),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    SettingSlider("DRIVE tap horizontal", "$draftDriveTapX%", draftDriveTapX.toFloat(),
+                    SettingSlider(stringResource(Res.string.drive_tap_horizontal), "$draftDriveTapX%", draftDriveTapX.toFloat(),
                         0f, 100f, step = 1f) {
                         onDraftDriveTapX(it.roundToInt().coerceIn(0, 100))
                     }
                     GroupDivider()
-                    SettingSlider("DRIVE tap vertical", "$draftDriveTapY%", draftDriveTapY.toFloat(),
+                    SettingSlider(stringResource(Res.string.drive_tap_vertical), "$draftDriveTapY%", draftDriveTapY.toFloat(),
                         0f, 100f, step = 1f) {
                         onDraftDriveTapY(it.roundToInt().coerceIn(0, 100))
                     }
                     GroupDivider()
-                    Text("DRIVE stick zoom taps (active 1 second after the DRIVE tap).",
+                    Text(stringResource(Res.string.drive_stick_help),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    SettingSlider("Stick UP horizontal", "$draftDriveStickInX%", draftDriveStickInX.toFloat(),
+                    SettingSlider(stringResource(Res.string.stick_up_horizontal), "$draftDriveStickInX%", draftDriveStickInX.toFloat(),
                         0f, 100f, step = 1f) { onDraftDriveStickInX(it.roundToInt().coerceIn(0, 100)) }
                     GroupDivider()
-                    SettingSlider("Stick UP vertical", "$draftDriveStickInY%", draftDriveStickInY.toFloat(),
+                    SettingSlider(stringResource(Res.string.stick_up_vertical), "$draftDriveStickInY%", draftDriveStickInY.toFloat(),
                         0f, 100f, step = 1f) { onDraftDriveStickInY(it.roundToInt().coerceIn(0, 100)) }
                     GroupDivider()
-                    SettingSlider("Stick DOWN horizontal", "$draftDriveStickOutX%", draftDriveStickOutX.toFloat(),
+                    SettingSlider(stringResource(Res.string.stick_down_horizontal), "$draftDriveStickOutX%", draftDriveStickOutX.toFloat(),
                         0f, 100f, step = 1f) { onDraftDriveStickOutX(it.roundToInt().coerceIn(0, 100)) }
                     GroupDivider()
-                    SettingSlider("Stick DOWN vertical", "$draftDriveStickOutY%", draftDriveStickOutY.toFloat(),
+                    SettingSlider(stringResource(Res.string.stick_down_vertical), "$draftDriveStickOutY%", draftDriveStickOutY.toFloat(),
                         0f, 100f, step = 1f) { onDraftDriveStickOutY(it.roundToInt().coerceIn(0, 100)) }
                     GroupDivider()
                     Text(
-                        "DRIVE image shift (up only, after Auto DRIVE tap; 0 = Standard).",
+                        stringResource(Res.string.drive_image_shift_help),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -711,12 +711,12 @@ internal fun SettingsScreen(
                     // this slider as the user edits the margin; clamp the value on Save & Restart.
                     if (driveImageShiftMaxPx > 0) {
                         SettingSlider(
-                            "Upward shift", "$draftDriveImageShift px",
+                            stringResource(Res.string.upward_shift), "$draftDriveImageShift px",
                             draftDriveImageShift.coerceIn(0, driveImageShiftMaxPx).toFloat(),
                             0f, driveImageShiftMaxPx.toFloat(), step = 1f,
                         ) { onDraftDriveImageShift(it.roundToInt().coerceIn(0, driveImageShiftMaxPx)) }
                     } else {
-                        Text("Standard (Bottom Margin is 0px)",
+                        Text(stringResource(Res.string.standard_zero_margin),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
@@ -748,8 +748,7 @@ internal fun SettingsScreen(
                 DiagnosticExportRow(onExportDiagnostics)
             }
             Text(
-                "Saves recent Pillion connection history plus a one-time Android/Bluetooth snapshot to Downloads. " +
-                    "Full-device logcat is collected only when you tap Export.",
+                stringResource(Res.string.export_diag_help),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = 6.dp, top = 8.dp, end = 6.dp),
@@ -925,10 +924,10 @@ private fun DiagnosticExportRow(onExport: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
-            Text("Export diagnostic log", style = MaterialTheme.typography.bodyLarge)
+            Text(stringResource(Res.string.export_diagnostic_log), style = MaterialTheme.typography.bodyLarge)
         }
         Text(
-            "Export",
+            stringResource(Res.string.export_action),
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.primary,
