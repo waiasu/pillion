@@ -335,4 +335,33 @@
     <string name="saving_restarting">Saving settings &amp; restarting Pillion…</string>
     <string name="resetting_restarting">Resetting &amp; restarting Pillion…</string>
 
+    <string name="select_app_vd">Select app for VD</string>
+    <string name="fixed_app_fallback">Falls back to Pillion when fixed-app mode is enabled.</string>
+    <string name="checking_vd">Checking VD...</string>
+    <string name="always_use_selected_app">Always use selected app on VD</string>
+    <string name="selected_app_explanation">Promote the selected app instead of the current foreground app.</string>
+    <string name="selected_app">Selected app</string>
+    <string name="restart_app_on_vd_label">Restart app on VD</string>
+    <string name="restart_app_on_vd_explanation">Restart the app after moving it to the virtual display.</string>
+    <string name="stick_input">Stick tap input</string>
+    <string name="nav_stick_position">NAV mode stick tap position</string>
+    <string name="ocr_area_settings">OCR area settings</string>
+    <string name="auto_drive_mode">Auto DRIVE mode</string>
+    <string name="auto_drive_help_eligible">After PROMOTE: switch on two empty Area 1 OCR results.</string>
+    <string name="auto_drive_help_requirements">Requires selected Yahoo! Car Navigation, OCR and Restart app on VD.</string>
+    <string name="drive_settings">DRIVE mode settings</string>
+    <string name="drive_tap_help">Auto DRIVE button tap (percent of VD content).</string>
+    <string name="drive_tap_horizontal">DRIVE tap horizontal</string>
+    <string name="drive_tap_vertical">DRIVE tap vertical</string>
+    <string name="drive_stick_help">DRIVE stick zoom taps (active 1 second after the DRIVE tap).</string>
+    <string name="stick_up_horizontal">Stick UP horizontal</string>
+    <string name="stick_up_vertical">Stick UP vertical</string>
+    <string name="stick_down_horizontal">Stick DOWN horizontal</string>
+    <string name="stick_down_vertical">Stick DOWN vertical</string>
+    <string name="drive_image_shift_help">DRIVE image shift (up only, after Auto DRIVE tap; 0 = Standard).</string>
+    <string name="upward_shift">Upward shift</string>
+    <string name="standard_zero_margin">Standard (Bottom Margin is 0px)</string>
+    <string name="export_diagnostic_log">Export diagnostic log</string>
+    <string name="export_action">Export</string>
+    <string name="export_diag_help">Saves recent Pillion connection history plus a one-time Android/Bluetooth snapshot to Downloads. Full-device logcat is collected only when you tap Export.</string>
 </resources>
