@@ -390,14 +390,7 @@ internal fun SettingsScreen(
                     Modifier.fillMaxWidth().padding(vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Column(Modifier.weight(1f)) {
-                        Text(stringResource(Res.string.vd_toggle))
-                        Text(
-                            stringResource(Res.string.dash_keep_nav),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
+                    Text(stringResource(Res.string.vd_toggle), modifier = Modifier.weight(1f))
                     if (dashChecking) {
                         CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
                     } else if (dashEnabled) {
@@ -1039,7 +1032,7 @@ private fun resolutionDetail(option: DashScale): String = when (option) {
     DashScale.X10 -> stringResource(Res.string.matches_usable_area)
     DashScale.X20 -> "${option.label} · ${stringResource(Res.string.recommended)}"
     DashScale.X30 -> "${option.label} · ${stringResource(Res.string.most_detail_heavy)}"
-    else -> "${option.label} · ${stringResource(Res.string.more_detail)}"
+    else -> option.label
 }
 
 @Composable

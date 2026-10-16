@@ -61,8 +61,8 @@
     <string name="margin_cyan">シアン</string>
     <string name="margin_magenta">マゼンタ</string>
     <string name="cancel">キャンセル</string>
-    <string name="map_layout_size">地図の描画サイズ</string>
-    <string name="virtual_display_size_help">VDの描画サイズは、余白を除いた表示領域に合わせて決まります。メーターへ送る映像は%1$d × %2$dのままです。</string>
+    <string name="map_layout_size">描画サイズ</string>
+    <string name="virtual_display_size_help">描画サイズは、余白を除いた表示領域に合わせて決まります。メーターへ送る映像は%1$d × %2$dのままです。</string>
     <string name="matches_usable_area">表示可能領域と同じサイズ</string>
     <string name="recommended">推奨</string>
     <string name="more_detail"></string>
@@ -80,9 +80,9 @@
     <string name="selected_app_explanation">現在スマホで開いているアプリではなく、指定したアプリを常に投影します。</string>
     <string name="selected_app">対象アプリ</string>
     <string name="not_selected">未選択</string>
-    <string name="select_app_vd">投影するアプリを選択</string>
+    <string name="select_app_vd">アプリを選択</string>
     <string name="fixed_app_fallback">アプリ固定が有効で、対象アプリが未選択の場合はPillionを表示します。</string>
-    <string name="restart_app_on_vd_label">投影時にアプリを再起動</string>
+    <string name="restart_app_on_vd_label">アプリを再起動</string>
     <string name="restart_app_on_vd_explanation">メーター投影時に、対象アプリを再起動します。</string>
     <string name="stick_input">ステック機能</string>
     <string name="nav_stick_position">タップ位置</string>
@@ -112,7 +112,7 @@
     <string name="drive_tap_help">ドライブモードへの切替時にタップする位置を指定します。</string>
     <string name="drive_tap_horizontal">切替タップ：横位置</string>
     <string name="drive_tap_vertical">切替タップ：縦位置</string>
-    <string name="drive_stick_help">ドライブモード中のスティック操作位置です。切替タップから1秒後に操作を受け付けます。</string>
+    <string name="drive_stick_help">ドライブモード中のスティックでのタップ位置です。切替タップから1秒後に操作を受け付けます。</string>
     <string name="stick_up_horizontal">スティック上：横位置</string>
     <string name="stick_up_vertical">スティック上：縦位置</string>
     <string name="stick_down_horizontal">スティック下：横位置</string>
@@ -124,10 +124,10 @@
 
     <!-- ===== 07. 設定 ＞ メンテナンス ===== -->
     <string name="maintenance">メンテナンス</string>
-    <string name="save_settings_restart">設定を保存して再起動</string>
+    <string name="save_settings_restart">設定を保存</string>
     <string name="save_restart">保存して再起動</string>
     <string name="save_restart_help">画質・レイアウト・VD機能の変更は、設定を保存して再起動すると反映されます。外観・言語・VDのオン／オフはすぐに反映されます。</string>
-    <string name="export_diagnostic_log">診断ログを書き出す</string>
+    <string name="export_diagnostic_log">診断ログを保存</string>
     <string name="export_action">書き出す</string>
     <string name="export_diag_help">Pillionの接続履歴とAndroid・Bluetoothの状態情報をダウンロードフォルダーに保存します。端末全体のlogcatは書き出し操作時のみ取得します。</string>
     <string name="shutting_down">Pillionを終了中…</string>
