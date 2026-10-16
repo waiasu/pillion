@@ -160,7 +160,6 @@ internal fun SettingsScreen(
     val uriHandler = LocalUriHandler.current
     var showFixedAppPicker by remember { mutableStateOf(false) }
     var languageMenuOpen by remember { mutableStateOf(false) }
-    var manualLanguage by remember { mutableStateOf(languageTag.ifBlank { "ja" }) }
     var driveSettingsExpanded by remember { mutableStateOf(false) }
     var navStickSettingsExpanded by remember { mutableStateOf(false) }
     var ocrAreaSettingsExpanded by remember { mutableStateOf(false) }
@@ -254,64 +253,63 @@ internal fun SettingsScreen(
             Text(stringResource(Res.string.settings), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         }
 
+        // One appearance group: visual theme and app language live together.
+        // Language uses a single selector, including the system default.
         SectionHeader(stringResource(Res.string.appearance))
-        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-            val options = listOf(
-                ThemeMode.SYSTEM to stringResource(Res.string.system),
-                ThemeMode.LIGHT to stringResource(Res.string.light),
-                ThemeMode.DARK to stringResource(Res.string.dark),
+        SettingsGroup {
+            Text(
+                stringResource(Res.string.theme),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(top = 12.dp, bottom = 8.dp),
             )
-            options.forEachIndexed { index, (mode, label) ->
-                SegmentedButton(
-                    selected = themeMode == mode,
-                    onClick = { onThemeMode(mode) },
-                    shape = SegmentedButtonDefaults.itemShape(index, options.size),
-                ) {
-                    Text(label)
+            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
+                val options = listOf(
+                    ThemeMode.SYSTEM to stringResource(Res.string.system),
+                    ThemeMode.LIGHT to stringResource(Res.string.light),
+                    ThemeMode.DARK to stringResource(Res.string.dark),
+                )
+                options.forEachIndexed { index, (mode, label) ->
+                    SegmentedButton(
+                        selected = themeMode == mode,
+                        onClick = { onThemeMode(mode) },
+                        shape = SegmentedButtonDefaults.itemShape(index, options.size),
+                    ) {
+                        Text(label, maxLines = 1)
+                    }
                 }
             }
-        }
-
-
-        Spacer(Modifier.height(18.dp))
-        SectionHeader(stringResource(Res.string.language))
-        SettingsGroup {
-            Row(
-                Modifier.fillMaxWidth().padding(vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(stringResource(Res.string.language_system_default), modifier = Modifier.weight(1f))
-                Switch(
-                    checked = languageTag.isBlank(),
-                    onCheckedChange = { useSystem ->
-                        if (useSystem) onLanguageTag("")
-                        else onLanguageTag(manualLanguage)
-                    },
-                )
-            }
-            if (languageTag.isNotBlank()) {
-                GroupDivider()
-                Box {
-                    Row(
-                        Modifier.fillMaxWidth().clickable { languageMenuOpen = true }
-                            .padding(vertical = 14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(stringResource(Res.string.language), modifier = Modifier.weight(1f))
-                        Text(if (languageTag == "ja") "日本語" else "English",
-                            color = MaterialTheme.colorScheme.primary)
-                    }
-                    DropdownMenu(
-                        expanded = languageMenuOpen,
-                        onDismissRequest = { languageMenuOpen = false },
-                    ) {
-                        listOf("ja" to "日本語", "en" to "English").forEach { (tag, name) ->
-                            DropdownMenuItem(text = { Text(name) }, onClick = {
-                                manualLanguage = tag
-                                languageMenuOpen = false
-                                onLanguageTag(tag)
-                            })
-                        }
+            GroupDivider()
+            Box {
+                Row(
+                    Modifier.fillMaxWidth()
+                        .clickable { languageMenuOpen = true }
+                        .padding(vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(stringResource(Res.string.language), modifier = Modifier.weight(1f))
+                    Text(
+                        when (languageTag) {
+                            "" -> stringResource(Res.string.language_system_default)
+                            "ja" -> "日本語"
+                            "en" -> "English"
+                            else -> languageTag
+                        },
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+                DropdownMenu(
+                    expanded = languageMenuOpen,
+                    onDismissRequest = { languageMenuOpen = false },
+                ) {
+                    listOf(
+                        "" to stringResource(Res.string.language_system_default),
+                        "ja" to "日本語",
+                        "en" to "English",
+                    ).forEach { (tag, name) ->
+                        DropdownMenuItem(text = { Text(name) }, onClick = {
+                            languageMenuOpen = false
+                            if (tag != languageTag) onLanguageTag(tag)
+                        })
                     }
                 }
             }
@@ -833,6 +831,21 @@ private fun SettingSlider(
     }
 }
 
+/**
+ * Presentation-only translation. Persisted enum names and RGB values remain stable.
+ */
+@Composable
+private fun marginColorLabel(color: DashMarginColor): String = when (color) {
+    DashMarginColor.Black -> stringResource(Res.string.margin_black)
+    DashMarginColor.White -> stringResource(Res.string.margin_white)
+    DashMarginColor.Red -> stringResource(Res.string.margin_red)
+    DashMarginColor.Green -> stringResource(Res.string.margin_green)
+    DashMarginColor.Blue -> stringResource(Res.string.margin_blue)
+    DashMarginColor.Yellow -> stringResource(Res.string.margin_yellow)
+    DashMarginColor.Cyan -> stringResource(Res.string.margin_cyan)
+    DashMarginColor.Magenta -> stringResource(Res.string.margin_magenta)
+}
+
 @Composable
 private fun MarginColorSelector(
     selected: DashMarginColor,
@@ -846,7 +859,7 @@ private fun MarginColorSelector(
         Column(Modifier.weight(1f)) {
             Text(stringResource(Res.string.margin_color), style = MaterialTheme.typography.bodyLarge)
             Text(
-                selected.label,
+                marginColorLabel(selected),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -874,7 +887,7 @@ private fun MarginColorSelector(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
-                                option.label,
+                                marginColorLabel(option),
                                 modifier = Modifier.weight(1f),
                                 color = if (selected == option) MaterialTheme.colorScheme.primary
                                 else MaterialTheme.colorScheme.onSurface,

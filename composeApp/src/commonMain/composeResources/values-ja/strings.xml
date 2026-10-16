@@ -26,10 +26,10 @@
     <string name="updates">アップデート</string>
     <string name="new_version_available">新しいバージョンがあります</string>
     <string name="get">入手</string>
-    <string name="appearance">外観</string>
+    <string name="appearance">外観・言語</string>
     <string name="language">言語</string>
     <string name="language_system_default">システム標準</string>
-    <string name="system">システム標準</string>
+    <string name="system">自動</string>
     <string name="light">ライト</string>
     <string name="dark">ダーク</string>
     <string name="motorcycle">車体</string>
@@ -167,4 +167,13 @@
     <string name="export_diagnostic_log">診断ログを書き出す</string>
     <string name="export_action">書き出す</string>
     <string name="export_diag_help">Pillionの接続履歴とAndroid・Bluetoothの状態情報をダウンロードフォルダーに保存します。端末全体のlogcatは書き出し操作時のみ取得します。</string>
+    <string name="theme">テーマ</string>
+    <string name="margin_black">黒</string>
+    <string name="margin_white">白</string>
+    <string name="margin_red">赤</string>
+    <string name="margin_green">緑</string>
+    <string name="margin_blue">青</string>
+    <string name="margin_yellow">黄</string>
+    <string name="margin_cyan">シアン</string>
+    <string name="margin_magenta">マゼンタ</string>
 </resources>
