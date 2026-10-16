@@ -1,370 +1,57 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- ==================== Visible UI ==================== -->
-    <!-- [Visible UI] Original: "Settings" -->
-    <string name="settings">Settings</string>
 
-    <!-- [Visible UI] Original: "your screen, on the bike dash" -->
-    <string name="tagline">your screen, on the bike dash</string>
+    <!-- ===== 01. Welcome screen ===== -->
+    <string name="intro_title">Navigation on your XMAX dashboard.</string>
+    <string name="intro_body">Pillion projects your phone's navigation display to the XMAX dashboard using StreetCross-compatible Bluetooth. Tap Next to get started.</string>
+    <string name="continue_text">Next</string>
 
-    <!-- [Visible UI] Original: "Connecting to dash…" -->
-    <string name="connecting_to_dash">Connecting to dash…</string>
+    <!-- ===== 02. Home — Virtual Display ===== -->
+    <string name="tagline">Your phone screen, on your bike's dashboard</string>
+    <string name="home_vd_mode">Virtual Display (VD)</string>
+    <string name="guide_start_vd">After starting casting, you can turn off your phone screen.</string>
+    <string name="home_vd_detail">If you use your phone, turn its screen off to return to navigation. Casting also resumes automatically after you turn the bike's ignition off and on.</string>
 
-    <!-- [Visible UI] Original: "fps" -->
+    <!-- ===== 02. Home — Screen mirroring ===== -->
+    <string name="home_phone_mirror_mode">Screen mirroring</string>
+    <string name="guide_start_phone_mirror">Turn your phone to landscape, tap Start, and allow screen capture.</string>
+    <string name="home_phone_mirror_detail">Keep your phone screen on. Turning it off stops casting. Use VD mode to cast with the screen off.</string>
+
+    <!-- ===== 02. Home — Controls and connection status ===== -->
+    <string name="start_mirroring">Start</string>
+    <string name="stop_mirroring">Stop</string>
+    <string name="connecting_to_dash">Connecting to dashboard…</string>
     <string name="fps">fps</string>
-
-    <!-- [Visible UI] Original: "mirroring • %1$d KB per frame" -->
-    <string name="mirroring_frame_size">mirroring • %1$d KB per frame</string>
-
-    <!-- [Visible UI] Original: "Broadcasting" -->
-    <string name="broadcasting">Broadcasting</string>
-
-    <!-- [Visible UI] Original: "Open Waze or Google Maps — it's on your dash." -->
-    <string name="open_maps_on_dash">Open Waze or Google Maps — it's on your dash.</string>
-
-    <!-- [Visible UI] Original: "Disconnected" -->
+    <string name="mirroring_frame_size">Casting · %1$d KB per frame</string>
+    <string name="broadcasting">Sending video</string>
+    <string name="open_maps_on_dash">Open an app to show it on the dashboard.</string>
     <string name="disconnected">Disconnected</string>
 
-    <!-- [Visible UI] Original: "Before you ride" -->
-    <string name="before_you_ride">Before you ride</string>
-
-    <!-- [Visible UI] Original: "Pair your phone with the bike in your Bluetooth settings (one time only)." -->
-    <string name="guide_pair_bluetooth">Pair your phone with the bike in your Bluetooth settings (one time only).</string>
-
-    <!-- [Visible UI] Original: "Mount the phone in landscape and turn on auto-rotate, so the map fills the dash." -->
-    <string name="guide_landscape">Mount the phone in landscape and turn on auto-rotate, so the map fills the dash.</string>
-
-    <!-- [Visible UI] Original: "On the bike, switch the dash to Navigation mode." -->
-    <string name="guide_navigation_mode">On the bike, switch the dash to Navigation mode.</string>
-
-    <!-- [Visible UI] Normal mirroring uses whole-screen capture only. -->
-    <string name="guide_start_mirroring">Tap Start mirroring, then allow screen capture.</string>
-    <string name="home_vd_mode">Virtual Display</string>
-    <string name="home_phone_mirror_mode">Screen mirroring</string>
-    <string name="guide_start_vd">Tap Start mirroring, then lock your phone.</string>
-    <string name="home_vd_detail">Navigation resumes automatically when the bike reconnects or you lock your phone again. You can use your phone freely in between.</string>
-    <string name="guide_start_phone_mirror">Turn your phone to landscape, then tap Start mirroring and allow screen capture.</string>
-    <string name="home_phone_mirror_detail">The bike can connect later. Keep your phone screen on — locking it stops mirroring. Virtual Display lets you navigate with the screen off.</string>
-
-    <!-- [Visible UI] Original: "Open Waze or Google Maps — it appears on your dash." -->
-    <string name="guide_open_maps">Open Waze or Google Maps — it appears on your dash.</string>
-
-    <!-- [Visible UI] Original: "Start mirroring" -->
-    <string name="start_mirroring">Start mirroring</string>
-
-    <!-- [Visible UI] Original: "Stop mirroring" -->
-    <string name="stop_mirroring">Stop mirroring</string>
-
-    <!-- [Visible UI] Original: "Back" -->
-    <string name="back">Back</string>
-
-    <!-- [Visible UI] Original: "Updates" -->
-    <string name="updates">Updates</string>
-
-    <!-- [Visible UI] Original: "A new version is available" -->
-    <string name="new_version_available">A new version is available</string>
-
-    <!-- [Visible UI] Original: "Get" -->
-    <string name="get">Get</string>
-
-    <!-- [Visible UI] Original: "Appearance" -->
-    <string name="appearance">Appearance &amp; Language</string>
-    <string name="language">Language</string>
-    <string name="language_system_default">Use system language</string>
-
-    <!-- [Visible UI] Original: "System" -->
-    <string name="system">System</string>
-
-    <!-- [Visible UI] Original: "Light" -->
-    <string name="light">Light</string>
-
-    <!-- [Visible UI] Original: "Dark" -->
-    <string name="dark">Dark</string>
-
-    <!-- [Visible UI] Original: "Motorcycle" -->
-    <string name="motorcycle">Motorcycle</string>
-
-    <!-- [Visible UI] Original: "Not selected" -->
-    <string name="not_selected">Not selected</string>
-
-    <!-- [Visible UI] Original: "Tap to switch head unit" -->
-    <string name="tap_switch_head_unit">Tap to switch head unit</string>
-
-    <!-- [Visible UI] Original: "Change" -->
-    <string name="change">Change</string>
-
-    <!-- [Visible UI] Original: "Mirroring" -->
-    <string name="mirroring">Mirroring</string>
-    <string name="display_and_image">Display &amp; Image</string>
-    <string name="vd_display_only">Virtual Display only</string>
-    <string name="maintenance">Maintenance</string>
-
-    <!-- [Visible UI] Original: "Image quality" -->
-    <string name="image_quality">Image quality</string>
-
-    <!-- [Visible UI] Original: "DPI" -->
-    <string name="dpi">DPI</string>
-
-    <!-- [Visible UI] Original: "Max frame rate" -->
-    <string name="max_frame_rate">Max frame rate</string>
-
-    <!-- [Visible UI] Original: "Left margin" -->
-    <string name="left_margin">Left margin</string>
-
-    <!-- [Visible UI] Original: "Bottom margin" -->
-    <string name="bottom_margin">Bottom margin</string>
-
-    <!-- [Visible UI] Original: "Margin color" -->
-    <string name="margin_color">Margin color</string>
-
-    <!-- [Visible UI] Original: "Cancel" -->
-    <string name="cancel">Cancel</string>
-
-    <!-- [Visible UI] Original: "Higher quality looks sharper but makes the picture less smooth (about 15–25 fps at 40% on a fast phone). The cap keeps the frame rate down to save battery and reduce heat." -->
-    <string name="image_quality_help">Higher quality looks sharper but makes the picture less smooth (about 15–25 fps at 40% on a fast phone). The cap keeps the frame rate down to save battery and reduce heat.</string>
-
-    <!-- [Visible UI] XMAX VD settings; no longer experimental. -->
-    <string name="dedicated_dash_display">VD Features</string>
-
-    <!-- [Visible UI] Original: "On" -->
-    <string name="on">On</string>
-
-    <!-- [Visible UI] Original: "Off" -->
-    <string name="off">Off</string>
-
-    <!-- [Visible UI] Original: "Keep your nav app on the dash with the phone screen off." -->
-    <string name="dash_keep_nav">Keep your nav app on the dash with the phone screen off.</string>
-
-    <!-- [Visible UI] Original: "Disable" -->
-    <string name="disable">Disable</string>
-
-    <!-- [Visible UI] Original: "Set up" -->
-    <string name="set_up">Set up</string>
-
-    <!-- [Visible UI] Original: "Re-run setup (after a restart)" -->
-    <string name="rerun_setup">Re-run setup (after a restart)</string>
-
-    <!-- [Visible UI] Reflects v37 loopback ADB recovery, including after app restart. -->
-    <string name="dash_feature_help">Initial setup uses Wireless debugging. VD can keep working without Wi-Fi while its Helper or local ADB is available.</string>
-
-    <!-- [Visible UI] Stick input target positions inside the usable dash image. -->
-    <string name="stick_tap_position">Stick tap position</string>
-    <string name="stick_tap_position_help">0% is left/top and 100% is right/bottom of the displayed navigation image.</string>
-
-    <string name="ocr_title">Road text OCR</string>
-    <string name="ocr_help">Reads the selected rectangle from the original virtual display once every 10 seconds and sends the recognized text to the dash road-name field.</string>
-    <string name="ocr_enable">OCR</string>
-    <string name="ocr_area_1">OCR area 1</string>
-    <string name="ocr_area_2">OCR area 2</string>
-    <string name="ocr_show_area">Show OCR area</string>
-    <string name="ocr_left">OCR left</string>
-    <string name="ocr_top">OCR top</string>
-    <string name="ocr_right">OCR right</string>
-    <string name="ocr_bottom">OCR bottom</string>
-    <string name="zoom_in_horizontal">Zoom in - Horizontal position</string>
-    <string name="zoom_in_vertical">Zoom in - Vertical position</string>
-    <string name="zoom_out_horizontal">Zoom out - Horizontal position</string>
-    <string name="zoom_out_vertical">Zoom out - Vertical position</string>
-
-    <string name="save_settings_restart">Save settings &amp; restart</string>
-    <string name="save_restart">Save &amp; restart</string>
-    <string name="save_restart_help">Image, layout and VD feature changes apply after Save &amp; Restart. Appearance and VD On/Off apply immediately.</string>
-
+    <!-- ===== 02. Home — Reset ===== -->
+    <string name="slide_reset_restart">Reset &amp; restart</string>
+    <string name="reset_restart_help">Stops Pillion, clears temporary cache, and restarts it. Settings, permissions, ADB setup, and diagnostic logs are preserved.</string>
     <string name="reset_restart">Reset &amp; restart</string>
-    <string name="slide_reset_restart">Slide to Reset &amp; Restart</string>
-    <string name="reset_restart_help">Stops Pillion components, clears temporary cache, then restarts. Settings, permissions, ADB setup, and diagnostic logs are kept.</string>
 
-    <!-- [Visible UI] Original: "Map layout size" -->
-    <string name="map_layout_size">Map layout size</string>
-
-    <!-- [Visible UI] Original: "Virtual-display size follows the usable area after margins. The dash still receives a %1$d × %2$d image." -->
-    <string name="virtual_display_size_help">Virtual-display size follows the usable area after margins. The dash still receives a %1$d × %2$d image.</string>
-
-    <!-- [Visible UI] Original: "Matches the usable dash area" -->
-    <string name="matches_usable_area">Matches the usable dash area</string>
-
-    <!-- [Visible UI] Original: "Recommended" -->
-    <string name="recommended">Recommended</string>
-
-    <!-- [Visible UI] Original: "Most detail · heaviest on battery" -->
-    <string name="most_detail_heavy">Most detail · heaviest on battery</string>
-
-    <!-- [Visible UI] Original: "more detail" -->
-    <string name="more_detail">more detail</string>
-
-    <!-- [Visible UI] Original: "About" -->
-    <string name="about">About</string>
-
-    <!-- [Visible UI] Original: "Source code" -->
-    <string name="source_code">Source code</string>
-
-    <!-- [Visible UI] Original: "Report an issue" -->
-    <string name="report_issue">Report an issue</string>
-
-    <!-- [Visible UI] Original: "Changelog" -->
-    <string name="changelog">Changelog</string>
-
-    <!-- [Visible UI] Original: "Version %1$s" -->
-    <string name="version_format">Version %1$s</string>
-
-    <!-- [Visible UI] Original: "Skip" -->
-    <string name="skip">Skip</string>
-
-    <!-- [Visible UI] Original: "Continue" -->
-    <string name="continue_text">Continue</string>
-
-    <!-- [Visible UI] Original: "Turn your phone into your motorcycle's dash." -->
-    <string name="intro_title">Navigation on your XMAX dashboard.</string>
-
-    <!-- [Visible UI] Original: "Navigation, speed and maps — projected right onto the screen built into your bike, where you can actually see them at a glance." -->
-    <string name="intro_body">Pillion sends your navigation display to the XMAX dashboard via StreetCross-compatible Bluetooth. Continue to get started.</string>
-
-    <!-- [Visible UI] Original: "How it connects" -->
-    <string name="how_it_connects">How it connects</string>
-
-    <!-- [Visible UI] Original: "Two ways to reach the dash, depending on what your bike supports." -->
-    <string name="how_it_connects_body">Two ways to reach the dash, depending on what your bike supports.</string>
-
-    <!-- [Visible UI] Original: "Bluetooth" -->
-    <string name="bluetooth">Bluetooth</string>
-
-    <!-- [Visible UI] Original: "Wireless. Sends a fast slideshow of your screen — perfect for turn-by-turn navigation." -->
-    <string name="bluetooth_desc">Wireless. Sends a fast slideshow of your screen — perfect for turn-by-turn navigation.</string>
-
-    <!-- [Visible UI] Original: "USB" -->
-    <string name="usb">USB</string>
-
-    <!-- [Visible UI] Original: "A wired connection with smooth, full-motion video — great for maps and live navigation." -->
-    <string name="usb_desc">A wired connection with smooth, full-motion video — great for maps and live navigation.</string>
-
-    <!-- [Visible UI] Original: "More bikes over time" -->
-    <string name="more_bikes_over_time">More bikes over time</string>
-
-    <!-- [Visible UI] Original: "We're adding support for more motorcycles and dashes — just keep the app updated." -->
-    <string name="more_bikes_desc">We're adding support for more motorcycles and dashes — just keep the app updated.</string>
-
-    <!-- [Visible UI] Original: "Choose your motorcycle" -->
-    <string name="choose_motorcycle">Choose your motorcycle</string>
-
-    <!-- [Visible UI] Original: "Pick the head unit your bike uses. You can change this anytime in Settings." -->
-    <string name="choose_motorcycle_body">Pick the head unit your bike uses. You can change this anytime in Settings.</string>
-
-    <!-- [Visible UI] Original: "Yamaha, StreetCross and Motorize are trademarks of their respective owners. Pillion is an independent project and is not affiliated with, endorsed, or sponsored by them." -->
-    <string name="trademark_notice">Yamaha, StreetCross and Motorize are trademarks of their respective owners. Pillion is an independent project and is not affiliated with, endorsed, or sponsored by them.</string>
-
-    <!-- [Visible UI] Original: "USB cable to the bike" -->
-    <string name="usb_cable">USB cable to the bike</string>
-
-    <!-- [Visible UI] Original: "Wireless over Bluetooth" -->
-    <string name="wireless_bluetooth">Wireless over Bluetooth</string>
-
-    <!-- [Visible UI] Original: "Full-motion video" -->
-    <string name="full_motion_video">Full-motion video</string>
-
-    <!-- [Visible UI] Original: "Slideshow" -->
-    <string name="slideshow">Slideshow</string>
-
-    <!-- [Visible UI] Original: "Your nav, on the dash" -->
-    <string name="dash_nav_title">Your nav, on the dash</string>
-
-    <!-- [Visible UI] Original: "Keep your maps app on the bike screen — in landscape, with your phone screen off. Unlike mirroring, the dash shows only your app and your phone stays free." -->
-    <string name="dash_nav_body">Keep your maps app on the bike screen — in landscape, with your phone screen off. Unlike mirroring, the dash shows only your app and your phone stays free.</string>
-
-    <!-- [Visible UI] Original: "Get started" -->
-    <string name="get_started">Get started</string>
-
-    <!-- [Visible UI] Original: "Maybe later" -->
-    <string name="maybe_later">Maybe later</string>
-
-    <!-- [Visible UI] Original: "Turn on Wireless debugging" -->
-    <string name="wireless_debugging_on">Turn on Wireless debugging</string>
-
-    <!-- [Visible UI] Original: "Open Developer options, turn on Wireless debugging, then open Pair device with pairing code. Pillion will notify you when the pairing port is ready." -->
-    <string name="wireless_debugging_help">Open Developer options, turn on Wireless debugging, then open “Pair device with pairing code”. Pillion will notify you when the pairing port is ready.</string>
-
-    <!-- [Visible UI] Original: "Open settings" -->
-    <string name="open_settings">Open settings</string>
-
-    <!-- Legacy labels retained for source compatibility. The normal UI now uses notification-only PIN entry. -->
-    <string name="pair_with_code">Pair with the code</string>
-    <string name="pair_with_code_help">Enter the PIN from Pillion's notification.</string>
-
-    <string name="pair_from_notification">Pair from the notification</string>
-    <string name="pair_from_notification_help">In Wireless debugging, open “Pair device with pairing code” and keep the PIN dialog open. When Pillion detects the port, its notification will change. Enter the 6-digit PIN from that notification.</string>
-    <string name="preparing_pillion">Preparing Pillion…</string>
-    <string name="setup_success">Setup successful</string>
-    <string name="setup_needs_attention">Setup needs attention</string>
-    <string name="retry_setup">Retry setup</string>
-    <string name="setup_trace">Setup trace</string>
-
-    <!-- [Visible UI] Original: "Next" -->
-    <string name="next">Next</string>
-
-    <!-- [Visible UI] Original: "Pair" -->
-    <string name="pair">Pair</string>
-
-    <!-- [Visible UI] Original: "Open settings again" -->
-    <string name="open_settings_again">Open settings again</string>
-
-    <!-- [Visible UI] Original: "Code, or port and code" -->
-    <string name="code_or_port_code">Code, or port and code</string>
-
-    <!-- [Visible UI] Original: "You're all set" -->
-    <string name="all_set">You're all set</string>
-
-    <!-- [Visible UI] Original: "Open your nav app and start Pillion as usual. While you ride with the phone unlocked it mirrors your screen — lock the phone and your nav automatically stays on the dash, screen off. Keep Wi-Fi available for setup; after that it works without Wi-Fi until the phone restarts." -->
-    <string name="all_set_help">Open your nav app and start Pillion as usual. While you ride with the phone unlocked it mirrors your screen — lock the phone and your nav automatically stays on the dash, screen off. Keep Wi-Fi available for setup; after that it works without Wi-Fi until the phone restarts.</string>
-
-    <!-- [Visible UI] Original: "Done" -->
-    <string name="done">Done</string>
-
-    <!-- [Visible UI] Original: "Close setup" -->
-    <string name="close_setup">Close setup</string>
-
-    <!-- [Visible UI] Original: "Pairing…" -->
-    <string name="pairing">Pairing…</string>
-
-    <!-- [Visible UI] Original: "✅ Connected" -->
-    <string name="connected">✅ Connected</string>
-
-    <!-- [Visible UI] Original: "Pairing failed — check the code and try again" -->
-    <string name="pairing_failed">Pairing failed — check the code and try again</string>
-
-    <!-- [Visible UI] Original: "Shutting down Pillion…" -->
-    <string name="shutting_down">Shutting down Pillion…</string>
-    <string name="saving_restarting">Saving settings &amp; restarting Pillion…</string>
-    <string name="resetting_restarting">Resetting &amp; restarting Pillion…</string>
-
-    <string name="select_app_vd">Select app for VD</string>
-    <string name="fixed_app_fallback">Falls back to Pillion when fixed-app mode is enabled.</string>
-    <string name="checking_vd">Checking VD...</string>
-    <string name="always_use_selected_app">Always use selected app on VD</string>
-    <string name="selected_app_explanation">Promote the selected app instead of the current foreground app.</string>
-    <string name="selected_app">Selected app</string>
-    <string name="restart_app_on_vd_label">Restart app on VD</string>
-    <string name="restart_app_on_vd_explanation">Restart the app after moving it to the virtual display.</string>
-    <string name="stick_input">Stick tap input</string>
-    <string name="nav_stick_position">NAV mode stick tap position</string>
-    <string name="ocr_area_settings">OCR area settings</string>
-    <string name="auto_drive_mode">Auto DRIVE mode</string>
-    <string name="auto_drive_help_eligible">After PROMOTE: switch on two empty Area 1 OCR results.</string>
-    <string name="auto_drive_help_requirements">Requires selected Yahoo! Car Navigation, OCR and Restart app on VD.</string>
-    <string name="drive_settings">DRIVE mode settings</string>
-    <string name="drive_tap_help">Auto DRIVE button tap (percent of VD content).</string>
-    <string name="drive_tap_horizontal">DRIVE tap horizontal</string>
-    <string name="drive_tap_vertical">DRIVE tap vertical</string>
-    <string name="drive_stick_help">DRIVE stick zoom taps (active 1 second after the DRIVE tap).</string>
-    <string name="stick_up_horizontal">Stick UP horizontal</string>
-    <string name="stick_up_vertical">Stick UP vertical</string>
-    <string name="stick_down_horizontal">Stick DOWN horizontal</string>
-    <string name="stick_down_vertical">Stick DOWN vertical</string>
-    <string name="drive_image_shift_help">DRIVE image shift (up only, after Auto DRIVE tap; 0 = Standard).</string>
-    <string name="upward_shift">Upward shift</string>
-    <string name="standard_zero_margin">Standard (Bottom Margin is 0px)</string>
-    <string name="export_diagnostic_log">Export diagnostic log</string>
-    <string name="export_action">Export</string>
-    <string name="export_diag_help">Saves recent Pillion connection history plus a one-time Android/Bluetooth snapshot to Downloads. Full-device logcat is collected only when you tap Export.</string>
+    <!-- ===== 03. Settings — Style and language ===== -->
+    <string name="settings">Settings</string>
+    <string name="back">Back</string>
+    <string name="appearance">Style</string>
     <string name="theme">Theme</string>
+    <string name="system">Automatic</string>
+    <string name="light">Light</string>
+    <string name="dark">Dark</string>
+    <string name="language">Language</string>
+    <string name="language_system_default">Automatic</string>
+
+    <!-- ===== 04. Settings — Rendering and image quality ===== -->
+    <string name="display_and_image">Rendering</string>
+    <string name="image_quality">Image quality (JPEG)</string>
+    <string name="max_frame_rate">Max frame rate</string>
+    <string name="dpi">DPI</string>
+    <string name="left_margin">Left margin</string>
+    <string name="bottom_margin">Bottom margin</string>
+    <string name="margin_color">Margin color</string>
+    <string name="change">Change</string>
     <string name="margin_black">Black</string>
     <string name="margin_white">White</string>
     <string name="margin_red">Red</string>
@@ -373,11 +60,157 @@
     <string name="margin_yellow">Yellow</string>
     <string name="margin_cyan">Cyan</string>
     <string name="margin_magenta">Magenta</string>
-    <string name="screen_modes_help">Normal screen mirroring uses only JPEG quality and Max FPS. In VD mode, the layout and margins can keep navigation content clear of the dashboard's overlays.</string>
+    <string name="cancel">Cancel</string>
+    <string name="map_layout_size">Render size</string>
+    <string name="virtual_display_size_help">Render size is based on the usable area after margins. The image sent to the dashboard remains %1$d × %2$d.</string>
+    <string name="matches_usable_area">Same as usable display area</string>
+    <string name="recommended">Recommended</string>
+    <string name="more_detail"></string>
+    <string name="most_detail_heavy">High battery use</string>
+    <string name="screen_modes_help">Only JPEG quality and Max FPS affect screen mirroring. In VD mode, adjust the margins and render size to avoid overlapping the dashboard's arrows and other overlays.</string>
+    <string name="image_quality_help">Higher image quality looks sharper but can affect frame rate, heat, and battery use. Set a lower Max frame rate to reduce the load.</string>
+
+    <!-- ===== 05. Settings — VD options, pinned app, and stick input ===== -->
+    <string name="dedicated_dash_display">VD options</string>
     <string name="vd_toggle">VD mode</string>
+    <string name="dash_keep_nav">Keep an app visible on the dashboard with your phone screen off.</string>
     <string name="enable_vd">Enable</string>
-    <string name="yahoo_navi_assist">Yahoo! Car Navigation assistance</string>
+    <string name="disable">Disable</string>
+    <string name="always_use_selected_app">Pin app to dash</string>
+    <string name="selected_app_explanation">Always cast the selected app instead of the app currently open on your phone.</string>
+    <string name="selected_app">App to pin</string>
+    <string name="not_selected">Not selected</string>
+    <string name="select_app_vd">Select app</string>
+    <string name="fixed_app_fallback">When Pin app to dash is enabled and no app is selected, Pillion is shown instead.</string>
+    <string name="restart_app_on_vd_label">Restart app</string>
+    <string name="restart_app_on_vd_explanation">Restarts the app when casting begins.</string>
+    <string name="stick_input">Stick controls</string>
+    <string name="nav_stick_position">Tap positions</string>
+    <string name="stick_tap_position_help">The top-left of the image is 0%; the bottom-right is 100%.</string>
+    <string name="zoom_in_horizontal">Stick up: Horizontal</string>
+    <string name="zoom_in_vertical">Stick up: Vertical</string>
+    <string name="zoom_out_horizontal">Stick down: Horizontal</string>
+    <string name="zoom_out_vertical">Stick down: Vertical</string>
+    <string name="dash_feature_help">Initial setup requires Wireless debugging. VD can work without Wi-Fi as long as the Helper or local ADB is available.</string>
+
+    <!-- ===== 06. Settings — Yahoo! Car Navigation tools (OCR and Drive Mode) ===== -->
+    <string name="yahoo_navi_assist">Yahoo! Car Navigation tools</string>
     <string name="ocr_toggle">OCR</string>
-    <string name="ocr_toggle_help">Reads designated areas of the VD screen and displays recognized navigation information in the dashboard's road-name area.</string>
-    <string name="ocr_area_timing_help">Area 1 is sampled about every 10 seconds and recognizes only the supported arrival-time and distance format; other text formats are not supported. Area 2 samples the map scale about once per second.</string>
+    <string name="ocr_toggle_help">Displays recognized navigation information in the dashboard's road-name field.</string>
+    <string name="ocr_show_area">Show recognition areas</string>
+    <string name="ocr_area_settings">Recognition area settings</string>
+    <string name="ocr_area_1">Area 1: Arrival time &amp; distance</string>
+    <string name="ocr_left">Left edge</string>
+    <string name="ocr_top">Top edge</string>
+    <string name="ocr_right">Right edge</string>
+    <string name="ocr_bottom">Bottom edge</string>
+    <string name="ocr_area_2">Area 2: Map scale</string>
+    <string name="auto_drive_mode">Automatic Drive Mode</string>
+    <string name="auto_drive_help_eligible">Automatically switches to Drive Mode when Area 1 is blank twice in a row.</string>
+    <string name="auto_drive_help_requirements">Requires Yahoo! Car Navigation as the pinned app, OCR, and Restart app to be enabled.</string>
+    <string name="drive_settings">Drive Mode settings</string>
+    <string name="drive_tap_help">Set the tap position used to switch to Drive Mode.</string>
+    <string name="drive_tap_horizontal">Switch tap: Horizontal</string>
+    <string name="drive_tap_vertical">Switch tap: Vertical</string>
+    <string name="drive_stick_help">Tap positions for the stick in Drive Mode. Stick input is enabled one second after the mode-switch tap.</string>
+    <string name="stick_up_horizontal">Stick up: Horizontal</string>
+    <string name="stick_up_vertical">Stick up: Vertical</string>
+    <string name="stick_down_horizontal">Stick down: Horizontal</string>
+    <string name="stick_down_vertical">Stick down: Vertical</string>
+    <string name="drive_image_shift_help">Shifts the image upward after switching to Drive Mode. Set 0 px for the default position.</string>
+    <string name="upward_shift">Upward shift</string>
+    <string name="standard_zero_margin">Default position (cannot adjust because the bottom margin is 0 px)</string>
+    <string name="ocr_area_timing_help">Area 1 is scanned about every 10 seconds and recognizes only supported arrival-time and distance formats. It cannot read arbitrary text or other formats. Area 2 scans the map scale about once per second.</string>
+
+    <!-- ===== 07. Settings — Maintenance ===== -->
+    <string name="maintenance">Maintenance</string>
+    <string name="save_settings_restart">Save settings</string>
+    <string name="save_restart">Save &amp; restart</string>
+    <string name="save_restart_help">Image quality, layout, and VD feature changes take effect after Save &amp; restart. Theme, language, and VD on/off changes take effect immediately.</string>
+    <string name="export_diagnostic_log">Save diagnostic log</string>
+    <string name="export_action">Export</string>
+    <string name="export_diag_help">Saves Pillion's connection history and Android/Bluetooth status information to Downloads. Device-wide logcat is collected only when you export.</string>
+    <string name="shutting_down">Closing Pillion…</string>
+    <string name="saving_restarting">Saving settings and restarting Pillion…</string>
+    <string name="resetting_restarting">Resetting and restarting Pillion…</string>
+
+    <!-- ===== 08. Settings — About ===== -->
+    <string name="about">About</string>
+    <string name="source_code">Source code</string>
+    <string name="changelog">Changelog</string>
+    <string name="version_format">Version %1$s</string>
+    <string name="report_issue">Report an issue</string>
+
+    <!-- ===== 09. VD setup — Introduction and Wireless debugging ===== -->
+    <string name="dash_nav_title">More freedom</string>
+    <string name="dash_nav_body">Your phone screen and bike ignition can be turned on or off seamlessly. Once casting is running, you don't need to touch your phone when you start the bike again.</string>
+    <string name="get_started">Start setup</string>
+    <string name="maybe_later">Set up later</string>
+    <string name="wireless_debugging_on">Enable Wireless debugging</string>
+    <string name="wireless_debugging_help">In Developer options, enable Wireless debugging and open “Pair device with pairing code”. Pillion will notify you when it detects the pairing port.</string>
+    <string name="open_settings">Open settings</string>
+
+    <!-- ===== 09. VD setup — Pairing and connection status ===== -->
+    <string name="pair_from_notification">Pair from notification</string>
+    <string name="pair_from_notification_help">Keep Android's Wireless debugging pairing screen open. When Pillion's notification updates, enter the six-digit code shown by Android using that notification.</string>
+    <string name="pairing">Pairing…</string>
+    <string name="preparing_pillion">Preparing Pillion…</string>
+    <string name="setup_success">Setup complete</string>
+    <string name="setup_needs_attention">Could not complete setup</string>
+    <string name="next">Next</string>
+    <string name="retry_setup">Try again</string>
+    <string name="open_settings_again">Open settings again</string>
+    <string name="setup_trace">Setup details</string>
+
+    <!-- ===== 09. VD setup — Setup complete ===== -->
+    <string name="all_set">You're all set</string>
+    <string name="all_set_help">Open your navigation app and start casting in Pillion. In VD mode, the app stays visible even when your phone screen is off. Wi-Fi is required for initial setup, but afterward VD can work without Wi-Fi while the Helper is running.</string>
+    <string name="done">Done</string>
+    <string name="close_setup">Close setup</string>
+
+    <!-- ===== 10. Reference — Legacy and other strings (retained for compatibility) ===== -->
+    <string name="before_you_ride">Before you ride</string>
+    <string name="guide_pair_bluetooth">Pair your phone with the bike over Bluetooth (first time only).</string>
+    <string name="guide_landscape">For screen mirroring, turn your phone to landscape and enable auto-rotate.</string>
+    <string name="guide_navigation_mode">Switch the bike's dashboard to Navigation mode.</string>
+    <string name="guide_start_mirroring">Tap Start and allow screen capture.</string>
+    <string name="guide_open_maps">Open a navigation app to show it on the dashboard.</string>
+    <string name="motorcycle">Bike</string>
+    <string name="tap_switch_head_unit">Tap to change dashboard type</string>
+    <string name="mirroring">Mirroring</string>
+    <string name="vd_display_only">VD-only settings</string>
+    <string name="on">On</string>
+    <string name="off">Off</string>
+    <string name="set_up">Set up</string>
+    <string name="rerun_setup">Run setup again</string>
+    <string name="stick_tap_position">Stick tap positions</string>
+    <string name="ocr_title">Navigation text recognition (OCR)</string>
+    <string name="ocr_help">Recognizes text in selected VD areas and sends it to the dashboard's road-name field. Area 1 updates about every 10 seconds; Area 2 about once per second.</string>
+    <string name="ocr_enable">OCR</string>
+    <string name="checking_vd">Checking VD status…</string>
+    <string name="updates">Updates</string>
+    <string name="new_version_available">A new version is available</string>
+    <string name="get">Get</string>
+    <string name="skip">Skip</string>
+    <string name="how_it_connects">Connection methods</string>
+    <string name="how_it_connects_body">Two connection methods are available, depending on the bike's dashboard.</string>
+    <string name="bluetooth">Bluetooth</string>
+    <string name="bluetooth_desc">Sends a sequence of images over Bluetooth, suitable for navigation.</string>
+    <string name="usb">USB</string>
+    <string name="usb_desc">Uses a wired USB connection for smooth, full-motion video.</string>
+    <string name="more_bikes_over_time">More supported bikes</string>
+    <string name="more_bikes_desc">Support for additional motorcycles and dashboards is planned.</string>
+    <string name="choose_motorcycle">Choose your bike</string>
+    <string name="choose_motorcycle_body">Select the type of dashboard installed on your bike. You can change it later in Settings.</string>
+    <string name="trademark_notice">Yamaha, Garmin, and StreetCross are trademarks of their respective owners. Pillion is an independent, unofficial project and is not affiliated with, endorsed by, or sponsored by Yamaha or Garmin.</string>
+    <string name="usb_cable">Connect to the bike via USB</string>
+    <string name="wireless_bluetooth">Connect wirelessly via Bluetooth</string>
+    <string name="full_motion_video">Full-motion video</string>
+    <string name="slideshow">Sequence of images</string>
+    <string name="pair_with_code">Pair with a code</string>
+    <string name="pair_with_code_help">Enter the pairing code using Pillion's notification.</string>
+    <string name="pair">Pair</string>
+    <string name="code_or_port_code">Code, or port number and code</string>
+    <string name="connected">✅ Connected</string>
+    <string name="pairing_failed">Pairing failed. Check the code and try again.</string>
 </resources>

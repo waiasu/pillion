@@ -76,14 +76,14 @@
     <string name="dash_keep_nav">スマホの画面を消しても、アプリをメーターに表示できます。</string>
     <string name="enable_vd">有効化</string>
     <string name="disable">無効化</string>
-    <string name="always_use_selected_app">投影するアプリを固定</string>
+    <string name="always_use_selected_app">アプリを固定</string>
     <string name="selected_app_explanation">現在スマホで開いているアプリではなく、指定したアプリを常に投影します。</string>
-    <string name="selected_app">対象アプリ</string>
+    <string name="selected_app">固定するアプリ</string>
     <string name="not_selected">未選択</string>
     <string name="select_app_vd">アプリを選択</string>
-    <string name="fixed_app_fallback">アプリ固定が有効で、対象アプリが未選択の場合はPillionを表示します。</string>
+    <string name="fixed_app_fallback">アプリを固定が有効で、アプリが未選択の場合はPillionを表示します。</string>
     <string name="restart_app_on_vd_label">アプリを再起動</string>
-    <string name="restart_app_on_vd_explanation">メーター投影時に、対象アプリを再起動します。</string>
+    <string name="restart_app_on_vd_explanation">投影開始時に再起動します。</string>
     <string name="stick_input">ステック機能</string>
     <string name="nav_stick_position">タップ位置</string>
     <string name="stick_tap_position_help">画像の左上が0%、右下が100%です。</string>
@@ -95,8 +95,8 @@
 
     <!-- ===== 06. 設定 ＞ Yahoo!カーナビ補助機能（OCR・DRIVE） ===== -->
     <string name="yahoo_navi_assist">Yahoo!カーナビ補助機能</string>
-    <string name="ocr_toggle">OCR機能</string>
-    <string name="ocr_toggle_help">映像の指定範囲を文字認識し、読み取った情報をメーターの道路名表示欄に表示します。</string>
+    <string name="ocr_toggle">OCR</string>
+    <string name="ocr_toggle_help">読み取った情報をメーターの道路名表示欄に表示します。</string>
     <string name="ocr_show_area">認識範囲を表示</string>
     <string name="ocr_area_settings">認識範囲の設定</string>
     <string name="ocr_area_1">エリア1：到着時刻・距離</string>
@@ -106,7 +106,7 @@
     <string name="ocr_bottom">下端</string>
     <string name="ocr_area_2">エリア2：縮尺</string>
     <string name="auto_drive_mode">ドライブモード自動切替</string>
-    <string name="auto_drive_help_eligible">メーター投影後、エリア1が2回連続で空白と判定された場合、ドライブモードに切り替えます。</string>
+    <string name="auto_drive_help_eligible">エリア1が2回連続で空白の場合自動で切り替えます。</string>
     <string name="auto_drive_help_requirements">Yahoo!カーナビの固定、OCR機能、投影時にアプリを再起動を有効にする必要があります。</string>
     <string name="drive_settings">ドライブモードの詳細設定</string>
     <string name="drive_tap_help">ドライブモードへの切替時にタップする位置を指定します。</string>
@@ -142,8 +142,8 @@
     <string name="report_issue">問題を報告</string>
 
     <!-- ===== 09. VD初期設定 ＞ 案内・ワイヤレスデバッグ ===== -->
-    <string name="dash_nav_title">スマホはマウント不要</string>
-    <string name="dash_nav_body">スマホの画面を消しても、アプリをメーターに表示できます。通常ミラーと異なり、スマホの画面のオン・オフ、車体のオン・オフにシームレスに対応します。</string>
+    <string name="dash_nav_title">もっと自由に</string>
+    <string name="dash_nav_body">スマホの画面のオン・オフ、バイクのオン・オフにシームレスに対応します。キーをオンにして走り出す前に操作も不要です。</string>
     <string name="get_started">設定を開始</string>
     <string name="maybe_later">後で設定</string>
     <string name="wireless_debugging_on">ワイヤレスデバッグを有効にする</string>
@@ -202,7 +202,7 @@
     <string name="more_bikes_desc">今後も対応車種やメーターの拡充が予定されています。</string>
     <string name="choose_motorcycle">車体を選択</string>
     <string name="choose_motorcycle_body">車体で使用しているメーターの種類を選択してください。設定からいつでも変更できます。</string>
-    <string name="trademark_notice">Yamaha、StreetCross、Motorizeはそれぞれの権利者の商標です。Pillionは独立したプロジェクトで、これらの企業との提携、承認、支援を受けたものではありません。</string>
+    <string name="trademark_notice">Yamaha、Garmin、StreetCrossの名称は、それぞれの権利者に帰属します。Pillionは独立した非公式プロジェクトであり、ヤマハおよびGarminとは提携しておらず、承認・後援も受けていません。</string>
     <string name="usb_cable">車体とUSBで接続</string>
     <string name="wireless_bluetooth">Bluetoothで無線接続</string>
     <string name="full_motion_video">動画表示</string>

@@ -404,14 +404,7 @@ internal fun SettingsScreen(
                     Modifier.fillMaxWidth().padding(vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Column(Modifier.weight(1f)) {
-                        Text(stringResource(Res.string.always_use_selected_app))
-                        Text(
-                            stringResource(Res.string.selected_app_explanation),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
+                    Text(stringResource(Res.string.always_use_selected_app), modifier = Modifier.weight(1f))
                     Switch(
                         checked = draftFixedDashAppEnabled,
                         onCheckedChange = onDraftFixedDashAppEnabled,
@@ -758,6 +751,12 @@ internal fun SettingsScreen(
             GroupDivider()
             LinkRow("XMAX Custom Fork v37") { uriHandler.openUri("https://github.com/waiasu/pillion") }
         }
+        Text(
+            stringResource(Res.string.trademark_notice),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 6.dp, top = 8.dp, end = 6.dp),
+        )
 
         Spacer(Modifier.height(28.dp))
         MadeByCredit { uriHandler.openUri("https://github.com/alexandrevega") }
