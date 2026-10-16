@@ -4,7 +4,7 @@ This file is the current-state reference for the XMAX / Pixel fork.
 
 このファイルは XMAX / Pixel fork の「現在どうなっているか」を確認するための基準メモです。
 
-The implementation described here covers **stable v37 (2026-10-14)**, including v35 NAV/DRIVE behavior and v36 helper security/bootstrapping/Stop/stick-guard updates. The v35 release commit was `ea564aa`; the `xmax-v34` tag points to commit `4d994e3`. As always, source code takes precedence over these notes.
+The implementation described here covers **stable v38 (2026-10-17)**, including v35 NAV/DRIVE behavior and v36 helper security/bootstrapping/Stop/stick-guard updates. The v35 release commit was `ea564aa`; the `xmax-v34` tag points to commit `4d994e3`. As always, source code takes precedence over these notes.
 
 If this file and the source ever disagree, **the source code wins**.
 
@@ -72,6 +72,17 @@ Changing VD size/DPI while Yahoo! Car Navigation is already alive can produce pa
 
 ---
 
+## v38 — UI localization and text refinements
+
+- Android UI language selector supports Automatic, Japanese (`ja`), English (`en`), Korean (`ko`), Spanish (`es`) and Malay (`ms`), with persisted language selection.
+- Shared Compose UI resources contain 183 matching entries per locale. Japanese is the primary translation reference; English was revised to match current behavior.
+- Android platform notifications retain Japanese and English resources, with English fallback for Korean, Spanish and Malay.
+- Japanese persistent notification action is now `ストップ`. Wireless-ADB pairing notification reply input label is fixed to English: `Code, or port number and code`.
+- The in-app About label is XMAX Custom Fork v38. VD, OCR, Auto DRIVE, Helper, Bluetooth, rendering and camera logic are unchanged.
+- User verified switching languages on a test build.
+
+---
+
 ## v37 — dedicated VD-only startup
 
 When Android NaviLite dedicated VD is ON, Start bypasses MediaProjection consent and the phone-mirror VirtualDisplay/ImageReader. The service runs as `connectedDevice`, and `SwitchableScreenSource` begins in STATUS (`Please lock the phone`). Existing PROMOTE uses the helper-owned trusted VD, and DEMOTE returns to STATUS. VD OFF and SDL/USB retain their original capture path. A shared non-blocking Start/Settings-entry preflight checks authenticated Helper first, then local ADB at 127.0.0.1:5555 only. If both are unavailable, disable VD in saved settings, synchronize Compose UI, and use normal MediaProjection consent for the same Start tap. Settings removes the Rerun setup link and shows Checking while probing. Both preflight and Helper bootstrap accept a live existing loopback connection: libadb-android connect() returns false when already connected. A Wi-Fi-only connection is not treated as local loopback. Preflight performs no Wi-Fi/mDNS discovery or Helper spawn; existing VD lifecycle and Bluetooth reconnect mechanisms remain intact. v37 bench and XMAX field tests passed.
@@ -82,7 +93,7 @@ When dedicated VD is OFF, the phone-mirror service subscribes to `ACTION_SCREEN_
 
 ## v37 Settings and Home presentation
 
-- Settings groups: Appearance and Motorcycle unchanged; Display & Image contains shared Image quality and Max FPS, then a VD-only subsection with DPI, Left/Bottom margin, Margin color and Map layout size. VD Features contains VD On/Off, selected app targeting, Restart app on VD, stick taps, OCR and Auto DRIVE. Maintenance contains Save & Restart and diagnostic export. About shows XMAX Custom Fork v37.
+- Settings groups: Appearance and Motorcycle unchanged; Display & Image contains shared Image quality and Max FPS, then a VD-only subsection with DPI, Left/Bottom margin, Margin color and Map layout size. VD Features contains VD On/Off, selected app targeting, Restart app on VD, stick taps, OCR and Auto DRIVE. Maintenance contains Save & Restart and diagnostic export. About shows XMAX Custom Fork v38 (updated in v38).
 - The “experimental” VD heading and old Wi-Fi-until-restart guidance are replaced with current v37 copy; the Save & Restart caption distinguishes draft settings from immediate theme/VD enable.
 - The Android NaviLite Home Idle state shows a mode title, emphasized one-line Start instructions, and muted behavior notes without numbered steps. VD ON: Start then lock, automatically resume when the bike reconnects or the phone is re-locked after use. VD OFF: use landscape orientation, Start and consent, keep the screen on (lock stops mirroring); the bike may connect later in either mode. Other head-unit guides and session states/actions remain untouched. The UI follows the remembered/persisted `dashEnabled` state, including preflight disable and setup completion.
 
