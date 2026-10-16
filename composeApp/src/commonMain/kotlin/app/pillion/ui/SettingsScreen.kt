@@ -391,11 +391,7 @@ internal fun SettingsScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(Modifier.weight(1f)) {
-                        Text(
-                            stringResource(Res.string.vd_toggle),
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.SemiBold,
-                        )
+                        Text(stringResource(Res.string.vd_toggle))
                         Text(
                             stringResource(Res.string.dash_keep_nav),
                             style = MaterialTheme.typography.bodySmall,
@@ -546,11 +542,7 @@ internal fun SettingsScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(Modifier.weight(1f)) {
-                        Text(
-                            stringResource(Res.string.ocr_toggle),
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.SemiBold,
-                        )
+                        Text(stringResource(Res.string.ocr_toggle))
                         Text(
                             stringResource(Res.string.ocr_toggle_help),
                             style = MaterialTheme.typography.bodySmall,
