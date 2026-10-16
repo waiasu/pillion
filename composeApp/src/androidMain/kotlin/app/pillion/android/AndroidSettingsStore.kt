@@ -38,10 +38,10 @@ class AndroidSettingsStore(context: Context) : SettingsStore {
         check(editor.commit()) { "Could not save first-run preset" }
     }
 
-    override fun languageTag(): String = prefs.getString(KEY_LANGUAGE, "")?.takeIf { it == "ja" || it == "en" } ?: ""
+    override fun languageTag(): String = prefs.getString(KEY_LANGUAGE, "")?.takeIf { it in setOf("ja", "en", "ko", "es", "ms") } ?: ""
 
     override fun setLanguageTag(tag: String) {
-        prefs.edit().putString(KEY_LANGUAGE, tag.takeIf { it == "ja" || it == "en" } ?: "").apply()
+        prefs.edit().putString(KEY_LANGUAGE, tag.takeIf { it in setOf("ja", "en", "ko", "es", "ms") } ?: "").apply()
     }
 
     override fun themeMode(): ThemeMode =

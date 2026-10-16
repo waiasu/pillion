@@ -4,7 +4,7 @@
     <string name="notification_waiting">接続待機中・自動再接続します</string>
     <string name="notification_reconnecting">再接続中…（%1$d回目）</string>
     <string name="notification_streaming">投影中</string>
-    <string name="notification_stop">停止</string>
+    <string name="notification_stop">ストップ</string>
     <string name="notification_channel_name">Pillion</string>
     <string name="notification_channel_description">Pillionの接続状態</string>
     <string name="adb_open_pairing_dialog">ワイヤレスデバッグで「ペア設定コードによるデバイスのペア設定」を開いてください。</string>
@@ -31,7 +31,7 @@
     <string name="adb_discovery_failed_generic">ADBサービスを検出できませんでした</string>
     <string name="adb_allow_notifications">Pillionからペア設定コードを入力できるよう、通知を許可してください。</string>
     <string name="adb_setup_channel">Pillion初期設定</string>
-    <string name="adb_code_or_port_label">コード、またはポート番号とコード</string>
+    <string name="adb_code_or_port_label">Code, or port number and code</string>
     <string name="adb_enter_code_action">コードを入力</string>
     <string name="adb_open_pillion_action">Pillionを開く</string>
     <string name="adb_setup_title">Pillion ワイヤレスデバッグ設定</string>

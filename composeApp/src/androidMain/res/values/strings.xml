@@ -91,7 +91,7 @@
     <string name="adb_setup_channel">Pillion setup</string>
 
     <!-- [Android visible text] Original: "Code, or port and code" -->
-    <string name="adb_code_or_port_label">Code, or port and code</string>
+    <string name="adb_code_or_port_label">Code, or port number and code</string>
 
     <!-- [Android visible text] Original: "Enter code" -->
     <string name="adb_enter_code_action">Enter code</string>

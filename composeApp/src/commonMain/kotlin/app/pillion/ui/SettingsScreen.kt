@@ -292,6 +292,9 @@ internal fun SettingsScreen(
                             "" -> stringResource(Res.string.language_system_default)
                             "ja" -> "日本語"
                             "en" -> "English"
+                            "ko" -> "한국어"
+                            "es" -> "Español"
+                            "ms" -> "Bahasa Melayu"
                             else -> languageTag
                         },
                         color = MaterialTheme.colorScheme.primary,
@@ -305,6 +308,9 @@ internal fun SettingsScreen(
                         "" to stringResource(Res.string.language_system_default),
                         "ja" to "日本語",
                         "en" to "English",
+                        "ko" to "한국어",
+                        "es" to "Español",
+                        "ms" to "Bahasa Melayu",
                     ).forEach { (tag, name) ->
                         DropdownMenuItem(text = { Text(name) }, onClick = {
                             languageMenuOpen = false
