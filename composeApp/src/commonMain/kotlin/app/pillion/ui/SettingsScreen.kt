@@ -334,12 +334,6 @@ internal fun SettingsScreen(
             }
             if (dashSupported) {
                 GroupDivider()
-                Text(
-                    stringResource(Res.string.vd_display_only),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 12.dp, bottom = 4.dp),
-                )
                 SettingSlider(
                     stringResource(Res.string.dpi),
                     "$dashDpi dpi",
@@ -372,7 +366,14 @@ internal fun SettingsScreen(
                 DashResolutionSelector(dashScale, draftLeftMargin, draftBottomMargin, onDashScale)
             }
         }
-        if (!dashSupported) {
+        if (dashSupported) {
+            Text(
+                stringResource(Res.string.screen_modes_help),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 6.dp, top = 8.dp, end = 6.dp),
+            )
+        } else {
             Text(
                 stringResource(Res.string.image_quality_help),
                 style = MaterialTheme.typography.bodySmall,
@@ -391,12 +392,9 @@ internal fun SettingsScreen(
                 ) {
                     Column(Modifier.weight(1f)) {
                         Text(
-                            when {
-                                dashChecking -> stringResource(Res.string.checking_vd)
-                                dashEnabled -> stringResource(Res.string.on)
-                                else -> stringResource(Res.string.off)
-                            },
-                            style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
+                            stringResource(Res.string.vd_toggle),
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.SemiBold,
                         )
                         Text(
                             stringResource(Res.string.dash_keep_nav),
@@ -409,7 +407,7 @@ internal fun SettingsScreen(
                     } else if (dashEnabled) {
                         OutlinedButton(onClick = onDisableDash, shape = RoundedCornerShape(12.dp)) { Text(stringResource(Res.string.disable)) }
                     } else {
-                        Button(onClick = onSetUpDash, shape = RoundedCornerShape(12.dp)) { Text(stringResource(Res.string.set_up)) }
+                        Button(onClick = onSetUpDash, shape = RoundedCornerShape(12.dp)) { Text(stringResource(Res.string.enable_vd)) }
                     }
                 }
                 GroupDivider()
@@ -531,24 +529,34 @@ internal fun SettingsScreen(
                     step = 1f,
                 ) { onDraftStickZoomOutY(it.roundToInt().coerceIn(0, 100)) }
                 }
-                GroupDivider()
-                Text(
-                    stringResource(Res.string.ocr_title),
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
-                )
-                Text(
-                    stringResource(Res.string.ocr_help),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 6.dp),
-                )
+            }
+            // VD bootstrap guidance belongs with VD and NAV stick settings, not with Yahoo OCR.
+            Text(
+                stringResource(Res.string.dash_feature_help),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 6.dp, top = 8.dp, end = 6.dp),
+            )
+
+            Spacer(Modifier.height(24.dp))
+            SectionHeader(stringResource(Res.string.yahoo_navi_assist))
+            SettingsGroup {
                 Row(
                     Modifier.fillMaxWidth().padding(vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(stringResource(Res.string.ocr_enable), modifier = Modifier.weight(1f))
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            stringResource(Res.string.ocr_toggle),
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Text(
+                            stringResource(Res.string.ocr_toggle_help),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                     Switch(checked = draftOcrEnabled, onCheckedChange = onDraftOcrEnabled)
                 }
                 GroupDivider()
@@ -722,7 +730,7 @@ internal fun SettingsScreen(
                 }
             }
             Text(
-                stringResource(Res.string.dash_feature_help),
+                stringResource(Res.string.ocr_area_timing_help),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = 6.dp, top = 8.dp, end = 6.dp),

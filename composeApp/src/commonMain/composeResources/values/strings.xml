@@ -373,4 +373,11 @@
     <string name="margin_yellow">Yellow</string>
     <string name="margin_cyan">Cyan</string>
     <string name="margin_magenta">Magenta</string>
+    <string name="screen_modes_help">Normal screen mirroring uses only JPEG quality and Max FPS. In VD mode, the layout and margins can keep navigation content clear of the dashboard's overlays.</string>
+    <string name="vd_toggle">VD mode</string>
+    <string name="enable_vd">Enable</string>
+    <string name="yahoo_navi_assist">Yahoo! Car Navigation assistance</string>
+    <string name="ocr_toggle">OCR</string>
+    <string name="ocr_toggle_help">Reads designated areas of the VD screen and displays recognized navigation information in the dashboard's road-name area.</string>
+    <string name="ocr_area_timing_help">Area 1 is sampled about every 10 seconds and recognizes only the supported arrival-time and distance format; other text formats are not supported. Area 2 samples the map scale about once per second.</string>
 </resources>
