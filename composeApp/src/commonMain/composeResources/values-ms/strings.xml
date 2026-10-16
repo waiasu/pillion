@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Terjemahan Bahasa Melayu berdasarkan versi Jepun -->
+    <string name="intro_title">Navigasi pada meter XMAX anda.</string>
+    <string name="intro_body">Pillion memaparkan navigasi telefon pada meter XMAX melalui Bluetooth yang serasi dengan StreetCross. Tekan Seterusnya untuk bermula.</string>
+    <string name="continue_text">Seterusnya</string>
+
+    <!-- Terjemahan Bahasa Melayu berdasarkan versi Jepun -->
+    <string name="tagline">Skrin telefon anda pada meter motosikal</string>
+    <string name="home_vd_mode">Paparan maya (VD)</string>
+    <string name="guide_start_vd">Anda boleh mematikan skrin telefon selepas memulakan paparan.</string>
+    <string name="home_vd_detail">Jika anda menggunakan telefon, matikan skrinnya untuk kembali ke navigasi. Paparan juga pulih secara automatik selepas suis motosikal dimatikan dan dihidupkan.</string>
+
+    <!-- Terjemahan Bahasa Melayu berdasarkan versi Jepun -->
+    <string name="home_phone_mirror_mode">Pencerminan skrin</string>
+    <string name="guide_start_phone_mirror">Putar telefon ke landskap, tekan Mula dan benarkan perkongsian skrin.</string>
+    <string name="home_phone_mirror_detail">Pastikan skrin telefon sentiasa hidup. Mematikannya akan menghentikan paparan. Gunakan mod VD untuk paparan dengan skrin dimatikan.</string>
+
+    <!-- Terjemahan Bahasa Melayu berdasarkan versi Jepun -->
+    <string name="start_mirroring">Mula</string>
+    <string name="stop_mirroring">Henti</string>
+    <string name="connecting_to_dash">Menyambung ke meter…</string>
+    <string name="fps">fps</string>
+    <string name="mirroring_frame_size">Memaparkan · %1$d KB setiap bingkai</string>
+    <string name="broadcasting">Menghantar imej</string>
+    <string name="open_maps_on_dash">Buka aplikasi untuk memaparkannya pada meter.</string>
+    <string name="disconnected">Terputus sambungan</string>
+
+    <!-- Terjemahan Bahasa Melayu berdasarkan versi Jepun -->
+    <string name="slide_reset_restart">Set semula dan mula semula</string>
+    <string name="reset_restart_help">Menghentikan Pillion, mengosongkan cache sementara dan memulakannya semula. Tetapan, kebenaran, konfigurasi ADB dan log diagnostik dikekalkan.</string>
+    <string name="reset_restart">Set semula dan mula semula</string>
+
+    <!-- Terjemahan Bahasa Melayu berdasarkan versi Jepun -->
+    <string name="settings">Tetapan</string>
+    <string name="back">Kembali</string>
+    <string name="appearance">Gaya</string>
+    <string name="theme">Tema</string>
+    <string name="system">Automatik</string>
+    <string name="light">Cerah</string>
+    <string name="dark">Gelap</string>
+    <string name="language">Bahasa</string>
+    <string name="language_system_default">Automatik</string>
+
+    <!-- Terjemahan Bahasa Melayu berdasarkan versi Jepun -->
+    <string name="display_and_image">Paparan</string>
+    <string name="image_quality">Kualiti imej (JPEG)</string>
+    <string name="max_frame_rate">Kadar bingkai maksimum</string>
+    <string name="dpi">DPI</string>
+    <string name="left_margin">Ruang kiri</string>
+    <string name="bottom_margin">Ruang bawah</string>
+    <string name="margin_color">Warna ruang</string>
+    <string name="change">Tukar</string>
+    <string name="margin_black">Hitam</string>
+    <string name="margin_white">Putih</string>
+    <string name="margin_red">Merah</string>
+    <string name="margin_green">Hijau</string>
+    <string name="margin_blue">Biru</string>
+    <string name="margin_yellow">Kuning</string>
+    <string name="margin_cyan">Sian</string>
+    <string name="margin_magenta">Magenta</string>
+    <string name="cancel">Batal</string>
+    <string name="map_layout_size">Saiz pemaparan</string>
+    <string name="virtual_display_size_help">Saiz pemaparan ditentukan oleh kawasan yang boleh digunakan selepas menolak ruang tepi. Imej yang dihantar ke meter kekal %1$d × %2$d.</string>
+    <string name="matches_usable_area">Sama dengan kawasan paparan</string>
+    <string name="recommended">Disyorkan</string>
+    <string name="more_detail"></string>
+    <string name="most_detail_heavy">Penggunaan bateri tinggi</string>
+    <string name="screen_modes_help">Dalam pencerminan biasa, hanya kualiti JPEG dan FPS maksimum digunakan. Dalam mod VD, laraskan ruang tepi dan saiz pemaparan untuk mengelakkan imej bertindih dengan anak panah meter.</string>
+    <string name="image_quality_help">Kualiti lebih tinggi memberikan imej lebih jelas tetapi boleh menjejaskan kadar bingkai, haba dan bateri. Kurangkan FPS maksimum untuk mengurangkan beban.</string>
+
+    <!-- Terjemahan Bahasa Melayu berdasarkan versi Jepun -->
+    <string name="dedicated_dash_display">Pilihan VD</string>
+    <string name="vd_toggle">Mod VD</string>
+    <string name="dash_keep_nav">Paparkan aplikasi pada meter walaupun skrin telefon dimatikan.</string>
+    <string name="enable_vd">Aktifkan</string>
+    <string name="disable">Nyahaktifkan</string>
+    <string name="always_use_selected_app">Tetapkan aplikasi</string>
+    <string name="selected_app_explanation">Sentiasa paparkan aplikasi yang dipilih dan bukannya aplikasi yang sedang dibuka pada telefon.</string>
+    <string name="selected_app">Aplikasi tetap</string>
+    <string name="not_selected">Belum dipilih</string>
+    <string name="select_app_vd">Pilih aplikasi</string>
+    <string name="fixed_app_fallback">Jika Tetapkan aplikasi diaktifkan tetapi tiada aplikasi dipilih, Pillion akan dipaparkan.</string>
+    <string name="restart_app_on_vd_label">Mulakan semula aplikasi</string>
+    <string name="restart_app_on_vd_explanation">Memulakan semula aplikasi apabila paparan bermula.</string>
+    <string name="stick_input">Kawalan suis</string>
+    <string name="nav_stick_position">Kedudukan ketikan</string>
+    <string name="stick_tap_position_help">Sudut kiri atas imej ialah 0% dan sudut kanan bawah ialah 100%.</string>
+    <string name="zoom_in_horizontal">Suis atas: mendatar</string>
+    <string name="zoom_in_vertical">Suis atas: menegak</string>
+    <string name="zoom_out_horizontal">Suis bawah: mendatar</string>
+    <string name="zoom_out_vertical">Suis bawah: menegak</string>
+    <string name="dash_feature_help">Persediaan awal memerlukan Penyahpepijatan wayarles. VD boleh digunakan tanpa Wi-Fi selagi Helper atau ADB setempat tersedia.</string>
+
+    <!-- Terjemahan Bahasa Melayu berdasarkan versi Jepun -->
+    <string name="yahoo_navi_assist">Alat bantuan Yahoo! Car Navigation</string>
+    <string name="ocr_toggle">OCR</string>
+    <string name="ocr_toggle_help">Memaparkan maklumat yang dikenal pasti dalam ruang nama jalan pada meter.</string>
+    <string name="ocr_show_area">Tunjukkan kawasan pengecaman</string>
+    <string name="ocr_area_settings">Tetapan kawasan pengecaman</string>
+    <string name="ocr_area_1">Kawasan 1: Masa tiba dan jarak</string>
+    <string name="ocr_left">Tepi kiri</string>
+    <string name="ocr_top">Tepi atas</string>
+    <string name="ocr_right">Tepi kanan</string>
+    <string name="ocr_bottom">Tepi bawah</string>
+    <string name="ocr_area_2">Kawasan 2: Skala peta</string>
+    <string name="auto_drive_mode">Tukar ke Mod Drive secara automatik</string>
+    <string name="auto_drive_help_eligible">Beralih ke Mod Drive secara automatik jika Kawasan 1 kosong dua kali berturut-turut.</string>
+    <string name="auto_drive_help_requirements">Memerlukan Yahoo! Car Navigation sebagai aplikasi tetap, OCR dan Mulakan semula aplikasi diaktifkan.</string>
+    <string name="drive_settings">Tetapan Mod Drive</string>
+    <string name="drive_tap_help">Tetapkan kedudukan ketikan untuk beralih ke Mod Drive.</string>
+    <string name="drive_tap_horizontal">Ketikan tukar: mendatar</string>
+    <string name="drive_tap_vertical">Ketikan tukar: menegak</string>
+    <string name="drive_stick_help">Kedudukan ketikan suis dalam Mod Drive. Input suis tersedia satu saat selepas ketikan pertukaran mod.</string>
+    <string name="stick_up_horizontal">Suis atas: mendatar</string>
+    <string name="stick_up_vertical">Suis atas: menegak</string>
+    <string name="stick_down_horizontal">Suis bawah: mendatar</string>
+    <string name="stick_down_vertical">Suis bawah: menegak</string>
+    <string name="drive_image_shift_help">Mengalihkan imej ke atas selepas bertukar ke Mod Drive. Tetapkan 0 px untuk kedudukan asal.</string>
+    <string name="upward_shift">Anjakan ke atas</string>
+    <string name="standard_zero_margin">Kedudukan asal (tidak boleh dilaraskan kerana ruang bawah ialah 0 px)</string>
+    <string name="ocr_area_timing_help">Kawasan 1 diimbas kira-kira setiap 10 saat dan hanya mengenali format masa tiba dan jarak yang disokong. Teks lain tidak dapat dibaca. Kawasan 2 mengimbas skala peta kira-kira setiap saat.</string>
+
+    <!-- Terjemahan Bahasa Melayu berdasarkan versi Jepun -->
+    <string name="maintenance">Penyelenggaraan</string>
+    <string name="save_settings_restart">Simpan tetapan</string>
+    <string name="save_restart">Simpan dan mula semula</string>
+    <string name="save_restart_help">Perubahan kualiti imej, susun atur dan ciri VD berkuat kuasa selepas disimpan dan dimulakan semula. Tema, bahasa dan VD hidup/mati berkuat kuasa serta-merta.</string>
+    <string name="export_diagnostic_log">Simpan log diagnostik</string>
+    <string name="export_action">Eksport</string>
+    <string name="export_diag_help">Menyimpan sejarah sambungan Pillion serta status Android dan Bluetooth dalam folder Muat Turun. Logcat seluruh peranti hanya dikumpulkan semasa eksport.</string>
+    <string name="shutting_down">Menutup Pillion…</string>
+    <string name="saving_restarting">Menyimpan tetapan dan memulakan semula…</string>
+    <string name="resetting_restarting">Menetapkan semula dan memulakan semula…</string>
+
+    <!-- Terjemahan Bahasa Melayu berdasarkan versi Jepun -->
+    <string name="about">Maklumat aplikasi</string>
+    <string name="source_code">Kod sumber</string>
+    <string name="changelog">Log perubahan</string>
+    <string name="version_format">Versi %1$s</string>
+    <string name="report_issue">Laporkan masalah</string>
+
+    <!-- Terjemahan Bahasa Melayu berdasarkan versi Jepun -->
+    <string name="dash_nav_title">Lebih kebebasan</string>
+    <string name="dash_nav_body">Hidupkan atau matikan skrin telefon dan suis motosikal tanpa gangguan. Selepas paparan bermula, anda tidak perlu menyentuh telefon apabila menghidupkan motosikal semula.</string>
+    <string name="get_started">Mulakan persediaan</string>
+    <string name="maybe_later">Tetapkan kemudian</string>
+    <string name="wireless_debugging_on">Aktifkan Penyahpepijatan wayarles</string>
+    <string name="wireless_debugging_help">Dalam Pilihan pembangun, aktifkan Penyahpepijatan wayarles dan buka Padankan peranti dengan kod. Pillion akan memberitahu anda apabila port padanan dikesan.</string>
+    <string name="open_settings">Buka tetapan</string>
+
+    <!-- Terjemahan Bahasa Melayu berdasarkan versi Jepun -->
+    <string name="pair_from_notification">Padankan melalui pemberitahuan</string>
+    <string name="pair_from_notification_help">Biarkan skrin padanan Android terbuka. Apabila pemberitahuan Pillion dikemas kini, masukkan kod enam digit yang dipaparkan oleh Android melalui pemberitahuan itu.</string>
+    <string name="pairing">Sedang memadankan…</string>
+    <string name="preparing_pillion">Menyediakan Pillion…</string>
+    <string name="setup_success">Persediaan selesai</string>
+    <string name="setup_needs_attention">Persediaan tidak dapat diselesaikan</string>
+    <string name="next">Seterusnya</string>
+    <string name="retry_setup">Cuba lagi</string>
+    <string name="open_settings_again">Buka tetapan semula</string>
+    <string name="setup_trace">Butiran persediaan</string>
+
+    <!-- Terjemahan Bahasa Melayu berdasarkan versi Jepun -->
+    <string name="all_set">Semuanya sedia</string>
+    <string name="all_set_help">Buka aplikasi navigasi dan mulakan paparan dalam Pillion. Dalam mod VD, aplikasi kekal kelihatan walaupun skrin telefon dimatikan. Wi-Fi diperlukan untuk persediaan awal, tetapi selepas itu VD boleh digunakan tanpa Wi-Fi selagi Helper berjalan.</string>
+    <string name="done">Selesai</string>
+    <string name="close_setup">Tutup persediaan</string>
+
+    <!-- Terjemahan Bahasa Melayu berdasarkan versi Jepun -->
+    <string name="before_you_ride">Sebelum menunggang</string>
+    <string name="guide_pair_bluetooth">Padankan telefon dengan motosikal melalui Bluetooth (sekali sahaja).</string>
+    <string name="guide_landscape">Untuk pencerminan skrin, putar telefon ke landskap dan aktifkan putaran automatik.</string>
+    <string name="guide_navigation_mode">Tukar meter motosikal kepada mod Navigasi.</string>
+    <string name="guide_start_mirroring">Tekan Mula dan benarkan perkongsian skrin.</string>
+    <string name="guide_open_maps">Buka aplikasi navigasi untuk memaparkannya pada meter.</string>
+    <string name="motorcycle">Motosikal</string>
+    <string name="tap_switch_head_unit">Ketik untuk menukar jenis meter</string>
+    <string name="mirroring">Pencerminan</string>
+    <string name="vd_display_only">Tetapan VD sahaja</string>
+    <string name="on">Hidup</string>
+    <string name="off">Mati</string>
+    <string name="set_up">Sediakan</string>
+    <string name="rerun_setup">Ulang persediaan</string>
+    <string name="stick_tap_position">Kedudukan ketikan suis</string>
+    <string name="ocr_title">Pengecaman teks navigasi (OCR)</string>
+    <string name="ocr_help">Mengenali teks dalam kawasan VD terpilih dan menghantarnya ke ruang nama jalan pada meter. Kawasan 1 dikemas kini kira-kira setiap 10 saat, Kawasan 2 setiap saat.</string>
+    <string name="ocr_enable">OCR</string>
+    <string name="checking_vd">Menyemak status VD…</string>
+    <string name="updates">Kemas kini</string>
+    <string name="new_version_available">Versi baharu tersedia</string>
+    <string name="get">Dapatkan</string>
+    <string name="skip">Langkau</string>
+    <string name="how_it_connects">Kaedah sambungan</string>
+    <string name="how_it_connects_body">Dua kaedah sambungan tersedia bergantung pada meter motosikal.</string>
+    <string name="bluetooth">Bluetooth</string>
+    <string name="bluetooth_desc">Menghantar imej berturutan melalui Bluetooth, sesuai untuk navigasi.</string>
+    <string name="usb">USB</string>
+    <string name="usb_desc">Menggunakan sambungan USB berwayar untuk video yang lancar.</string>
+    <string name="more_bikes_over_time">Lebih banyak motosikal disokong</string>
+    <string name="more_bikes_desc">Sokongan untuk motosikal dan meter tambahan dirancang.</string>
+    <string name="choose_motorcycle">Pilih motosikal anda</string>
+    <string name="choose_motorcycle_body">Pilih jenis meter yang dipasang pada motosikal. Anda boleh menukarnya kemudian dalam Tetapan.</string>
+    <string name="trademark_notice">Yamaha, Garmin dan StreetCross ialah tanda dagangan pemilik masing-masing. Pillion ialah projek bebas dan tidak rasmi serta tidak mempunyai hubungan, pengesahan atau tajaan daripada Yamaha atau Garmin.</string>
+    <string name="usb_cable">Sambung motosikal melalui USB</string>
+    <string name="wireless_bluetooth">Sambung tanpa wayar melalui Bluetooth</string>
+    <string name="full_motion_video">Video bergerak</string>
+    <string name="slideshow">Siri imej</string>
+    <string name="pair_with_code">Padankan dengan kod</string>
+    <string name="pair_with_code_help">Masukkan kod padanan melalui pemberitahuan Pillion.</string>
+    <string name="pair">Padankan</string>
+    <string name="code_or_port_code">Kod atau nombor port dan kod</string>
+    <string name="connected">✅ Bersambung</string>
+    <string name="pairing_failed">Padanan gagal. Semak kod dan cuba lagi.</string>
+</resources>
