@@ -29,6 +29,7 @@ import app.pillion.core.SettingsStore
 import app.pillion.core.ThemeMode
 import app.pillion.core.headunit.HeadUnitProfile
 import app.pillion.core.headunit.HeadUnitRegistry
+import app.pillion.core.headunit.NaviLiteProfile
 import app.pillion.resources.*
 import org.jetbrains.compose.resources.stringResource
 import kotlinx.coroutines.launch
@@ -45,22 +46,32 @@ fun App(
     onRestartApp: () -> Unit = {},
     onResetAndRestartApp: () -> Unit = {},
     onExportDiagnostics: () -> Unit = {},
+    onLanguageChange: (String) -> Unit = {},
     startRequestInFlight: Boolean? = null,
     dashSettingsRevision: Int = 0,
     onCheckDashAvailability: suspend () -> Boolean = { true },
 ) {
     var themeMode by remember { mutableStateOf(settingsStore?.themeMode() ?: ThemeMode.SYSTEM) }
+    var languageTag by remember { mutableStateOf(settingsStore?.languageTag() ?: "") }
     PillionTheme(themeMode) {
-        var selectedBikeId by remember { mutableStateOf(settingsStore?.selectedBikeId()) }
-        var changingBike by remember { mutableStateOf(false) }
-        val profile = selectedBikeId?.let { HeadUnitRegistry.byId(it) }
+        // The XMAX fork exclusively uses the StreetCross/NaviLite Bluetooth profile.
+        // Existing users keep their settings; legacy selection is migrated without a welcome page.
+        var selectedBikeId by remember {
+            mutableStateOf(settingsStore?.selectedBikeId()?.let { NaviLiteProfile.id })
+        }
+        LaunchedEffect(selectedBikeId) {
+            if (selectedBikeId == NaviLiteProfile.id &&
+                settingsStore?.selectedBikeId() != NaviLiteProfile.id) {
+                settingsStore?.setSelectedBikeId(NaviLiteProfile.id)
+            }
+        }
+        val profile = selectedBikeId?.let { HeadUnitRegistry.byId(NaviLiteProfile.id) }
 
         if (profile == null) {
-            OnboardingScreen(
-                profiles = HeadUnitRegistry.all(),
-                onSelect = { p -> settingsStore?.setSelectedBikeId(p.id); selectedBikeId = p.id; changingBike = false },
-                skipIntro = changingBike,
-            )
+            OnboardingScreen(onContinue = {
+                settingsStore?.setSelectedBikeId(NaviLiteProfile.id)
+                selectedBikeId = NaviLiteProfile.id
+            })
             return@PillionTheme
         }
 
@@ -341,10 +352,12 @@ fun App(
                     }
                 },
                 onExportDiagnostics = onExportDiagnostics,
+                languageTag = languageTag,
+                onLanguageTag = { tag -> languageTag = tag; settingsStore?.setLanguageTag(tag); onLanguageChange(tag) },
                 onSetUpDash = { showDashOnboarding = true },
                 onDisableDash = { dashEnabled = false; settingsStore?.setDashEnabled(false) },
                 bikeName = profile.displayName,
-                onChangeBike = { showSettings = false; changingBike = true; selectedBikeId = null },
+                onChangeBike = {},
                 onBack = { showSettings = false },
             )
         } else {

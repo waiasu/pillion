@@ -238,7 +238,7 @@ class CaptureService : Service() {
             try {
                 startForegroundTyped(ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
             } catch (t: Throwable) {
-                fail("Unable to start VD service: ${t.message ?: t.javaClass.simpleName}")
+                fail(getString(app.pillion.R.string.capture_vd_start_error, t.message ?: t.javaClass.simpleName))
                 return
             }
             null
@@ -250,7 +250,7 @@ class CaptureService : Service() {
             val data = resultData
             if (resultCode == 0 || data == null) {
                 runCatching { startForegroundTyped(ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE) }
-                fail("Screen capture not granted — tap Start again"); return
+                fail(getString(app.pillion.R.string.capture_not_granted)); return
             }
             // Must be foreground (mediaProjection) before acquiring the projection (Android 10+).
             try {
@@ -259,11 +259,11 @@ class CaptureService : Service() {
                 Log.e(TAG, "media projection FGS rejected — stale capture grant", e)
                 resultCode = 0; resultData = null
                 runCatching { startForegroundTyped(ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE) }
-                fail("Screen capture expired — tap Start again"); return
+                fail(getString(app.pillion.R.string.capture_expired)); return
             }
             val mpm = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
             val projection = mpm.getMediaProjection(resultCode, data) ?: run {
-                fail("screen capture denied"); return
+                fail(getString(app.pillion.R.string.capture_denied)); return
             }
             // The grant is single-use; clear it so a later restart can't reuse a dead token (→ crash).
             resultCode = 0; resultData = null
@@ -330,7 +330,7 @@ class CaptureService : Service() {
                 }
                     .onFailure {
                         Log.e(TAG, "dash: helper unavailable", it)
-                        fail(it.message ?: "Dash helper unavailable")
+                        fail(it.message ?: getString(app.pillion.R.string.capture_helper_unavailable))
                     }
             }
             registerScreenReceiver()

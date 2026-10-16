@@ -51,13 +51,13 @@ Compatibility with other Android devices, Yamaha models, or navigation apps is n
 - Optional Yahoo! Car Navigation Auto DRIVE mode based on OCR Area 1 after PROMOTE
 - DRIVE-only upward image shift, mode-specific stick coordinates and input suppression while the initial mode is undecided
 - First-run Yahoo! Car Navigation preset on clean installations (existing settings preserved)
-- Compact, collapsible NAV / DRIVE / OCR settings and XMAX Custom Fork v37 link in About
+- Compact, collapsible NAV / DRIVE / OCR settings and XMAX Custom Fork v38 link in About
 - Pixel SecureCamera detection and physical display wake handling
 - Start mirroring race / duplicate-start prevention
 - Reset Pillion and Save & Restart workflows
 - Authenticated DASH/OCR and restart-helper local control channels, bounded wireless ADB TCP/IP acknowledgement wait, and safer Stop handling
 - Diagnostic flight recorder and diagnostic export
-- Additional recovery and stability improvements for long-running use
+- Five UI languages: Japanese, English, Korean, Spanish and Malay (plus automatic system language)\n- Additional recovery and stability improvements for long-running use
 <br>
 
 - Yahoo!カーナビ向け Virtual Display キャスト
@@ -72,13 +72,13 @@ Compatibility with other Android devices, Yamaha models, or navigation apps is n
 - OCRエリア1の判定によるYahoo!カーナビのAuto DRIVEモード
 - DRIVE時限定の映像上方向シフト、モード別スティック座標、モード判定中の誤タップ防止
 - 初回クリーンインストール時のYahoo!カーナビ向け設定プリセット（既存設定は維持）
-- NAV/DRIVE/OCR設定の折りたたみ表示、About内のXMAX Custom Fork v37リンク
+- NAV/DRIVE/OCR設定の折りたたみ表示、About内のXMAX Custom Fork v38リンク
 - Pixel SecureCamera検出と物理ディスプレイ復帰処理
 - Start mirroring の二重発火・レース対策
 - Reset Pillion / Save & Restart
 - DASH/OCR・再起動Helperのローカル通信認証、ADB TCP/IP応答待ちの上限設定、Stop処理の安全化
 - 診断用フライトレコーダーと診断ログExport
-- 長時間運用向けの復帰処理・安定性改善
+- 日本語・英語・韓国語・スペイン語・マレー語の5言語対応（システム言語に合わせる自動設定あり）\n- 長時間運用向けの復帰処理・安定性改善
 
 ---
 
@@ -127,6 +127,12 @@ Compatibility with other Android devices, Yamaha models, or navigation apps is n
 - `v37` (2026-10-14)  
   VD-only Start without MediaProjection consent, correct loopback ADB reuse, normal-mirror automatic shutdown, and redesigned mode-aware Settings/Home. Bench and XMAX tests passed; test commits kept in history.  
   VD専用Start、ADB接続済み判定、通常ミラーの自動終了、設定・ホームUIの刷新。机上・実車確認済み、テストコミット履歴も保持。
+
+---
+
+- `v38` (2026-10-17)  
+  Five-language UI, refined Japanese/English wording, notification labels, and About version. Squash release; no casting logic changes.  
+  5言語UI、日本語・英語の文言整理、通知表示とAboutバージョンの更新。スカッシュで反映、投影処理は維持。
 
 ---
 

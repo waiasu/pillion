@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Korean translation; source of truth: Japanese resources -->
+    <string name="intro_title">XMAX 계기판에 내비게이션을 표시합니다.</string>
+    <string name="intro_body">StreetCross 호환 Bluetooth 통신으로 스마트폰의 내비게이션 화면을 XMAX 계기판에 표시합니다. 다음을 눌러 시작하세요.</string>
+    <string name="continue_text">다음</string>
+
+    <!-- Korean translation; source of truth: Japanese resources -->
+    <string name="tagline">스마트폰 화면을 바이크 계기판으로</string>
+    <string name="home_vd_mode">가상 디스플레이(VD)</string>
+    <string name="guide_start_vd">전송을 시작한 후 스마트폰 화면을 꺼도 사용할 수 있습니다.</string>
+    <string name="home_vd_detail">도중에 스마트폰을 사용해도 화면을 끄면 내비게이션으로 돌아갑니다. 바이크 시동을 껐다 켜도 자동으로 복구됩니다.</string>
+
+    <!-- Korean translation; source of truth: Japanese resources -->
+    <string name="home_phone_mirror_mode">일반 화면 미러링</string>
+    <string name="guide_start_phone_mirror">스마트폰을 가로로 돌리고 시작을 누른 다음 화면 공유를 허용하세요.</string>
+    <string name="home_phone_mirror_detail">스마트폰 화면을 계속 켜 두세요. 화면을 끄면 전송이 종료됩니다. 화면을 끄고 사용하려면 VD 모드를 이용하세요.</string>
+
+    <!-- Korean translation; source of truth: Japanese resources -->
+    <string name="start_mirroring">시작</string>
+    <string name="stop_mirroring">중지</string>
+    <string name="connecting_to_dash">계기판에 연결 중…</string>
+    <string name="fps">fps</string>
+    <string name="mirroring_frame_size">전송 중 · 프레임당 %1$d KB</string>
+    <string name="broadcasting">영상 전송 중</string>
+    <string name="open_maps_on_dash">앱을 열면 계기판에 표시됩니다.</string>
+    <string name="disconnected">연결 끊김</string>
+
+    <!-- Korean translation; source of truth: Japanese resources -->
+    <string name="slide_reset_restart">초기화 및 재시작</string>
+    <string name="reset_restart_help">Pillion 작동을 중지하고 임시 캐시를 삭제한 후 재시작합니다. 설정, 권한, ADB 설정 및 진단 로그는 유지됩니다.</string>
+    <string name="reset_restart">초기화 및 재시작</string>
+
+    <!-- Korean translation; source of truth: Japanese resources -->
+    <string name="settings">설정</string>
+    <string name="back">뒤로</string>
+    <string name="appearance">스타일</string>
+    <string name="theme">테마</string>
+    <string name="system">자동</string>
+    <string name="light">라이트</string>
+    <string name="dark">다크</string>
+    <string name="language">언어</string>
+    <string name="language_system_default">자동</string>
+
+    <!-- Korean translation; source of truth: Japanese resources -->
+    <string name="display_and_image">화면 표시</string>
+    <string name="image_quality">화질(JPEG)</string>
+    <string name="max_frame_rate">최대 프레임 속도</string>
+    <string name="dpi">DPI</string>
+    <string name="left_margin">왼쪽 여백</string>
+    <string name="bottom_margin">아래쪽 여백</string>
+    <string name="margin_color">여백 색상</string>
+    <string name="change">변경</string>
+    <string name="margin_black">검정</string>
+    <string name="margin_white">흰색</string>
+    <string name="margin_red">빨강</string>
+    <string name="margin_green">초록</string>
+    <string name="margin_blue">파랑</string>
+    <string name="margin_yellow">노랑</string>
+    <string name="margin_cyan">시안</string>
+    <string name="margin_magenta">마젠타</string>
+    <string name="cancel">취소</string>
+    <string name="map_layout_size">렌더링 크기</string>
+    <string name="virtual_display_size_help">렌더링 크기는 여백을 제외한 표시 영역을 기준으로 결정됩니다. 계기판으로 보내는 영상은 %1$d × %2$d로 유지됩니다.</string>
+    <string name="matches_usable_area">사용 가능한 표시 영역과 동일</string>
+    <string name="recommended">권장</string>
+    <string name="more_detail"></string>
+    <string name="most_detail_heavy">배터리 소모 큼</string>
+    <string name="screen_modes_help">일반 미러링에는 JPEG 화질과 최대 FPS만 적용됩니다. VD 모드에서는 여백과 렌더링 크기를 조절해 계기판의 화살표 등과 겹치지 않게 할 수 있습니다.</string>
+    <string name="image_quality_help">화질을 높이면 선명해지지만 프레임 속도, 발열 및 배터리 소모에 영향을 줍니다. 최대 프레임 속도를 낮춰 부하를 줄일 수 있습니다.</string>
+
+    <!-- Korean translation; source of truth: Japanese resources -->
+    <string name="dedicated_dash_display">VD 옵션</string>
+    <string name="vd_toggle">VD 모드</string>
+    <string name="dash_keep_nav">스마트폰 화면을 꺼도 앱을 계기판에 표시할 수 있습니다.</string>
+    <string name="enable_vd">활성화</string>
+    <string name="disable">비활성화</string>
+    <string name="always_use_selected_app">앱 고정</string>
+    <string name="selected_app_explanation">현재 스마트폰에서 열려 있는 앱 대신 지정한 앱을 항상 표시합니다.</string>
+    <string name="selected_app">고정할 앱</string>
+    <string name="not_selected">선택 안 함</string>
+    <string name="select_app_vd">앱 선택</string>
+    <string name="fixed_app_fallback">앱 고정이 활성화되어 있고 앱을 선택하지 않았다면 Pillion이 표시됩니다.</string>
+    <string name="restart_app_on_vd_label">앱 재시작</string>
+    <string name="restart_app_on_vd_explanation">전송을 시작할 때 앱을 재시작합니다.</string>
+    <string name="stick_input">스틱 기능</string>
+    <string name="nav_stick_position">탭 위치</string>
+    <string name="stick_tap_position_help">이미지 왼쪽 위는 0%, 오른쪽 아래는 100%입니다.</string>
+    <string name="zoom_in_horizontal">스틱 위: 가로 위치</string>
+    <string name="zoom_in_vertical">스틱 위: 세로 위치</string>
+    <string name="zoom_out_horizontal">스틱 아래: 가로 위치</string>
+    <string name="zoom_out_vertical">스틱 아래: 세로 위치</string>
+    <string name="dash_feature_help">초기 설정에는 무선 디버깅이 필요합니다. Helper 또는 로컬 ADB를 사용할 수 있으면 Wi-Fi 없이도 VD를 사용할 수 있습니다.</string>
+
+    <!-- Korean translation; source of truth: Japanese resources -->
+    <string name="yahoo_navi_assist">Yahoo! 카 내비게이션 보조 기능</string>
+    <string name="ocr_toggle">OCR</string>
+    <string name="ocr_toggle_help">인식한 정보를 계기판의 도로명 표시 영역에 표시합니다.</string>
+    <string name="ocr_show_area">인식 영역 표시</string>
+    <string name="ocr_area_settings">인식 영역 설정</string>
+    <string name="ocr_area_1">영역 1: 도착 시각 및 거리</string>
+    <string name="ocr_left">왼쪽 끝</string>
+    <string name="ocr_top">위쪽 끝</string>
+    <string name="ocr_right">오른쪽 끝</string>
+    <string name="ocr_bottom">아래쪽 끝</string>
+    <string name="ocr_area_2">영역 2: 지도 축척</string>
+    <string name="auto_drive_mode">드라이브 모드 자동 전환</string>
+    <string name="auto_drive_help_eligible">영역 1이 두 번 연속 비어 있으면 자동으로 전환합니다.</string>
+    <string name="auto_drive_help_requirements">Yahoo! 카 내비게이션 앱 고정, OCR, 전송 시 앱 재시작을 활성화해야 합니다.</string>
+    <string name="drive_settings">드라이브 모드 상세 설정</string>
+    <string name="drive_tap_help">드라이브 모드로 전환할 때 탭할 위치를 지정합니다.</string>
+    <string name="drive_tap_horizontal">전환 탭: 가로 위치</string>
+    <string name="drive_tap_vertical">전환 탭: 세로 위치</string>
+    <string name="drive_stick_help">드라이브 모드에서 스틱으로 탭할 위치입니다. 전환 탭 1초 후부터 조작할 수 있습니다.</string>
+    <string name="stick_up_horizontal">스틱 위: 가로 위치</string>
+    <string name="stick_up_vertical">스틱 위: 세로 위치</string>
+    <string name="stick_down_horizontal">스틱 아래: 가로 위치</string>
+    <string name="stick_down_vertical">스틱 아래: 세로 위치</string>
+    <string name="drive_image_shift_help">드라이브 모드로 전환한 후 영상을 위로 이동합니다. 0px는 기본 위치입니다.</string>
+    <string name="upward_shift">위쪽 이동량</string>
+    <string name="standard_zero_margin">기본 위치(아래쪽 여백이 0px이므로 조정할 수 없음)</string>
+    <string name="ocr_area_timing_help">영역 1은 약 10초마다 읽으며 지원되는 도착 시각 및 거리 형식만 인식합니다. 임의의 문자나 다른 형식은 읽을 수 없습니다. 영역 2는 약 1초마다 지도 축척을 읽습니다.</string>
+
+    <!-- Korean translation; source of truth: Japanese resources -->
+    <string name="maintenance">유지 관리</string>
+    <string name="save_settings_restart">설정 저장</string>
+    <string name="save_restart">저장 후 재시작</string>
+    <string name="save_restart_help">화질, 레이아웃 및 VD 기능 변경 사항은 저장 후 재시작하면 적용됩니다. 테마, 언어 및 VD 켜기/끄기는 즉시 적용됩니다.</string>
+    <string name="export_diagnostic_log">진단 로그 저장</string>
+    <string name="export_action">내보내기</string>
+    <string name="export_diag_help">Pillion 연결 기록과 Android 및 Bluetooth 상태 정보를 다운로드 폴더에 저장합니다. 기기 전체 logcat은 내보낼 때만 수집합니다.</string>
+    <string name="shutting_down">Pillion 종료 중…</string>
+    <string name="saving_restarting">설정을 저장하고 재시작하는 중…</string>
+    <string name="resetting_restarting">초기화 후 재시작하는 중…</string>
+
+    <!-- Korean translation; source of truth: Japanese resources -->
+    <string name="about">앱 정보</string>
+    <string name="source_code">소스 코드</string>
+    <string name="changelog">변경 내역</string>
+    <string name="version_format">버전 %1$s</string>
+    <string name="report_issue">문제 신고</string>
+
+    <!-- Korean translation; source of truth: Japanese resources -->
+    <string name="dash_nav_title">더 자유롭게</string>
+    <string name="dash_nav_body">스마트폰 화면과 바이크 시동을 자유롭게 켜고 끌 수 있습니다. 전송을 시작해 두면 다음에 시동을 걸 때 스마트폰을 조작할 필요가 없습니다.</string>
+    <string name="get_started">설정 시작</string>
+    <string name="maybe_later">나중에 설정</string>
+    <string name="wireless_debugging_on">무선 디버깅 활성화</string>
+    <string name="wireless_debugging_help">개발자 옵션에서 무선 디버깅을 켜고 ‘페어링 코드로 기기 페어링’을 여세요. 페어링 포트가 감지되면 Pillion이 알림을 보냅니다.</string>
+    <string name="open_settings">설정 열기</string>
+
+    <!-- Korean translation; source of truth: Japanese resources -->
+    <string name="pair_from_notification">알림에서 페어링</string>
+    <string name="pair_from_notification_help">Android의 무선 디버깅 페어링 화면을 열어 두세요. Pillion 알림이 업데이트되면 Android에 표시된 6자리 코드를 알림에서 입력하세요.</string>
+    <string name="pairing">페어링 중…</string>
+    <string name="preparing_pillion">Pillion 준비 중…</string>
+    <string name="setup_success">설정 완료</string>
+    <string name="setup_needs_attention">설정을 완료하지 못했습니다</string>
+    <string name="next">다음</string>
+    <string name="retry_setup">다시 시도</string>
+    <string name="open_settings_again">설정 다시 열기</string>
+    <string name="setup_trace">설정 세부 정보</string>
+
+    <!-- Korean translation; source of truth: Japanese resources -->
+    <string name="all_set">준비 완료</string>
+    <string name="all_set_help">내비게이션 앱을 열고 Pillion에서 전송을 시작하세요. VD 모드에서는 스마트폰 화면을 꺼도 앱이 표시됩니다. 초기 설정에는 Wi-Fi가 필요하지만 이후 Helper가 실행 중이면 Wi-Fi 없이도 사용할 수 있습니다.</string>
+    <string name="done">완료</string>
+    <string name="close_setup">설정 닫기</string>
+
+    <!-- Korean translation; source of truth: Japanese resources -->
+    <string name="before_you_ride">주행 전 확인</string>
+    <string name="guide_pair_bluetooth">Bluetooth 설정에서 스마트폰과 바이크를 페어링하세요(최초 1회).</string>
+    <string name="guide_landscape">일반 미러링에서는 스마트폰을 가로로 돌리고 자동 회전을 켜세요.</string>
+    <string name="guide_navigation_mode">바이크 계기판을 내비게이션 모드로 전환하세요.</string>
+    <string name="guide_start_mirroring">시작을 누르고 화면 공유를 허용하세요.</string>
+    <string name="guide_open_maps">내비게이션 앱을 열면 계기판에 표시됩니다.</string>
+    <string name="motorcycle">바이크</string>
+    <string name="tap_switch_head_unit">탭하여 계기판 유형 변경</string>
+    <string name="mirroring">미러링</string>
+    <string name="vd_display_only">VD 전용 설정</string>
+    <string name="on">켜기</string>
+    <string name="off">끄기</string>
+    <string name="set_up">설정</string>
+    <string name="rerun_setup">설정 다시 실행</string>
+    <string name="stick_tap_position">스틱 탭 위치</string>
+    <string name="ocr_title">내비게이션 문자 인식(OCR)</string>
+    <string name="ocr_help">지정한 VD 영역의 문자를 인식해 계기판 도로명 영역으로 보냅니다. 영역 1은 약 10초마다, 영역 2는 약 1초마다 업데이트됩니다.</string>
+    <string name="ocr_enable">OCR</string>
+    <string name="checking_vd">VD 상태 확인 중…</string>
+    <string name="updates">업데이트</string>
+    <string name="new_version_available">새 버전이 있습니다</string>
+    <string name="get">받기</string>
+    <string name="skip">건너뛰기</string>
+    <string name="how_it_connects">연결 방식</string>
+    <string name="how_it_connects_body">바이크 계기판에 따라 두 가지 연결 방식을 사용할 수 있습니다.</string>
+    <string name="bluetooth">Bluetooth</string>
+    <string name="bluetooth_desc">Bluetooth로 연속 이미지를 전송하며 내비게이션 표시용으로 적합합니다.</string>
+    <string name="usb">USB</string>
+    <string name="usb_desc">USB 유선 연결로 부드러운 동영상을 표시합니다.</string>
+    <string name="more_bikes_over_time">지원 바이크 확대</string>
+    <string name="more_bikes_desc">추가 바이크와 계기판 지원이 예정되어 있습니다.</string>
+    <string name="choose_motorcycle">바이크 선택</string>
+    <string name="choose_motorcycle_body">바이크에 장착된 계기판 유형을 선택하세요. 설정에서 언제든 변경할 수 있습니다.</string>
+    <string name="trademark_notice">Yamaha, Garmin 및 StreetCross는 각 소유자의 상표입니다. Pillion은 독립적인 비공식 프로젝트이며 Yamaha 또는 Garmin과 제휴하거나 승인 또는 후원을 받지 않았습니다.</string>
+    <string name="usb_cable">USB로 바이크 연결</string>
+    <string name="wireless_bluetooth">Bluetooth로 무선 연결</string>
+    <string name="full_motion_video">동영상 표시</string>
+    <string name="slideshow">연속 이미지 표시</string>
+    <string name="pair_with_code">코드로 페어링</string>
+    <string name="pair_with_code_help">Pillion 알림에서 페어링 코드를 입력하세요.</string>
+    <string name="pair">페어링</string>
+    <string name="code_or_port_code">코드 또는 포트 번호와 코드</string>
+    <string name="connected">✅ 연결됨</string>
+    <string name="pairing_failed">페어링에 실패했습니다. 코드를 확인하고 다시 시도하세요.</string>
+</resources>

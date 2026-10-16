@@ -10,6 +10,26 @@ The upstream Pillion changelog remains in `CHANGELOG.md` unchanged. Historical e
 
 No pending XMAX-specific changes.
 
+## [v38] - 2026-10-17
+
+Five-language UI support and wording cleanup; no changes to casting or reconnect behavior.
+
+### Changes
+
+- Added Korean (`ko`), Spanish (`es`) and Malay (`ms`) translations based on Japanese, each with 183 shared Compose strings. Japanese, English and system-language automatic selection remain available.
+- Expanded language selection and Android preference persistence to five explicit languages, with immediate switching.
+- Refined Japanese descriptions and aligned English UI text with current VD, mirroring, setup and maintenance behavior.
+- Renamed the Japanese notification Stop action from `停止` to `ストップ`.
+- Standardized the wireless-ADB pairing notification reply input label to English (`Code, or port number and code`), while other Android notification text retains Japanese/English localization and fallback.
+- About now shows **XMAX Custom Fork v38**. Android package version metadata is unchanged.
+- VD, OCR, Auto DRIVE, Bluetooth, Helper, camera and MediaProjection logic are unchanged.
+
+### Validation
+
+- User confirmed successful language switching on the installed test build.
+- GitHub Actions Android build passed for the five-language test revision.
+- User requested a squash release into `xmax-pillion`; intermediate commits remain in the test branch.
+
 ## [v37] - 2026-10-14
 
 Dedicated VD without MediaProjection, normal-mirror shutdown, and clearer Settings/Home.

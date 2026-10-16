@@ -91,7 +91,7 @@
     <string name="adb_setup_channel">Pillion setup</string>
 
     <!-- [Android visible text] Original: "Code, or port and code" -->
-    <string name="adb_code_or_port_label">Code, or port and code</string>
+    <string name="adb_code_or_port_label">Code, or port number and code</string>
 
     <!-- [Android visible text] Original: "Enter code" -->
     <string name="adb_enter_code_action">Enter code</string>
@@ -112,4 +112,12 @@
     <string name="adb_paired_connect_failed_return">Paired, but could not connect. Tap to return to Pillion and retry.</string>
     <string name="adb_discovery_failed_notification">Pairing-port discovery failed. Enter “port code” from the Android pairing dialog.</string>
 
+    <string name="diagnostic_export_running">Diagnostic export is already running</string>
+    <string name="diagnostic_saved">Saved: %1$s</string>
+    <string name="diagnostic_export_failed">Diagnostic export failed: %1$s</string>
+    <string name="capture_vd_start_error">Unable to start VD service: %1$s</string>
+    <string name="capture_not_granted">Screen capture not granted — tap Start again</string>
+    <string name="capture_expired">Screen capture expired — tap Start again</string>
+    <string name="capture_denied">screen capture denied</string>
+    <string name="capture_helper_unavailable">Dash helper unavailable</string>
 </resources>

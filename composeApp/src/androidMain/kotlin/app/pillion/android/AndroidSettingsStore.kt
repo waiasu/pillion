@@ -38,6 +38,12 @@ class AndroidSettingsStore(context: Context) : SettingsStore {
         check(editor.commit()) { "Could not save first-run preset" }
     }
 
+    override fun languageTag(): String = prefs.getString(KEY_LANGUAGE, "")?.takeIf { it in setOf("ja", "en", "ko", "es", "ms") } ?: ""
+
+    override fun setLanguageTag(tag: String) {
+        prefs.edit().putString(KEY_LANGUAGE, tag.takeIf { it in setOf("ja", "en", "ko", "es", "ms") } ?: "").apply()
+    }
+
     override fun themeMode(): ThemeMode =
         runCatching { ThemeMode.valueOf(prefs.getString(KEY_THEME, null) ?: ThemeMode.SYSTEM.name) }
             .getOrDefault(ThemeMode.SYSTEM)
@@ -211,6 +217,7 @@ class AndroidSettingsStore(context: Context) : SettingsStore {
         value.toInt().coerceIn(1, 15).toDouble()
 
     private companion object {
+        const val KEY_LANGUAGE = "language_tag"
         const val KEY_THEME = "theme_mode"
         const val KEY_QUALITY = "image_quality"
         const val KEY_DASH_DPI = "dash_dpi"

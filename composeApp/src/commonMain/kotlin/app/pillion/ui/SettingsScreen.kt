@@ -1,6 +1,7 @@
 package app.pillion.ui
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -26,6 +27,8 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -78,6 +81,8 @@ internal fun SettingsScreen(
     onMaxFps: (Double) -> Unit,
     themeMode: ThemeMode,
     onThemeMode: (ThemeMode) -> Unit,
+    languageTag: String = "",
+    onLanguageTag: (String) -> Unit = {},
     dashSupported: Boolean = false,
     dashEnabled: Boolean = false,
     dashChecking: Boolean = false,
@@ -154,6 +159,7 @@ internal fun SettingsScreen(
 ) {
     val uriHandler = LocalUriHandler.current
     var showFixedAppPicker by remember { mutableStateOf(false) }
+    var languageMenuOpen by remember { mutableStateOf(false) }
     var driveSettingsExpanded by remember { mutableStateOf(false) }
     var navStickSettingsExpanded by remember { mutableStateOf(false) }
     var ocrAreaSettingsExpanded by remember { mutableStateOf(false) }
@@ -164,7 +170,7 @@ internal fun SettingsScreen(
     if (showFixedAppPicker) {
         AlertDialog(
             onDismissRequest = { showFixedAppPicker = false },
-            title = { Text("Select app for VD") },
+            title = { Text(stringResource(Res.string.select_app_vd)) },
             text = {
                 Column(
                     Modifier.fillMaxWidth()
@@ -183,7 +189,7 @@ internal fun SettingsScreen(
                         Column(Modifier.weight(1f)) {
                             Text(stringResource(Res.string.not_selected))
                             Text(
-                                "Falls back to Pillion when fixed-app mode is enabled.",
+                                stringResource(Res.string.fixed_app_fallback),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -247,48 +253,73 @@ internal fun SettingsScreen(
             Text(stringResource(Res.string.settings), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         }
 
+        // One appearance group: visual theme and app language live together.
+        // Language uses a single selector, including the system default.
         SectionHeader(stringResource(Res.string.appearance))
-        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-            val options = listOf(
-                ThemeMode.SYSTEM to stringResource(Res.string.system),
-                ThemeMode.LIGHT to stringResource(Res.string.light),
-                ThemeMode.DARK to stringResource(Res.string.dark),
+        SettingsGroup {
+            Text(
+                stringResource(Res.string.theme),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(top = 12.dp, bottom = 8.dp),
             )
-            options.forEachIndexed { index, (mode, label) ->
-                SegmentedButton(
-                    selected = themeMode == mode,
-                    onClick = { onThemeMode(mode) },
-                    shape = SegmentedButtonDefaults.itemShape(index, options.size),
-                ) {
-                    Text(label)
+            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
+                val options = listOf(
+                    ThemeMode.SYSTEM to stringResource(Res.string.system),
+                    ThemeMode.LIGHT to stringResource(Res.string.light),
+                    ThemeMode.DARK to stringResource(Res.string.dark),
+                )
+                options.forEachIndexed { index, (mode, label) ->
+                    SegmentedButton(
+                        selected = themeMode == mode,
+                        onClick = { onThemeMode(mode) },
+                        shape = SegmentedButtonDefaults.itemShape(index, options.size),
+                    ) {
+                        Text(label, maxLines = 1)
+                    }
                 }
             }
-        }
-
-        Spacer(Modifier.height(24.dp))
-        SectionHeader(stringResource(Res.string.motorcycle))
-        SettingsGroup {
-            Row(
-                Modifier.fillMaxWidth().clickable(onClick = onChangeBike).padding(vertical = 14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(Modifier.weight(1f)) {
-                    Text(if (bikeName.isEmpty()) stringResource(Res.string.not_selected) else bikeName, style = MaterialTheme.typography.bodyLarge)
+            GroupDivider()
+            Box {
+                Row(
+                    Modifier.fillMaxWidth()
+                        .clickable { languageMenuOpen = true }
+                        .padding(vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(stringResource(Res.string.language), modifier = Modifier.weight(1f))
                     Text(
-                        stringResource(Res.string.tap_switch_head_unit),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        when (languageTag) {
+                            "" -> stringResource(Res.string.language_system_default)
+                            "ja" -> "日本語"
+                            "en" -> "English"
+                            "ko" -> "한국어"
+                            "es" -> "Español"
+                            "ms" -> "Bahasa Melayu"
+                            else -> languageTag
+                        },
+                        color = MaterialTheme.colorScheme.primary,
                     )
                 }
-                Text(
-                    stringResource(Res.string.change),
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.primary,
-                )
+                DropdownMenu(
+                    expanded = languageMenuOpen,
+                    onDismissRequest = { languageMenuOpen = false },
+                ) {
+                    listOf(
+                        "" to stringResource(Res.string.language_system_default),
+                        "ja" to "日本語",
+                        "en" to "English",
+                        "ko" to "한국어",
+                        "es" to "Español",
+                        "ms" to "Bahasa Melayu",
+                    ).forEach { (tag, name) ->
+                        DropdownMenuItem(text = { Text(name) }, onClick = {
+                            languageMenuOpen = false
+                            if (tag != languageTag) onLanguageTag(tag)
+                        })
+                    }
+                }
             }
         }
-
         Spacer(Modifier.height(24.dp))
         SectionHeader(stringResource(Res.string.display_and_image))
         SettingsGroup {
@@ -309,12 +340,6 @@ internal fun SettingsScreen(
             }
             if (dashSupported) {
                 GroupDivider()
-                Text(
-                    stringResource(Res.string.vd_display_only),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 12.dp, bottom = 4.dp),
-                )
                 SettingSlider(
                     stringResource(Res.string.dpi),
                     "$dashDpi dpi",
@@ -347,7 +372,14 @@ internal fun SettingsScreen(
                 DashResolutionSelector(dashScale, draftLeftMargin, draftBottomMargin, onDashScale)
             }
         }
-        if (!dashSupported) {
+        if (dashSupported) {
+            Text(
+                stringResource(Res.string.screen_modes_help),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 6.dp, top = 8.dp, end = 6.dp),
+            )
+        } else {
             Text(
                 stringResource(Res.string.image_quality_help),
                 style = MaterialTheme.typography.bodySmall,
@@ -364,27 +396,13 @@ internal fun SettingsScreen(
                     Modifier.fillMaxWidth().padding(vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            when {
-                                dashChecking -> "Checking VD..."
-                                dashEnabled -> stringResource(Res.string.on)
-                                else -> stringResource(Res.string.off)
-                            },
-                            style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
-                        )
-                        Text(
-                            stringResource(Res.string.dash_keep_nav),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
+                    Text(stringResource(Res.string.vd_toggle), modifier = Modifier.weight(1f))
                     if (dashChecking) {
                         CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
                     } else if (dashEnabled) {
                         OutlinedButton(onClick = onDisableDash, shape = RoundedCornerShape(12.dp)) { Text(stringResource(Res.string.disable)) }
                     } else {
-                        Button(onClick = onSetUpDash, shape = RoundedCornerShape(12.dp)) { Text(stringResource(Res.string.set_up)) }
+                        Button(onClick = onSetUpDash, shape = RoundedCornerShape(12.dp)) { Text(stringResource(Res.string.enable_vd)) }
                     }
                 }
                 GroupDivider()
@@ -392,14 +410,7 @@ internal fun SettingsScreen(
                     Modifier.fillMaxWidth().padding(vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Column(Modifier.weight(1f)) {
-                        Text("Always use selected app on VD")
-                        Text(
-                            "Promote the selected app instead of the current foreground app.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
+                    Text(stringResource(Res.string.always_use_selected_app), modifier = Modifier.weight(1f))
                     Switch(
                         checked = draftFixedDashAppEnabled,
                         onCheckedChange = onDraftFixedDashAppEnabled,
@@ -413,7 +424,7 @@ internal fun SettingsScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(Modifier.weight(1f)) {
-                        Text("Selected app")
+                        Text(stringResource(Res.string.selected_app))
                         Text(
                             selectedFixedApp?.label
                                 ?: draftFixedDashAppPackage
@@ -435,9 +446,9 @@ internal fun SettingsScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(Modifier.weight(1f)) {
-                        Text("Restart app on VD")
+                        Text(stringResource(Res.string.restart_app_on_vd_label))
                         Text(
-                            "Restart the app after moving it to the virtual display.",
+                            stringResource(Res.string.restart_app_on_vd_explanation),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -449,7 +460,7 @@ internal fun SettingsScreen(
                     Modifier.fillMaxWidth().padding(vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("Stick tap input", modifier = Modifier.weight(1f))
+                    Text(stringResource(Res.string.stick_input), modifier = Modifier.weight(1f))
                     Switch(checked = draftStickTapEnabled, onCheckedChange = onDraftStickTapEnabled)
                 }
                 GroupDivider()
@@ -459,7 +470,7 @@ internal fun SettingsScreen(
                         .padding(vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("NAV mode stick tap position", modifier = Modifier.weight(1f))
+                    Text(stringResource(Res.string.nav_stick_position), modifier = Modifier.weight(1f))
                     Text(if (navStickSettingsExpanded) "▲" else "▼",
                         color = MaterialTheme.colorScheme.primary)
                 }
@@ -506,24 +517,30 @@ internal fun SettingsScreen(
                     step = 1f,
                 ) { onDraftStickZoomOutY(it.roundToInt().coerceIn(0, 100)) }
                 }
-                GroupDivider()
-                Text(
-                    stringResource(Res.string.ocr_title),
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
-                )
-                Text(
-                    stringResource(Res.string.ocr_help),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 6.dp),
-                )
+            }
+            // VD bootstrap guidance belongs with VD and NAV stick settings, not with Yahoo OCR.
+            Text(
+                stringResource(Res.string.dash_feature_help),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 6.dp, top = 8.dp, end = 6.dp),
+            )
+
+            Spacer(Modifier.height(24.dp))
+            SectionHeader(stringResource(Res.string.yahoo_navi_assist))
+            SettingsGroup {
                 Row(
                     Modifier.fillMaxWidth().padding(vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(stringResource(Res.string.ocr_enable), modifier = Modifier.weight(1f))
+                    Column(Modifier.weight(1f)) {
+                        Text(stringResource(Res.string.ocr_toggle))
+                        Text(
+                            stringResource(Res.string.ocr_toggle_help),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                     Switch(checked = draftOcrEnabled, onCheckedChange = onDraftOcrEnabled)
                 }
                 GroupDivider()
@@ -545,7 +562,7 @@ internal fun SettingsScreen(
                         .padding(vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("OCR area settings", modifier = Modifier.weight(1f))
+                    Text(stringResource(Res.string.ocr_area_settings), modifier = Modifier.weight(1f))
                     Text(if (ocrAreaSettingsExpanded) "▲" else "▼",
                         color = MaterialTheme.colorScheme.primary)
                 }
@@ -620,10 +637,10 @@ internal fun SettingsScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(Modifier.weight(1f)) {
-                        Text("Auto DRIVE mode")
+                        Text(stringResource(Res.string.auto_drive_mode))
                         Text(
-                            if (driveEligible) "After PROMOTE: switch on two empty Area 1 OCR results."
-                            else "Requires selected Yahoo! Car Navigation, OCR and Restart app on VD.",
+                            if (driveEligible) stringResource(Res.string.auto_drive_help_eligible)
+                            else stringResource(Res.string.auto_drive_help_requirements),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -641,43 +658,43 @@ internal fun SettingsScreen(
                         .padding(vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("DRIVE mode settings", modifier = Modifier.weight(1f))
+                    Text(stringResource(Res.string.drive_settings), modifier = Modifier.weight(1f))
                     Text(if (driveSettingsExpanded) "▲" else "▼",
                         color = MaterialTheme.colorScheme.primary)
                 }
                 if (driveSettingsExpanded) {
                     Text(
-                        "Auto DRIVE button tap (percent of VD content).",
+                        stringResource(Res.string.drive_tap_help),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    SettingSlider("DRIVE tap horizontal", "$draftDriveTapX%", draftDriveTapX.toFloat(),
+                    SettingSlider(stringResource(Res.string.drive_tap_horizontal), "$draftDriveTapX%", draftDriveTapX.toFloat(),
                         0f, 100f, step = 1f) {
                         onDraftDriveTapX(it.roundToInt().coerceIn(0, 100))
                     }
                     GroupDivider()
-                    SettingSlider("DRIVE tap vertical", "$draftDriveTapY%", draftDriveTapY.toFloat(),
+                    SettingSlider(stringResource(Res.string.drive_tap_vertical), "$draftDriveTapY%", draftDriveTapY.toFloat(),
                         0f, 100f, step = 1f) {
                         onDraftDriveTapY(it.roundToInt().coerceIn(0, 100))
                     }
                     GroupDivider()
-                    Text("DRIVE stick zoom taps (active 1 second after the DRIVE tap).",
+                    Text(stringResource(Res.string.drive_stick_help),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    SettingSlider("Stick UP horizontal", "$draftDriveStickInX%", draftDriveStickInX.toFloat(),
+                    SettingSlider(stringResource(Res.string.stick_up_horizontal), "$draftDriveStickInX%", draftDriveStickInX.toFloat(),
                         0f, 100f, step = 1f) { onDraftDriveStickInX(it.roundToInt().coerceIn(0, 100)) }
                     GroupDivider()
-                    SettingSlider("Stick UP vertical", "$draftDriveStickInY%", draftDriveStickInY.toFloat(),
+                    SettingSlider(stringResource(Res.string.stick_up_vertical), "$draftDriveStickInY%", draftDriveStickInY.toFloat(),
                         0f, 100f, step = 1f) { onDraftDriveStickInY(it.roundToInt().coerceIn(0, 100)) }
                     GroupDivider()
-                    SettingSlider("Stick DOWN horizontal", "$draftDriveStickOutX%", draftDriveStickOutX.toFloat(),
+                    SettingSlider(stringResource(Res.string.stick_down_horizontal), "$draftDriveStickOutX%", draftDriveStickOutX.toFloat(),
                         0f, 100f, step = 1f) { onDraftDriveStickOutX(it.roundToInt().coerceIn(0, 100)) }
                     GroupDivider()
-                    SettingSlider("Stick DOWN vertical", "$draftDriveStickOutY%", draftDriveStickOutY.toFloat(),
+                    SettingSlider(stringResource(Res.string.stick_down_vertical), "$draftDriveStickOutY%", draftDriveStickOutY.toFloat(),
                         0f, 100f, step = 1f) { onDraftDriveStickOutY(it.roundToInt().coerceIn(0, 100)) }
                     GroupDivider()
                     Text(
-                        "DRIVE image shift (up only, after Auto DRIVE tap; 0 = Standard).",
+                        stringResource(Res.string.drive_image_shift_help),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -685,19 +702,19 @@ internal fun SettingsScreen(
                     // this slider as the user edits the margin; clamp the value on Save & Restart.
                     if (driveImageShiftMaxPx > 0) {
                         SettingSlider(
-                            "Upward shift", "$draftDriveImageShift px",
+                            stringResource(Res.string.upward_shift), "$draftDriveImageShift px",
                             draftDriveImageShift.coerceIn(0, driveImageShiftMaxPx).toFloat(),
                             0f, driveImageShiftMaxPx.toFloat(), step = 1f,
                         ) { onDraftDriveImageShift(it.roundToInt().coerceIn(0, driveImageShiftMaxPx)) }
                     } else {
-                        Text("Standard (Bottom Margin is 0px)",
+                        Text(stringResource(Res.string.standard_zero_margin),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
             Text(
-                stringResource(Res.string.dash_feature_help),
+                stringResource(Res.string.ocr_area_timing_help),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = 6.dp, top = 8.dp, end = 6.dp),
@@ -722,8 +739,7 @@ internal fun SettingsScreen(
                 DiagnosticExportRow(onExportDiagnostics)
             }
             Text(
-                "Saves recent Pillion connection history plus a one-time Android/Bluetooth snapshot to Downloads. " +
-                    "Full-device logcat is collected only when you tap Export.",
+                stringResource(Res.string.export_diag_help),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = 6.dp, top = 8.dp, end = 6.dp),
@@ -739,8 +755,14 @@ internal fun SettingsScreen(
             GroupDivider()
             LinkRow(stringResource(Res.string.changelog)) { uriHandler.openUri("$REPO_URL/blob/main/CHANGELOG.md") }
             GroupDivider()
-            LinkRow("XMAX Custom Fork v37") { uriHandler.openUri("https://github.com/waiasu/pillion") }
+            LinkRow("XMAX Custom Fork v38") { uriHandler.openUri("https://github.com/waiasu/pillion") }
         }
+        Text(
+            stringResource(Res.string.trademark_notice),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 6.dp, top = 8.dp, end = 6.dp),
+        )
 
         Spacer(Modifier.height(28.dp))
         MadeByCredit { uriHandler.openUri("https://github.com/alexandrevega") }
@@ -807,6 +829,21 @@ private fun SettingSlider(
     }
 }
 
+/**
+ * Presentation-only translation. Persisted enum names and RGB values remain stable.
+ */
+@Composable
+private fun marginColorLabel(color: DashMarginColor): String = when (color) {
+    DashMarginColor.Black -> stringResource(Res.string.margin_black)
+    DashMarginColor.White -> stringResource(Res.string.margin_white)
+    DashMarginColor.Red -> stringResource(Res.string.margin_red)
+    DashMarginColor.Green -> stringResource(Res.string.margin_green)
+    DashMarginColor.Blue -> stringResource(Res.string.margin_blue)
+    DashMarginColor.Yellow -> stringResource(Res.string.margin_yellow)
+    DashMarginColor.Cyan -> stringResource(Res.string.margin_cyan)
+    DashMarginColor.Magenta -> stringResource(Res.string.margin_magenta)
+}
+
 @Composable
 private fun MarginColorSelector(
     selected: DashMarginColor,
@@ -820,7 +857,7 @@ private fun MarginColorSelector(
         Column(Modifier.weight(1f)) {
             Text(stringResource(Res.string.margin_color), style = MaterialTheme.typography.bodyLarge)
             Text(
-                selected.label,
+                marginColorLabel(selected),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -848,7 +885,7 @@ private fun MarginColorSelector(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
-                                option.label,
+                                marginColorLabel(option),
                                 modifier = Modifier.weight(1f),
                                 color = if (selected == option) MaterialTheme.colorScheme.primary
                                 else MaterialTheme.colorScheme.onSurface,
@@ -899,10 +936,10 @@ private fun DiagnosticExportRow(onExport: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
-            Text("Export diagnostic log", style = MaterialTheme.typography.bodyLarge)
+            Text(stringResource(Res.string.export_diagnostic_log), style = MaterialTheme.typography.bodyLarge)
         }
         Text(
-            "Export",
+            stringResource(Res.string.export_action),
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.primary,
@@ -1000,7 +1037,7 @@ private fun resolutionDetail(option: DashScale): String = when (option) {
     DashScale.X10 -> stringResource(Res.string.matches_usable_area)
     DashScale.X20 -> "${option.label} · ${stringResource(Res.string.recommended)}"
     DashScale.X30 -> "${option.label} · ${stringResource(Res.string.most_detail_heavy)}"
-    else -> "${option.label} · ${stringResource(Res.string.more_detail)}"
+    else -> option.label
 }
 
 @Composable

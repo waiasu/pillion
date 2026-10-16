@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Traducción al español basada en la versión japonesa -->
+    <string name="intro_title">Navegación en el panel de tu XMAX.</string>
+    <string name="intro_body">Pillion proyecta la navegación del móvil en el panel de tu XMAX mediante Bluetooth compatible con StreetCross. Pulsa Siguiente para empezar.</string>
+    <string name="continue_text">Siguiente</string>
+
+    <!-- Traducción al español basada en la versión japonesa -->
+    <string name="tagline">La pantalla de tu móvil, en el panel de tu moto</string>
+    <string name="home_vd_mode">Pantalla virtual (VD)</string>
+    <string name="guide_start_vd">Puedes apagar la pantalla del móvil después de iniciar la proyección.</string>
+    <string name="home_vd_detail">Si usas el móvil, apaga su pantalla para volver a la navegación. La proyección se recupera automáticamente al apagar y encender la moto.</string>
+
+    <!-- Traducción al español basada en la versión japonesa -->
+    <string name="home_phone_mirror_mode">Duplicación de pantalla</string>
+    <string name="guide_start_phone_mirror">Pon el móvil en horizontal, pulsa Iniciar y permite compartir la pantalla.</string>
+    <string name="home_phone_mirror_detail">Mantén la pantalla del móvil encendida. Si la apagas, se detiene la proyección. Usa el modo VD para proyectar con la pantalla apagada.</string>
+
+    <!-- Traducción al español basada en la versión japonesa -->
+    <string name="start_mirroring">Iniciar</string>
+    <string name="stop_mirroring">Detener</string>
+    <string name="connecting_to_dash">Conectando al panel…</string>
+    <string name="fps">fps</string>
+    <string name="mirroring_frame_size">Proyectando · %1$d KB por fotograma</string>
+    <string name="broadcasting">Enviando imagen</string>
+    <string name="open_maps_on_dash">Abre una aplicación para verla en el panel.</string>
+    <string name="disconnected">Desconectado</string>
+
+    <!-- Traducción al español basada en la versión japonesa -->
+    <string name="slide_reset_restart">Restablecer y reiniciar</string>
+    <string name="reset_restart_help">Detiene Pillion, borra la caché temporal y lo reinicia. Conserva los ajustes, permisos, configuración ADB y registros de diagnóstico.</string>
+    <string name="reset_restart">Restablecer y reiniciar</string>
+
+    <!-- Traducción al español basada en la versión japonesa -->
+    <string name="settings">Ajustes</string>
+    <string name="back">Volver</string>
+    <string name="appearance">Estilo</string>
+    <string name="theme">Tema</string>
+    <string name="system">Automático</string>
+    <string name="light">Claro</string>
+    <string name="dark">Oscuro</string>
+    <string name="language">Idioma</string>
+    <string name="language_system_default">Automático</string>
+
+    <!-- Traducción al español basada en la versión japonesa -->
+    <string name="display_and_image">Visualización</string>
+    <string name="image_quality">Calidad de imagen (JPEG)</string>
+    <string name="max_frame_rate">FPS máximos</string>
+    <string name="dpi">DPI</string>
+    <string name="left_margin">Margen izquierdo</string>
+    <string name="bottom_margin">Margen inferior</string>
+    <string name="margin_color">Color del margen</string>
+    <string name="change">Cambiar</string>
+    <string name="margin_black">Negro</string>
+    <string name="margin_white">Blanco</string>
+    <string name="margin_red">Rojo</string>
+    <string name="margin_green">Verde</string>
+    <string name="margin_blue">Azul</string>
+    <string name="margin_yellow">Amarillo</string>
+    <string name="margin_cyan">Cian</string>
+    <string name="margin_magenta">Magenta</string>
+    <string name="cancel">Cancelar</string>
+    <string name="map_layout_size">Tamaño de renderizado</string>
+    <string name="virtual_display_size_help">El tamaño de renderizado depende del área disponible sin los márgenes. La imagen enviada al panel sigue siendo de %1$d × %2$d.</string>
+    <string name="matches_usable_area">Igual al área visible</string>
+    <string name="recommended">Recomendado</string>
+    <string name="more_detail"></string>
+    <string name="most_detail_heavy">Alto consumo de batería</string>
+    <string name="screen_modes_help">En la duplicación normal solo se aplican la calidad JPEG y los FPS máximos. En VD puedes ajustar márgenes y tamaño para evitar que la imagen se superponga a las flechas del panel.</string>
+    <string name="image_quality_help">Una mayor calidad mejora la nitidez, pero puede afectar a los FPS, la temperatura y la batería. Reduce los FPS máximos para limitar la carga.</string>
+
+    <!-- Traducción al español basada en la versión japonesa -->
+    <string name="dedicated_dash_display">Opciones de VD</string>
+    <string name="vd_toggle">Modo VD</string>
+    <string name="dash_keep_nav">Muestra una aplicación en el panel aunque la pantalla del móvil esté apagada.</string>
+    <string name="enable_vd">Activar</string>
+    <string name="disable">Desactivar</string>
+    <string name="always_use_selected_app">Fijar aplicación</string>
+    <string name="selected_app_explanation">Muestra siempre la aplicación elegida en lugar de la que esté abierta en el móvil.</string>
+    <string name="selected_app">Aplicación fija</string>
+    <string name="not_selected">Sin seleccionar</string>
+    <string name="select_app_vd">Elegir aplicación</string>
+    <string name="fixed_app_fallback">Si está activada la opción Fijar aplicación y no eliges ninguna, se mostrará Pillion.</string>
+    <string name="restart_app_on_vd_label">Reiniciar aplicación</string>
+    <string name="restart_app_on_vd_explanation">Reinicia la aplicación al comenzar la proyección.</string>
+    <string name="stick_input">Controles del mando</string>
+    <string name="nav_stick_position">Posiciones de toque</string>
+    <string name="stick_tap_position_help">La esquina superior izquierda es 0% y la inferior derecha es 100%.</string>
+    <string name="zoom_in_horizontal">Mando arriba: horizontal</string>
+    <string name="zoom_in_vertical">Mando arriba: vertical</string>
+    <string name="zoom_out_horizontal">Mando abajo: horizontal</string>
+    <string name="zoom_out_vertical">Mando abajo: vertical</string>
+    <string name="dash_feature_help">La configuración inicial requiere depuración inalámbrica. VD puede funcionar sin Wi-Fi mientras el Helper o ADB local esté disponible.</string>
+
+    <!-- Traducción al español basada en la versión japonesa -->
+    <string name="yahoo_navi_assist">Funciones para Yahoo! Car Navigation</string>
+    <string name="ocr_toggle">OCR</string>
+    <string name="ocr_toggle_help">Muestra la información reconocida en el campo del nombre de la vía del panel.</string>
+    <string name="ocr_show_area">Mostrar áreas de reconocimiento</string>
+    <string name="ocr_area_settings">Configurar áreas</string>
+    <string name="ocr_area_1">Área 1: llegada y distancia</string>
+    <string name="ocr_left">Borde izquierdo</string>
+    <string name="ocr_top">Borde superior</string>
+    <string name="ocr_right">Borde derecho</string>
+    <string name="ocr_bottom">Borde inferior</string>
+    <string name="ocr_area_2">Área 2: escala del mapa</string>
+    <string name="auto_drive_mode">Cambio automático a modo Drive</string>
+    <string name="auto_drive_help_eligible">Cambia automáticamente a modo Drive si el área 1 aparece vacía dos veces seguidas.</string>
+    <string name="auto_drive_help_requirements">Requiere fijar Yahoo! Car Navigation y activar OCR y Reiniciar aplicación.</string>
+    <string name="drive_settings">Ajustes del modo Drive</string>
+    <string name="drive_tap_help">Indica dónde tocar para cambiar al modo Drive.</string>
+    <string name="drive_tap_horizontal">Toque de cambio: horizontal</string>
+    <string name="drive_tap_vertical">Toque de cambio: vertical</string>
+    <string name="drive_stick_help">Posiciones de toque del mando en modo Drive. El mando se activa un segundo después del toque de cambio.</string>
+    <string name="stick_up_horizontal">Mando arriba: horizontal</string>
+    <string name="stick_up_vertical">Mando arriba: vertical</string>
+    <string name="stick_down_horizontal">Mando abajo: horizontal</string>
+    <string name="stick_down_vertical">Mando abajo: vertical</string>
+    <string name="drive_image_shift_help">Desplaza la imagen hacia arriba tras cambiar a modo Drive. Usa 0 px para la posición normal.</string>
+    <string name="upward_shift">Desplazamiento hacia arriba</string>
+    <string name="standard_zero_margin">Posición normal (no se puede ajustar porque el margen inferior es de 0 px)</string>
+    <string name="ocr_area_timing_help">El área 1 se analiza cada 10 segundos y solo reconoce formatos admitidos de hora de llegada y distancia. No reconoce textos arbitrarios. El área 2 lee la escala del mapa cada segundo.</string>
+
+    <!-- Traducción al español basada en la versión japonesa -->
+    <string name="maintenance">Mantenimiento</string>
+    <string name="save_settings_restart">Guardar ajustes</string>
+    <string name="save_restart">Guardar y reiniciar</string>
+    <string name="save_restart_help">Los cambios de calidad, diseño y funciones VD se aplican al guardar y reiniciar. El tema, idioma y activación de VD se aplican al instante.</string>
+    <string name="export_diagnostic_log">Guardar registro de diagnóstico</string>
+    <string name="export_action">Exportar</string>
+    <string name="export_diag_help">Guarda el historial de conexión de Pillion y el estado de Android y Bluetooth en Descargas. El logcat completo solo se recopila al exportar.</string>
+    <string name="shutting_down">Cerrando Pillion…</string>
+    <string name="saving_restarting">Guardando ajustes y reiniciando…</string>
+    <string name="resetting_restarting">Restableciendo y reiniciando…</string>
+
+    <!-- Traducción al español basada en la versión japonesa -->
+    <string name="about">Información de la aplicación</string>
+    <string name="source_code">Código fuente</string>
+    <string name="changelog">Historial de cambios</string>
+    <string name="version_format">Versión %1$s</string>
+    <string name="report_issue">Informar de un problema</string>
+
+    <!-- Traducción al español basada en la versión japonesa -->
+    <string name="dash_nav_title">Más libertad</string>
+    <string name="dash_nav_body">Enciende o apaga la pantalla del móvil y el contacto de la moto sin interrupciones. Una vez iniciada la proyección, no necesitas tocar el móvil al volver a arrancar.</string>
+    <string name="get_started">Iniciar configuración</string>
+    <string name="maybe_later">Configurar más tarde</string>
+    <string name="wireless_debugging_on">Activar depuración inalámbrica</string>
+    <string name="wireless_debugging_help">Activa Depuración inalámbrica en Opciones de desarrollador y abre Emparejar dispositivo con código. Pillion te avisará al detectar el puerto.</string>
+    <string name="open_settings">Abrir ajustes</string>
+
+    <!-- Traducción al español basada en la versión japonesa -->
+    <string name="pair_from_notification">Emparejar desde la notificación</string>
+    <string name="pair_from_notification_help">Mantén abierta la pantalla de emparejamiento de Android. Cuando se actualice la notificación de Pillion, introduce desde ella el código de seis dígitos.</string>
+    <string name="pairing">Emparejando…</string>
+    <string name="preparing_pillion">Preparando Pillion…</string>
+    <string name="setup_success">Configuración completada</string>
+    <string name="setup_needs_attention">No se pudo completar la configuración</string>
+    <string name="next">Siguiente</string>
+    <string name="retry_setup">Reintentar</string>
+    <string name="open_settings_again">Abrir ajustes de nuevo</string>
+    <string name="setup_trace">Detalles de configuración</string>
+
+    <!-- Traducción al español basada en la versión japonesa -->
+    <string name="all_set">Todo listo</string>
+    <string name="all_set_help">Abre la aplicación de navegación e inicia la proyección en Pillion. En modo VD, seguirá visible con la pantalla apagada. Se necesita Wi-Fi para la configuración inicial, pero después funciona sin Wi-Fi mientras el Helper esté activo.</string>
+    <string name="done">Listo</string>
+    <string name="close_setup">Cerrar configuración</string>
+
+    <!-- Traducción al español basada en la versión japonesa -->
+    <string name="before_you_ride">Antes de conducir</string>
+    <string name="guide_pair_bluetooth">Empareja el móvil con la moto por Bluetooth (solo la primera vez).</string>
+    <string name="guide_landscape">Para duplicar la pantalla, gira el móvil en horizontal y activa la rotación automática.</string>
+    <string name="guide_navigation_mode">Cambia el panel de la moto al modo Navegación.</string>
+    <string name="guide_start_mirroring">Pulsa Iniciar y permite compartir la pantalla.</string>
+    <string name="guide_open_maps">Abre una aplicación de navegación para verla en el panel.</string>
+    <string name="motorcycle">Moto</string>
+    <string name="tap_switch_head_unit">Toca para cambiar el tipo de panel</string>
+    <string name="mirroring">Duplicación</string>
+    <string name="vd_display_only">Ajustes exclusivos de VD</string>
+    <string name="on">Activado</string>
+    <string name="off">Desactivado</string>
+    <string name="set_up">Configurar</string>
+    <string name="rerun_setup">Repetir configuración</string>
+    <string name="stick_tap_position">Posiciones de toque del mando</string>
+    <string name="ocr_title">Reconocimiento de texto de navegación (OCR)</string>
+    <string name="ocr_help">Reconoce texto de las áreas VD elegidas y lo envía al campo del nombre de la vía. El área 1 se actualiza cada 10 segundos y el área 2 cada segundo.</string>
+    <string name="ocr_enable">OCR</string>
+    <string name="checking_vd">Comprobando VD…</string>
+    <string name="updates">Actualizaciones</string>
+    <string name="new_version_available">Hay una nueva versión</string>
+    <string name="get">Obtener</string>
+    <string name="skip">Omitir</string>
+    <string name="how_it_connects">Métodos de conexión</string>
+    <string name="how_it_connects_body">Hay dos métodos de conexión según el panel de la moto.</string>
+    <string name="bluetooth">Bluetooth</string>
+    <string name="bluetooth_desc">Envía imágenes consecutivas por Bluetooth, adecuado para navegación.</string>
+    <string name="usb">USB</string>
+    <string name="usb_desc">Usa una conexión USB por cable para mostrar vídeo fluido.</string>
+    <string name="more_bikes_over_time">Más motos compatibles</string>
+    <string name="more_bikes_desc">Está previsto ampliar la compatibilidad con otras motos y paneles.</string>
+    <string name="choose_motorcycle">Elige tu moto</string>
+    <string name="choose_motorcycle_body">Selecciona el tipo de panel instalado en tu moto. Puedes cambiarlo después en Ajustes.</string>
+    <string name="trademark_notice">Yamaha, Garmin y StreetCross son marcas de sus respectivos propietarios. Pillion es un proyecto independiente y no oficial, sin afiliación, aprobación ni patrocinio de Yamaha o Garmin.</string>
+    <string name="usb_cable">Conectar la moto por USB</string>
+    <string name="wireless_bluetooth">Conectar por Bluetooth</string>
+    <string name="full_motion_video">Vídeo en movimiento</string>
+    <string name="slideshow">Secuencia de imágenes</string>
+    <string name="pair_with_code">Emparejar con código</string>
+    <string name="pair_with_code_help">Introduce el código de emparejamiento desde la notificación de Pillion.</string>
+    <string name="pair">Emparejar</string>
+    <string name="code_or_port_code">Código o puerto y código</string>
+    <string name="connected">✅ Conectado</string>
+    <string name="pairing_failed">Error al emparejar. Comprueba el código e inténtalo de nuevo.</string>
+</resources>
