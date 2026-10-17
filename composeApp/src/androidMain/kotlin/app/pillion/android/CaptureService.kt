@@ -67,6 +67,7 @@ class CaptureService : Service() {
     private var keyguardListener: Any? = null
     @Volatile private var dashPromotedAtMs = 0L
     @Volatile private var dashSawLockedKeyguard = false
+    @Volatile private var lastUnlockHomeAtMs = 0L
     @Volatile private var lastDashTargetComponent: String? = null
     @Volatile private var fixedDashAppEnabled = false
     @Volatile private var fixedDashAppPackage: String? = null
@@ -368,12 +369,15 @@ class CaptureService : Service() {
         }
         val filter = IntentFilter(Intent.ACTION_SCREEN_OFF)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
+            // Keyguard broadcasts can originate from privileged SystemUI rather than the app UID.
+            // These are protected system actions, so accepting external system senders is safe.
+            registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED)
         } else {
             @Suppress("UnspecifiedRegisterReceiverFlag")
             registerReceiver(receiver, filter)
         }
         screenReceiver = receiver
+        DiagnosticFlightRecorder.record("VD", "screen receiver registered")
     }
 
     /**
@@ -448,12 +452,9 @@ class CaptureService : Service() {
                             }
                         }
                         Intent.ACTION_USER_PRESENT -> {
+                            DiagnosticFlightRecorder.record("VD", "USER_PRESENT received")
                             returnToPhone("user present", force = true)
-                            // Only an active VD session's explicit unlock sends HOME.
-                            // Stop, screen-on, and keyguard listener paths never send it.
-                            if (dashEnabled && !normalMirrorStopRequested.get()) {
-                                dashSwitch?.homeOnUnlock()
-                            }
+                            homeOnUnlock("user present")
                         }
                     }
                 }
@@ -589,7 +590,23 @@ class CaptureService : Service() {
         keyguardListener = null
     }
 
+    /** One HOME per unlock, even if both the keyguard listener and broadcast report it. */
+    private fun homeOnUnlock(source: String) {
+        if (!dashEnabled || normalMirrorStopRequested.get()) {
+            DiagnosticFlightRecorder.record("VD", "unlock HOME skipped ($source): session inactive")
+            return
+        }
+        val now = android.os.SystemClock.elapsedRealtime()
+        synchronized(this) {
+            if (now - lastUnlockHomeAtMs < 1_500L) return
+            lastUnlockHomeAtMs = now
+        }
+        DiagnosticFlightRecorder.record("VD", "unlock HOME requested ($source)")
+        dashSwitch?.homeOnUnlock()
+    }
+
     private fun onKeyguardUnlocked() {
+        homeOnUnlock("keyguard listener")
         val promotedAt = dashPromotedAtMs
         if (promotedAt == 0L) return
         val ageMs = System.currentTimeMillis() - promotedAt
