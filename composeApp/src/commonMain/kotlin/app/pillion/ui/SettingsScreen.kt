@@ -345,14 +345,12 @@ internal fun SettingsScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable { displayAdjustmentExpanded = !displayAdjustmentExpanded }
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                        .padding(vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(stringResource(Res.string.display_adjustment), modifier = Modifier.weight(1f))
-                    Text(
-                        if (displayAdjustmentExpanded) "▲" else "▼",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    Text(if (displayAdjustmentExpanded) "▲" else "▼",
+                        color = MaterialTheme.colorScheme.primary)
                 }
                 if (displayAdjustmentExpanded) {
                     GroupDivider()
