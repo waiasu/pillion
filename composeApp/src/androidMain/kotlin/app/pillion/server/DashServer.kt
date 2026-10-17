@@ -137,6 +137,7 @@ object DashServer {
     @Volatile private var displayId = -1
     @Volatile private var dashDisplay: VirtualDisplay? = null
     @Volatile private var lastComponent: String? = null
+    @Volatile private var lastPromotionRestartOnVd = false
     @Volatile private var keepAlive: Thread? = null
     @Volatile private var panelOffRetry: Thread? = null
     @Volatile private var secureCameraWatcher: Thread? = null
@@ -476,6 +477,7 @@ object DashServer {
     /** Move the foreground app onto the dash display and start encoding (phone just locked). */
     private fun promoteApp(component: String, restartOnVd: Boolean = false) {
         if (displayId < 0 || component.isEmpty()) return
+        lastPromotionRestartOnVd = restartOnVd
         // Every DASH promotion starts by resetting only the optional OCR side. OCR can only be
         // re-enabled later by OCR_START after the app sees a real IMAGE_ACK and its five-second grace.
         ocrActive = false
@@ -1123,9 +1125,37 @@ object DashServer {
         latestOcrJpeg = null
         latestOcrArea1Jpeg = null
         latestOcrSeq++
-        lastComponent?.let { relocateApp(it, 0) } // move task while the phone panel is still dark
+        val component = lastComponent
+        component?.let { relocateApp(it, 0) } // move task while the phone panel is still dark
+        // Restart-on-VD only: HOME after a confirmed move back to the phone.
+        val returnHome = lastPromotionRestartOnVd && component != null &&
+            waitForTaskOnPhone(component.substringBefore('/'))
         wakePhoneViaKeyEvent()
+        if (returnHome) {
+            val rc = exec("input", "keyevent", "3") // KEYCODE_HOME
+            Log.i(TAG, "demote-home: HOME injected rc=$rc")
+        }
         Log.i(TAG, "demoted to phone; requested system wake")
+    }
+
+    /** Best-effort display-0 check; failure must not trigger HOME. */
+    private fun waitForTaskOnPhone(pkg: String): Boolean {
+        val deadline = android.os.SystemClock.uptimeMillis() + 100L
+        do {
+            if (runCatching { taskAndDisplayForPackage(pkg)?.second == 0 }.getOrDefault(false)) {
+                return true
+            }
+            val remaining = deadline - android.os.SystemClock.uptimeMillis()
+            if (remaining <= 0L) break
+            try {
+                Thread.sleep(minOf(20L, remaining))
+            } catch (_: InterruptedException) {
+                Thread.currentThread().interrupt()
+                break
+            }
+        } while (true)
+        Log.i(TAG, "demote-home: task $pkg not confirmed on display 0 within 100ms; skipping HOME")
+        return false
     }
 
     /** KEYCODE_WAKEUP (224): normal Android wake path; harmless when Android is already awake. */
