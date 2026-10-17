@@ -449,6 +449,11 @@ class CaptureService : Service() {
                         }
                         Intent.ACTION_USER_PRESENT -> {
                             returnToPhone("user present", force = true)
+                            // Only an active VD session's explicit unlock sends HOME.
+                            // Stop, screen-on, and keyguard listener paths never send it.
+                            if (dashEnabled && !normalMirrorStopRequested.get()) {
+                                dashSwitch?.homeOnUnlock()
+                            }
                         }
                     }
                 }
