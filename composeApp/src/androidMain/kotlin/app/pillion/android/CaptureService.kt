@@ -369,15 +369,12 @@ class CaptureService : Service() {
         }
         val filter = IntentFilter(Intent.ACTION_SCREEN_OFF)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            // Keyguard broadcasts can originate from privileged SystemUI rather than the app UID.
-            // These are protected system actions, so accepting external system senders is safe.
-            registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED)
+            registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
         } else {
             @Suppress("UnspecifiedRegisterReceiverFlag")
             registerReceiver(receiver, filter)
         }
         screenReceiver = receiver
-        DiagnosticFlightRecorder.record("VD", "screen receiver registered")
     }
 
     /**
@@ -466,12 +463,14 @@ class CaptureService : Service() {
             addAction(Intent.ACTION_USER_PRESENT)
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
+            // Protected keyguard broadcasts may originate from privileged SystemUI.
+            registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED)
         } else {
             @Suppress("UnspecifiedRegisterReceiverFlag")
             registerReceiver(receiver, filter)
         }
         screenReceiver = receiver
+        DiagnosticFlightRecorder.record("VD", "unlock receiver registered")
     }
 
     /**
