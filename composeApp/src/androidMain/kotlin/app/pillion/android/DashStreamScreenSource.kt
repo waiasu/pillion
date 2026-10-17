@@ -722,6 +722,12 @@ class DashStreamScreenSource(
         }
     }
 
+    /** Request HOME only on an explicit phone-unlock event. Never part of DEMOTE/Stop. */
+    fun homeOnUnlock() {
+        DiagnosticFlightRecorder.record("VD", "HOME on user present")
+        send("HOME\n")
+    }
+
     /** Tell the helper to move the app back to the phone and stop encoding. */
     fun demote() {
         DiagnosticFlightRecorder.record("VD", "DEMOTE")
