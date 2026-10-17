@@ -47,6 +47,7 @@
     <string name="display_and_image">Paparan</string>
     <string name="image_quality">Kualiti imej (JPEG)</string>
     <string name="max_frame_rate">Kadar bingkai maksimum</string>
+    <string name="display_adjustment">Laraskan paparan</string>
     <string name="dpi">DPI</string>
     <string name="left_margin">Ruang kiri</string>
     <string name="bottom_margin">Ruang bawah</string>

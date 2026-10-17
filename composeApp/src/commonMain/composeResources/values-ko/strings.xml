@@ -47,6 +47,7 @@
     <string name="display_and_image">화면 표시</string>
     <string name="image_quality">화질(JPEG)</string>
     <string name="max_frame_rate">최대 프레임 속도</string>
+    <string name="display_adjustment">화면 조정</string>
     <string name="dpi">DPI</string>
     <string name="left_margin">왼쪽 여백</string>
     <string name="bottom_margin">아래쪽 여백</string>

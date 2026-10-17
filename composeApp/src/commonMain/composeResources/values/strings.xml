@@ -47,6 +47,7 @@
     <string name="display_and_image">Rendering</string>
     <string name="image_quality">Image quality (JPEG)</string>
     <string name="max_frame_rate">Max frame rate</string>
+    <string name="display_adjustment">Display adjustment</string>
     <string name="dpi">DPI</string>
     <string name="left_margin">Left margin</string>
     <string name="bottom_margin">Bottom margin</string>

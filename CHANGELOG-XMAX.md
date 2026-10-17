@@ -8,7 +8,7 @@ The upstream Pillion changelog remains in `CHANGELOG.md` unchanged. Historical e
 
 ## [Unreleased]
 
-No pending XMAX-specific changes.
+- v38 maintenance: correct Japanese `ステック機能` to `スティック機能`; fold the DPI/left/bottom margin sliders into a `表示調整` (Display adjustment) section in all five UI languages; shorten the ADB pairing reply hint to `Code / Port + Code` in both Android locales. No runtime changes or version bump.
 
 ## [v38] - 2026-10-17
 

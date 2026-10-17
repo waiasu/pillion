@@ -74,6 +74,9 @@ Changing VD size/DPI while Yahoo! Car Navigation is already alive can produce pa
 
 ## v38 — UI localization and text refinements
 
+A v38 maintenance update folds the DPI, left-margin and bottom-margin sliders into a collapsed-by-default Display adjustment group, corrects Japanese `スティック機能`, and uses the compact English pairing input hint `Code / Port + Code`. This is a Settings/notification text change only, with no version increment or casting logic changes.
+
+
 - Android UI language selector supports Automatic, Japanese (`ja`), English (`en`), Korean (`ko`), Spanish (`es`) and Malay (`ms`), with persisted language selection.
 - Shared Compose UI resources contain 183 matching entries per locale. Japanese is the primary translation reference; English was revised to match current behavior.
 - Android platform notifications retain Japanese and English resources, with English fallback for Korean, Spanish and Malay.

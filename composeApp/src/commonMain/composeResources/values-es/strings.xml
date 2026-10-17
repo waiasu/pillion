@@ -47,6 +47,7 @@
     <string name="display_and_image">Visualización</string>
     <string name="image_quality">Calidad de imagen (JPEG)</string>
     <string name="max_frame_rate">FPS máximos</string>
+    <string name="display_adjustment">Ajustes de pantalla</string>
     <string name="dpi">DPI</string>
     <string name="left_margin">Margen izquierdo</string>
     <string name="bottom_margin">Margen inferior</string>

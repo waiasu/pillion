@@ -47,6 +47,7 @@
     <string name="display_and_image">描画</string>
     <string name="image_quality">画質（JPEG）</string>
     <string name="max_frame_rate">最大フレームレート</string>
+    <string name="display_adjustment">表示調整</string>
     <string name="dpi">DPI</string>
     <string name="left_margin">左側余白</string>
     <string name="bottom_margin">下側余白</string>
@@ -84,7 +85,7 @@
     <string name="fixed_app_fallback">アプリを固定が有効で、アプリが未選択の場合はPillionを表示します。</string>
     <string name="restart_app_on_vd_label">アプリを再起動</string>
     <string name="restart_app_on_vd_explanation">投影開始時に再起動します。</string>
-    <string name="stick_input">ステック機能</string>
+    <string name="stick_input">スティック機能</string>
     <string name="nav_stick_position">タップ位置</string>
     <string name="stick_tap_position_help">画像の左上が0%、右下が100%です。</string>
     <string name="zoom_in_horizontal">スティック上：横位置</string>

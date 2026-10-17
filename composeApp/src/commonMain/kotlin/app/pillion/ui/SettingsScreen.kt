@@ -160,6 +160,7 @@ internal fun SettingsScreen(
     val uriHandler = LocalUriHandler.current
     var showFixedAppPicker by remember { mutableStateOf(false) }
     var languageMenuOpen by remember { mutableStateOf(false) }
+    var displayAdjustmentExpanded by remember { mutableStateOf(false) }
     var driveSettingsExpanded by remember { mutableStateOf(false) }
     var navStickSettingsExpanded by remember { mutableStateOf(false) }
     var ocrAreaSettingsExpanded by remember { mutableStateOf(false) }
@@ -340,6 +341,21 @@ internal fun SettingsScreen(
             }
             if (dashSupported) {
                 GroupDivider()
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { displayAdjustmentExpanded = !displayAdjustmentExpanded }
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(stringResource(Res.string.display_adjustment), modifier = Modifier.weight(1f))
+                    Text(
+                        if (displayAdjustmentExpanded) "▲" else "▼",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                if (displayAdjustmentExpanded) {
+                    GroupDivider()
                 SettingSlider(
                     stringResource(Res.string.dpi),
                     "$dashDpi dpi",
@@ -366,6 +382,7 @@ internal fun SettingsScreen(
                     DashMargins.maxBottom().toFloat(),
                     step = DashMargins.STEP_PX.toFloat(),
                 ) { onDraftBottomMargin(DashMargins.clampBottom(it.roundToInt())) }
+                }
                 GroupDivider()
                 MarginColorSelector(draftMarginColor, onDraftMarginColor)
                 GroupDivider()
