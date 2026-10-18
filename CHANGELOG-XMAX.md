@@ -8,6 +8,7 @@ The upstream Pillion changelog remains in `CHANGELOG.md` unchanged. Historical e
 
 ## [Unreleased]
 
+- v38 maintenance (2026-10-18): one-shot post-PROMOTE sleep recovery for rapid POWER presses during the existing 3-second screen-event guard. At 3.15 s, only the still-current dedicated-VD PROMOTE is checked via `PowerManager.isInteractive`; if Android is truly asleep, existing DEMOTE/Helper wake restores phone state and the meter waiting frame. Healthy interactive sessions remain untouched. Diagnostic record `POST_PROMOTE_SLEEP_CHECK` added. XMAX field stress test: 22 PROMOTEs, 8 sleep recoveries, 14 no-op checks; rapid button testing showed correct meter/phone return. Version stays **v38**.
 - v38 maintenance (2026-10-18): on phone unlock during an active dedicated VD session, send `HOME` to the authenticated Helper, which injects `input keyevent 3` to return the VD to Launcher. The existing 1.5-second duplicate-event guard applies; this is independent of Restart-on-VD. The `am start` HOME experiment was rejected and fully reverted because it offered no animation improvement.
 - DEMOTE now relocates the remembered navigation component to display 0 **only if its task still exists**. If the task is absent, skip relocation rather than letting `relocateApp()` launch the navigation app afresh. PROMOTE, Restart-on-VD, and normal relocation remain unchanged. XMAX fork version remains v38.
 
