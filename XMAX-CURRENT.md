@@ -10,6 +10,15 @@ If this file and the source ever disagree, **the source code wins**.
 
 ---
 
+## v38 maintenance — unlock HOME and absent-task DEMOTE (2026-10-18)
+
+- During an active dedicated VD session, unlocking the phone requests `HOME` via `CaptureService` → `SwitchableScreenSource` → `DashStreamScreenSource` → authenticated Helper. Helper uses `input keyevent 3` to return the VD to HOME. Duplicate unlock signals are suppressed within 1,500 ms. This is not a Start/Stop action and does not depend on Restart-on-VD.
+- An experiment replacing the HOME key event with `am start` did not eliminate Pixel Launcher animations; the `--no-animation` variant failed. Final implementation restores the original HOME key event.
+- DEMOTE first checks whether the remembered app has an existing task; only then does it call `relocateApp(component, 0)`. Without a task, it skips relocation, avoiding an unintended `am start` launch on display 0. PROMOTE, Restart-on-VD, Bluetooth reconnect and camera handling are unchanged.
+- Version label remains **XMAX Custom Fork v38**. Bench/on-bike tests passed for the unlock-HOME and DEMOTE task-absence fixes before release; the final reverted HOME command matches the previously tested working version.
+
+---
+
 ## Target / 主な実機環境
 
 - Yamaha XMAX with Garmin StreetCross / NaviLite-compatible dashboard

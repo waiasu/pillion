@@ -67,6 +67,7 @@ class CaptureService : Service() {
     private var keyguardListener: Any? = null
     @Volatile private var dashPromotedAtMs = 0L
     @Volatile private var dashSawLockedKeyguard = false
+    @Volatile private var lastUnlockHomeAtMs = 0L
     @Volatile private var lastDashTargetComponent: String? = null
     @Volatile private var fixedDashAppEnabled = false
     @Volatile private var fixedDashAppPackage: String? = null
@@ -448,7 +449,9 @@ class CaptureService : Service() {
                             }
                         }
                         Intent.ACTION_USER_PRESENT -> {
+                            DiagnosticFlightRecorder.record("VD", "USER_PRESENT received")
                             returnToPhone("user present", force = true)
+                            homeOnUnlock("user present")
                         }
                     }
                 }
@@ -460,12 +463,14 @@ class CaptureService : Service() {
             addAction(Intent.ACTION_USER_PRESENT)
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
+            // Protected keyguard broadcasts may originate from privileged SystemUI.
+            registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED)
         } else {
             @Suppress("UnspecifiedRegisterReceiverFlag")
             registerReceiver(receiver, filter)
         }
         screenReceiver = receiver
+        DiagnosticFlightRecorder.record("VD", "unlock receiver registered")
     }
 
     /**
@@ -584,7 +589,23 @@ class CaptureService : Service() {
         keyguardListener = null
     }
 
+    /** One HOME per unlock, even if both the keyguard listener and broadcast report it. */
+    private fun homeOnUnlock(source: String) {
+        if (!dashEnabled || normalMirrorStopRequested.get()) {
+            DiagnosticFlightRecorder.record("VD", "unlock HOME skipped ($source): session inactive")
+            return
+        }
+        val now = android.os.SystemClock.elapsedRealtime()
+        synchronized(this) {
+            if (now - lastUnlockHomeAtMs < 1_500L) return
+            lastUnlockHomeAtMs = now
+        }
+        DiagnosticFlightRecorder.record("VD", "unlock HOME requested ($source)")
+        dashSwitch?.homeOnUnlock()
+    }
+
     private fun onKeyguardUnlocked() {
+        homeOnUnlock("keyguard listener")
         val promotedAt = dashPromotedAtMs
         if (promotedAt == 0L) return
         val ageMs = System.currentTimeMillis() - promotedAt

@@ -397,6 +397,10 @@ object DashServer {
                         promoteApp(fields.firstOrNull().orEmpty(), fields.getOrNull(1) == "1")
                     }
                     line == "DEMOTE" -> demoteApp()
+                    line == "HOME" -> {
+                        val rc = exec("input", "keyevent", "3") // KEYCODE_HOME
+                        Log.i(TAG, "unlock-home: HOME injected rc=$rc")
+                    }
                     line.startsWith("DRIVE_SHIFT ") -> {
                         // This is an output-canvas-only translation. Never move the VD itself.
                         driveImageShiftPx = line.removePrefix("DRIVE_SHIFT ").trim()
@@ -1123,7 +1127,13 @@ object DashServer {
         latestOcrJpeg = null
         latestOcrArea1Jpeg = null
         latestOcrSeq++
-        lastComponent?.let { relocateApp(it, 0) } // move task while the phone panel is still dark
+        lastComponent?.let { component ->
+            if (runCatching { taskAndDisplayForPackage(component.substringBefore('/')) }.getOrNull() != null) {
+                relocateApp(component, 0) // move an existing task; never launch an absent app on DEMOTE
+            } else {
+                Log.i(TAG, "demote: task absent; skip app launch")
+            }
+        }
         wakePhoneViaKeyEvent()
         Log.i(TAG, "demoted to phone; requested system wake")
     }

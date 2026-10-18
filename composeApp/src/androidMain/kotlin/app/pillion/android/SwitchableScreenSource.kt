@@ -137,6 +137,9 @@ class SwitchableScreenSource(
         dash.demote()
     }
 
+    /** Explicit unlock only; does not affect PROMOTE, DEMOTE, or Stop. */
+    fun homeOnUnlock() = dash.homeOnUnlock()
+
     /** Transport loss: return the promoted task to display 0 and show the generated waiting frame. */
     fun enterReconnectWait() {
         demote()
