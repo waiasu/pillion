@@ -47,6 +47,7 @@ Compatibility with other Android devices, Yamaha models, or navigation apps is n
 - Automatic Bluetooth reconnect and recovery after ignition OFF / ON
 - Dedicated VD unlock handling returns the VD to HOME via authenticated Helper HOME key event
 - DEMOTE does not relaunch a remembered navigation app when its task is already absent
+- One-shot recovery after a real phone sleep during the 3-second PROMOTE settle window (rapid POWER presses)
 - Yahoo! Car Navigation restart-on-VD handling for rendering and DPI stability
 - OCR overlays for arrival information and map scale
 - XMAX stick up/down input support with separate NAV / DRIVE zoom positions
@@ -70,6 +71,7 @@ Compatibility with other Android devices, Yamaha models, or navigation apps is n
 - Bluetooth再接続、およびキーOFF / ON後の自動復帰
 - VD中のスマホロック解除でHelper経由のHOMEキー入力によりVDをホームへ復帰
 - DEMOTE時にナビの既存タスクが無ければ、意図しない再起動を抑止
+- PROMOTE直後3秒以内の電源ボタン連打でAndroidがスリープした場合に、単発確認でDEMOTE・復帰
 - Yahoo!カーナビの描画・DPI安定化を目的としたVD移動時のアプリ再起動
 - 到着情報・地図縮尺のOCRオーバーレイ
 - XMAXスティック上下入力対応（NAV/DRIVE別のズーム座標）
