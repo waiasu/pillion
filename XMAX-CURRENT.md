@@ -10,6 +10,15 @@ If this file and the source ever disagree, **the source code wins**.
 
 ---
 
+## v38 maintenance — recovery from real sleep during PROMOTE settle (2026-10-18)
+
+- PROMOTE retains the existing 3,000 ms guard against synthetic `SCREEN_OFF` events. A physical POWER press inside that window can nevertheless put Android to sleep and power down the VD while Pillion still thinks it is promoted.
+- `CaptureService.schedulePostPromoteSleepRecoveryCheck()` schedules **one** check per PROMOTE at 3,150 ms. It only acts if the same PROMOTE is still current and dedicated VD is enabled. `PowerManager.isInteractive == false` then triggers the existing `returnToPhone("post-promote sleep recovery")` → DEMOTE → Helper `KEYCODE_WAKEUP` flow. `true` or `null` does not initiate recovery.
+- Diagnostic flight recorder entry: `VD POST_PROMOTE_SLEEP_CHECK interactive=true/false/null`. The regular PROMOTE/DEMOTE transitions, Restart-on-VD, camera behavior, OCR, Bluetooth reconnect, and 3-second guard are otherwise unchanged.
+- On-bike stress testing (2026-10-18): 22 PROMOTEs, 8 recovery DEMOTEs after detecting actual sleep and 14 interactive checks without intervention, including rapid POWER-button presses; user observed restored meter waiting screen and phone lock screen. XMAX fork version remains **v38**.
+
+---
+
 ## v38 maintenance — unlock HOME and absent-task DEMOTE (2026-10-18)
 
 - During an active dedicated VD session, unlocking the phone requests `HOME` via `CaptureService` → `SwitchableScreenSource` → `DashStreamScreenSource` → authenticated Helper. Helper uses `input keyevent 3` to return the VD to HOME. Duplicate unlock signals are suppressed within 1,500 ms. This is not a Start/Stop action and does not depend on Restart-on-VD.

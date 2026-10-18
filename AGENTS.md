@@ -22,6 +22,7 @@ The stable `xmax-pillion` line includes v38 localization and UI polish, plus v35
 Unless a task explicitly requires it:
 
 - Do not change the established PROMOTE / DEMOTE state flow.
+- Preserve the v38 post-PROMOTE one-shot sleep recovery check (3,150 ms, current promotion only, `PowerManager.isInteractive == false` → normal DEMOTE/Helper wake); never weaken the existing 3-second synthetic screen-event guard without dedicated validation.
 - Do not demote merely because Bluetooth/RFCOMM disconnects.
 - Preserve the existing ScreenSource/helper/VD while transport reconnects.
 - Keep OCR traffic isolated from the main NaviLite JPEG frame stream.
