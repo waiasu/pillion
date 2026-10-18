@@ -5,6 +5,7 @@ This is the Yamaha XMAX / Pixel fork of Pillion.
 Before changing XMAX-specific behavior, read:
 
 - `XMAX-CURRENT.md` — current implementation, verified code behavior, defaults, and stability constraints.
+- `XMAX-HANDOFF-JA.md` — Japanese handoff notes covering field observations, failed/reverted experiments, and why stability-sensitive choices were made. Read this before simplifying or redesigning XMAX behavior.
 - `CHANGELOG-XMAX.md` — fork-specific release history.
 - `README.md` — fork overview followed by the preserved upstream README.
 
