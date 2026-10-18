@@ -8,6 +8,9 @@ The upstream Pillion changelog remains in `CHANGELOG.md` unchanged. Historical e
 
 ## [Unreleased]
 
+- v38 maintenance (2026-10-18): on phone unlock during an active dedicated VD session, send `HOME` to the authenticated Helper, which injects `input keyevent 3` to return the VD to Launcher. The existing 1.5-second duplicate-event guard applies; this is independent of Restart-on-VD. The `am start` HOME experiment was rejected and fully reverted because it offered no animation improvement.
+- DEMOTE now relocates the remembered navigation component to display 0 **only if its task still exists**. If the task is absent, skip relocation rather than letting `relocateApp()` launch the navigation app afresh. PROMOTE, Restart-on-VD, and normal relocation remain unchanged. XMAX fork version remains v38.
+
 - v38 maintenance: correct Japanese `ステック機能` to `スティック機能`; fold the DPI/left/bottom margin sliders into a `表示調整` (Display adjustment) section in all five UI languages; shorten the ADB pairing reply hint to `Code / Port + Code` in both Android locales. No runtime changes or version bump.
 
 ## [v38] - 2026-10-17
