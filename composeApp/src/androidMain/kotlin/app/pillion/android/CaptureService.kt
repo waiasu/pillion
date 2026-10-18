@@ -432,6 +432,7 @@ class CaptureService : Service() {
                                 dashPromotedAtMs = System.currentTimeMillis()
                                 dashSawLockedKeyguard = isKeyguardLockedNow()
                                 scheduleLockStateSample(dashPromotedAtMs)
+                                schedulePostPromoteSleepRecoveryCheck(dashPromotedAtMs)
                             }
                         }
                         Intent.ACTION_SCREEN_ON -> {
@@ -635,6 +636,28 @@ class CaptureService : Service() {
                 returnToPhone("unlock after promotion wake")
             } else {
                 Log.d(TAG, "dash: promotion wake settled; keeping dash active")
+            }
+        }
+    }
+
+    /**
+     * A real POWER press during the 3-second PROMOTE settle window can put Android to sleep
+     * even though its SCREEN_OFF event is intentionally ignored. The VD then powers down while
+     * Pillion still believes it is promoted. Check once after the guard expires: valid DASH
+     * sessions remain interactive with only the physical panel blanked by the helper.
+     *
+     * Do not change the existing SCREEN_OFF guard or regular PROMOTE/DEMOTE event handling.
+     */
+    private fun schedulePostPromoteSleepRecoveryCheck(promotedAt: Long) {
+        scope.launch(Dispatchers.IO) {
+            delay(RETURN_TO_PHONE_GRACE_MS + 150L)
+            // A later DEMOTE, PROMOTE or Stop makes this check obsolete.
+            if (!dashEnabled || dashPromotedAtMs != promotedAt) return@launch
+            val interactive = getSystemService(PowerManager::class.java)?.isInteractive
+            DiagnosticFlightRecorder.record("VD", "POST_PROMOTE_SLEEP_CHECK interactive=$interactive")
+            if (interactive == false) {
+                Log.w(TAG, "dash: device asleep after promotion settle; recovering via DEMOTE")
+                returnToPhone("post-promote sleep recovery")
             }
         }
     }
