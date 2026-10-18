@@ -398,7 +398,7 @@ object DashServer {
                     }
                     line == "DEMOTE" -> demoteApp()
                     line == "HOME" -> {
-                        val rc = exec("am", "start", "-a", "android.intent.action.MAIN", "-c", "android.intent.category.HOME") // launch HOME without key event
+                        val rc = exec("input", "keyevent", "3") // KEYCODE_HOME
                         Log.i(TAG, "unlock-home: HOME injected rc=$rc")
                     }
                     line.startsWith("DRIVE_SHIFT ") -> {
