@@ -31,7 +31,7 @@ import java.util.zip.ZipOutputStream
  */
 object DiagnosticExporter {
     private const val LOGCAT_LINES = 12_000
-    private const val TOTAL_ADB_BUDGET_MS = 20_000L
+    private const val TOTAL_ADB_BUDGET_MS = 180_000L
 
     fun export(context: Context): Result<String> {
         val app = context.applicationContext
@@ -267,7 +267,7 @@ object DiagnosticExporter {
         }
     }
 
-    private const val COMMAND_TIMEOUT_MS = 3_000L
+    private const val COMMAND_TIMEOUT_MS = 30_000L
 
     private fun writeText(file: File, text: String) {
         runCatching { file.writeText(text, Charsets.UTF_8) }
