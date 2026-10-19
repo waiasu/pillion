@@ -224,7 +224,7 @@ object DiagnosticExporter {
 
         /** Close the ADB stream from a daemon timer if a diagnostic command stalls. */
         private fun runBounded(command: String, timeoutMs: Long): String {
-            val stream = adb.openShellStream(command)
+            val stream = adb.openShellStream(command + "; echo __PILLION_DIAG_COMPLETE__")
             val timedOut = AtomicBoolean(false)
             val closer = Thread({
                 try {
@@ -263,7 +263,15 @@ object DiagnosticExporter {
             if (timedOut.get()) {
                 output.append("\n[TIMEOUT after ").append(timeoutMs).append(" ms]\n")
             }
-            return output.toString()
+            val text = output.toString()
+            val marker = "__PILLION_DIAG_COMPLETE__"
+            return if (text.contains(marker)) {
+                text.replace(marker, "").replace(
+                    "[ADB stream closed; output may be incomplete]", ""
+                )
+            } else {
+                text + "\n[INCOMPLETE: shell completion marker not received]\n"
+            }
         }
     }
 
