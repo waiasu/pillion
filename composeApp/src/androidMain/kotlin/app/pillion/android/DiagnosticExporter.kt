@@ -210,6 +210,46 @@ object DiagnosticExporter {
         private val trace = StringBuilder("Pillion ADB export trace\n")
         private var sequence = 0
         private var transportStalled = false
+        private var adbChecked = false
+
+        // Export-only recovery. A surviving Helper can be reused after Pillion's own process
+        // restarts without restoring this process's libadb connection.
+        // Never restart adbd or touch the Helper/VD just to collect diagnostics.
+        private fun ensureExportAdbConnection() {
+            if (adbChecked) return
+            adbChecked = true
+            val start = SystemClock.elapsedRealtime()
+            if (adb.isConnected()) {
+                trace.appendLine("export-adb status=already-connected")
+                return
+            }
+            val executor = Executors.newSingleThreadExecutor { task ->
+                Thread(task, "pillion-diag-adb-reconnect").apply { isDaemon = true }
+            }
+            try {
+                val task = executor.submit<Boolean> {
+                    adb.connectDevice(PillionAdb.LOOPBACK_HOST, PillionAdb.TCPIP_PORT)
+                }
+                try {
+                    val result = task.get(5_000L, TimeUnit.MILLISECONDS)
+                    trace.appendLine(
+                        "export-adb status=${if (adb.isConnected()) "connected" else "unavailable"} " +
+                            "connectReturn=$result elapsedMs=${SystemClock.elapsedRealtime() - start}"
+                    )
+                } catch (_: TimeoutException) {
+                    task.cancel(true)
+                    trace.appendLine("export-adb status=timeout elapsedMs=${SystemClock.elapsedRealtime() - start}")
+                } catch (e: ExecutionException) {
+                    trace.appendLine("export-adb status=failed type=${e.cause?.javaClass?.simpleName ?: e.javaClass.simpleName}")
+                } catch (_: InterruptedException) {
+                    task.cancel(true)
+                    Thread.currentThread().interrupt()
+                    trace.appendLine("export-adb status=interrupted")
+                }
+            } finally {
+                executor.shutdownNow()
+            }
+        }
 
         private class Progress {
             val phase = AtomicReference("not-started")
@@ -229,6 +269,7 @@ object DiagnosticExporter {
             command: String,
             timeoutMs: Long = COMMAND_TIMEOUT_MS,
         ): String {
+            ensureExportAdbConnection()
             sequence++
             val start = SystemClock.elapsedRealtime()
             val marker = "__PILLION_DIAG_DONE_${startedMs}_${sequence}__"
