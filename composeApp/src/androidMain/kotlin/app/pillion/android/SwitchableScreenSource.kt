@@ -80,6 +80,10 @@ class SwitchableScreenSource(
         if (mode == Mode.STATUS) clearRoadOnStatusAck = true
     }
 
+    override fun onTransportConnected() = dash.onTransportConnected()
+
+    override fun onTransportDisconnected() = dash.onTransportDisconnected()
+
     override fun onImageAck() {
         // DASH ACKs drive OCR. STATUS ACKs are only used once to erase stale ROAD text.
         when (mode) {
