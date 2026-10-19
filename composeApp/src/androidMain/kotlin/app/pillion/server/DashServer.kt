@@ -145,6 +145,7 @@ object DashServer {
     @Volatile private var ocrServerStarted = false
 
     // Battery: encode only while a foreground app is promoted (phone locked). Idle otherwise.
+    @Volatile private var encodePausedForTransport = false
     @Volatile private var capturing = false
     @Volatile private var restartPerformedForCurrentPromotion = false
     @Volatile private var restartFrameGate = false
@@ -261,7 +262,7 @@ object DashServer {
         val image = reader.acquireLatestImage() ?: return
         bitmapAcquired.incrementAndGet()
         try {
-            if (!capturing) {
+            if (!capturing || encodePausedForTransport) {
                 bitmapSkippedIdle.incrementAndGet()
                 return
             }
@@ -323,7 +324,7 @@ object DashServer {
                 Log.i(
                     TAG,
                     "BITMAP_STATS intervalMs=$BITMAP_STATS_INTERVAL_MS " +
-                        "promoted=$capturing acquired=$acquired processed=$processed " +
+                        "promoted=$capturing encodePaused=$encodePausedForTransport acquired=$acquired processed=$processed " +
                         "skipIdle=$idle skipRestart=$restarting skipThrottle=$throttled " +
                         "failed=$failed " +
                         "copyAvg10thMs=${copyMs * 10L / divisor} " +
@@ -481,6 +482,14 @@ object DashServer {
                     }
                     line == "OCR_START" -> setOcrActive(true)
                     line == "OCR_STOP" -> setOcrActive(false)
+                    line == "ENCODE_PAUSE" -> {
+                        encodePausedForTransport = true
+                        Log.i(TAG, "transport JPEG encoding paused")
+                    }
+                    line == "ENCODE_RESUME" -> {
+                        encodePausedForTransport = false
+                        Log.i(TAG, "transport JPEG encoding resumed")
+                    }
                     line.startsWith("TAP_PERCENT ") -> {
                         val parts = line.split(' ')
                         val xPercent = parts.getOrNull(1)?.toIntOrNull()
