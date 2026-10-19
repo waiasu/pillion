@@ -57,6 +57,7 @@ class MirrorEngine(
                 // every initial connection or reconnect attempt without changing RFCOMM itself.
                 screen.onTransportConnecting()
                 channel.open()
+                screen.onTransportConnected()
                 Logger.trail("TRANSPORT CONNECTED")
                 val reader = FrameReader(channel)
                 Logger.d("session: handshake")
@@ -71,6 +72,8 @@ class MirrorEngine(
                 Logger.trail("SESSION FAILED ${t::class.simpleName ?: "Throwable"}: ${t.message ?: "-"}")
                 if (running) _state.value = MirrorState.Error(t.message ?: "connection lost")
             } finally {
+                // Keep the surviving VD/Helper, but stop producing unsent JPEGs.
+                runCatching { screen.onTransportDisconnected() }
                 running = false
                 if (!unexpectedFailure || !keepScreenAliveOnFailure) runCatching { screen.stop() }
                 runCatching { channel.close() }
