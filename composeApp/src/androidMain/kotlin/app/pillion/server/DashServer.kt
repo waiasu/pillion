@@ -83,7 +83,7 @@ object DashServer {
         FLAG_ALWAYS_UNLOCKED or FLAG_TOUCH_FEEDBACK_DISABLED or
         FLAG_OWN_FOCUS or FLAG_DEVICE_DISPLAY_GROUP
 
-    private const val MIN_INTERVAL_MS = 50L // cap capture/encode to ~20fps; the app paces sends
+    private const val MIN_INTERVAL_MS = 100L // cap capture/encode to ~10fps; the app paces sends
     private const val BITMAP_STATS_INTERVAL_MS = 10_000L // test-only diagnostics, no capture control
     private const val OCR_AREA1_INTERVAL_MS = 10_000L
     private const val OCR_AREA2_INTERVAL_MS = 1_000L
