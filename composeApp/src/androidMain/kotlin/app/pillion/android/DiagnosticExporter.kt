@@ -16,6 +16,9 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
@@ -184,14 +187,31 @@ object DiagnosticExporter {
 
     private class AdbSnapshot(private val context: Context) {
         private val deadlineMs = SystemClock.elapsedRealtime() + TOTAL_ADB_BUDGET_MS
+        private var abandoned = false
         private val adb by lazy { PillionAdb.getInstance(context) }
         @Volatile private var reconnectTried = false
 
         fun capture(label: String, command: String): String {
+            if (abandoned) return "[SKIPPED $label: earlier ADB timeout]\n"
             fun run(): Result<String> = runCatching {
                 val remaining = deadlineMs - SystemClock.elapsedRealtime()
                 if (remaining <= 0L) return "[SKIPPED $label: ADB budget exhausted]\n"
-                runBounded(command, minOf(COMMAND_TIMEOUT_MS, remaining))
+                val allowed = minOf(COMMAND_TIMEOUT_MS, remaining)
+                val runner = Executors.newSingleThreadExecutor { task ->
+                    Thread(task, "pillion-diag-command").apply { isDaemon = true }
+                }
+                try {
+                    val future = runner.submit<String> { runBounded(command, allowed) }
+                    try {
+                        future.get(allowed + 500L, TimeUnit.MILLISECONDS)
+                    } catch (_: TimeoutException) {
+                        abandoned = true
+                        future.cancel(true)
+                        "[TIMEOUT $label (including ADB stream open); remaining ADB work skipped]\n"
+                    }
+                } finally {
+                    runner.shutdownNow()
+                }
             }
 
             var result = run()
