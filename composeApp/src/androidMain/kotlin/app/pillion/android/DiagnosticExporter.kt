@@ -6,6 +6,7 @@ import android.content.ContentValues
 import android.content.Context
 import android.os.Build
 import android.os.Environment
+import android.os.SystemClock
 import android.provider.MediaStore
 import app.pillion.core.AppInfo
 import java.io.BufferedOutputStream
@@ -27,6 +28,7 @@ import java.util.zip.ZipOutputStream
  */
 object DiagnosticExporter {
     private const val LOGCAT_LINES = 12_000
+    private const val TOTAL_ADB_BUDGET_MS = 20_000L
 
     fun export(context: Context): Result<String> {
         val app = context.applicationContext
@@ -47,6 +49,14 @@ object DiagnosticExporter {
                 writeText(File(workDir, "summary.txt"), instantSummary)
 
                 val adb = AdbSnapshot(app)
+                // Retrieve the test evidence first, before slow or truncated full logcat.
+                writeText(
+                    File(workDir, "bitmap-stats.txt"),
+                    adb.capture(
+                        "bitmap stats",
+                        "logcat -d -v threadtime -b main -s PillionDash:I | grep BITMAP_STATS | tail -n 500",
+                    ),
+                )
                 // Bluetooth is the primary target of this field recorder. Take its live dumpsys
                 // before logcat/display queries so the state is as close to button-press time as possible.
                 writeText(
@@ -173,14 +183,19 @@ object DiagnosticExporter {
     }
 
     private class AdbSnapshot(private val context: Context) {
+        private val deadlineMs = SystemClock.elapsedRealtime() + TOTAL_ADB_BUDGET_MS
         private val adb by lazy { PillionAdb.getInstance(context) }
         @Volatile private var reconnectTried = false
 
         fun capture(label: String, command: String): String {
-            fun run(): Result<String> = runCatching { runBounded(command, COMMAND_TIMEOUT_MS) }
+            fun run(): Result<String> = runCatching {
+                val remaining = deadlineMs - SystemClock.elapsedRealtime()
+                if (remaining <= 0L) return "[SKIPPED $label: ADB budget exhausted]\n"
+                runBounded(command, minOf(COMMAND_TIMEOUT_MS, remaining))
+            }
 
             var result = run()
-            if (result.isFailure && !reconnectTried) {
+            if (result.isFailure && !reconnectTried && SystemClock.elapsedRealtime() < deadlineMs - 1_000L) {
                 reconnectTried = true
                 // Best-effort loopback reconnect only. Do not invoke helper setup, pairing, tcpip,
                 // privilege changes or any other recovery action during evidence collection.
@@ -218,7 +233,13 @@ object DiagnosticExporter {
                     val read = try {
                         reader.read(buffer)
                     } catch (t: Throwable) {
-                        if (timedOut.get()) break else throw t
+                        if (timedOut.get()) break
+                        if (t is java.io.IOException &&
+                            t.message?.contains("Stream closed", ignoreCase = true) == true) {
+                            output.append("\n[ADB stream closed; output may be incomplete]\n")
+                            break
+                        }
+                        throw t
                     }
                     if (read < 0) break
                     output.append(buffer, 0, read)
@@ -234,7 +255,7 @@ object DiagnosticExporter {
         }
     }
 
-    private const val COMMAND_TIMEOUT_MS = 12_000L
+    private const val COMMAND_TIMEOUT_MS = 3_000L
 
     private fun writeText(file: File, text: String) {
         runCatching { file.writeText(text, Charsets.UTF_8) }
