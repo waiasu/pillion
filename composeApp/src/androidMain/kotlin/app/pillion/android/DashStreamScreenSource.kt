@@ -249,8 +249,28 @@ class DashStreamScreenSource(
     fun receivedFrameSequence(): Long = receiveSeq
 
     /** Every RFCOMM/NaviLite attempt starts with OCR completely disabled. */
+    @Volatile private var encodePausedForTransport = false
+
     override fun onTransportConnecting() {
+        setEncodePausedForTransport(true, "RFCOMM connecting")
         resetOcrGate("transport connecting", notifyHelperIfActive = true)
+    }
+
+    override fun onTransportConnected() {
+        // Start JPEG generation now, BEFORE NaviLite handshake needs its first frame.
+        setEncodePausedForTransport(false, "RFCOMM connected")
+    }
+
+    override fun onTransportDisconnected() {
+        setEncodePausedForTransport(true, "RFCOMM disconnected")
+    }
+
+    private fun setEncodePausedForTransport(paused: Boolean, reason: String) {
+        if (encodePausedForTransport == paused) return
+        encodePausedForTransport = paused
+        send(if (paused) "ENCODE_PAUSE\n" else "ENCODE_RESUME\n")
+        Log.i(TAG, "dash encode ${if (paused) "paused" else "resumed"} ($reason)")
+        DiagnosticFlightRecorder.record("VD", "ENCODE ${if (paused) "PAUSE" else "RESUME"} $reason")
     }
 
     /** Start the five-second grace only after a real IMAGE_ACK while DASH mode is active. */
@@ -774,6 +794,8 @@ class DashStreamScreenSource(
         if (component != null && driveState == DriveState.DRIVE) {
             send(s, "DRIVE_SHIFT ${driveImageShiftPx.coerceIn(0, bottomMargin)}\n")
         }
+        // A reconnecting Helper must inherit transport pause, independently of task placement.
+        send(s, if (encodePausedForTransport) "ENCODE_PAUSE\n" else "ENCODE_RESUME\n")
         if (ocrEnabled && ocrGateActive) {
             // PROMOTE/DEMOTE above always reset helper OCR. Replay START only when this same DASH
             // session had already passed its grace period before the loopback socket reconnected.
