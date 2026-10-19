@@ -327,7 +327,7 @@ internal fun SettingsScreen(
             // Both phone mirroring and dedicated VD send JPEG frames at the chosen cap.
             SettingSlider(stringResource(Res.string.image_quality), "$quality", quality.toFloat(), 10f, 80f) { onQuality(it.roundToInt()) }
             GroupDivider()
-            val fpsChoices = (1..15).map { it.toDouble() }
+            val fpsChoices = (1..10).map { it.toDouble() }
             val fpsIndex = fpsChoices.indexOf(maxFps).takeIf { it >= 0 } ?: 2
             SettingSlider(
                 stringResource(Res.string.max_frame_rate),
