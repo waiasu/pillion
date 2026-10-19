@@ -207,7 +207,7 @@ object DiagnosticExporter {
     private class AdbSnapshot(private val context: Context) {
         private val adb by lazy { PillionAdb.getInstance(context) }
         private val startedMs = SystemClock.elapsedRealtime()
-        private val trace = StringBuilder("Pillion ADB export trace\\n")
+        private val trace = StringBuilder("Pillion ADB export trace\n")
         private var sequence = 0
         private var transportStalled = false
 
@@ -234,13 +234,13 @@ object DiagnosticExporter {
             val marker = "__PILLION_DIAG_DONE_${startedMs}_${sequence}__"
             if (transportStalled) {
                 trace.appendLine("command=$label status=skipped cause=earlier_unresponsive_ADB")
-                return "[SKIPPED $label: earlier ADB stream would not close]\\n"
+                return "[SKIPPED $label: earlier ADB stream would not close]\n"
             }
             val progress = Progress()
             val executor = Executors.newSingleThreadExecutor { task ->
                 Thread(task, "pillion-diag-${sequence}").apply { isDaemon = true }
             }
-            val wrapped = command + "; printf '\\n${marker}:%s\\n' \\"$?\\""
+            val wrapped = command + "; printf '\n${marker}:%s\n' \"$?\""
             val task = executor.submit<ReadResult> { readCommand(wrapped, marker, progress) }
             var result: ReadResult? = null
             var status = "unknown"
@@ -287,9 +287,9 @@ object DiagnosticExporter {
 
             val output = result?.output ?: progress.output.toString()
             return if (result?.complete == true && status.startsWith("complete")) {
-                output.ifBlank { "[command returned no output: $label]\\n" }
+                output.ifBlank { "[command returned no output: $label]\n" }
             } else {
-                output + "\\n[INCOMPLETE $label: $status; see adb-export-trace.txt]\\n"
+                output + "\n[INCOMPLETE $label: $status; see adb-export-trace.txt]\n"
             }
         }
 
@@ -331,9 +331,9 @@ object DiagnosticExporter {
                     progress.chars.addAndGet(read.toLong())
                     // Only scan the new chunk plus the possible marker split over its boundary.
                     val from = maxOf(0, oldLength - marker.length - 4)
-                    val found = progress.output.indexOf("\\n$marker:", from)
+                    val found = progress.output.indexOf("\n$marker:", from)
                     if (found >= 0) {
-                        val eol = progress.output.indexOf("\\n", found + 1)
+                        val eol = progress.output.indexOf("\n", found + 1)
                         if (eol >= 0) {
                             val exitCode = progress.output.substring(found + marker.length + 2, eol).trim()
                             progress.phase.set("marker-received")
