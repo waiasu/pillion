@@ -194,7 +194,7 @@ object DiagnosticExporter {
             if (abandoned) return "[SKIPPED $label: earlier ADB timeout]\n"
             fun run(): Result<String> = runCatching {
                 val remaining = deadlineMs - SystemClock.elapsedRealtime()
-                if (remaining <= 0L) return "[SKIPPED $label: ADB budget exhausted]\n"
+                if (remaining <= 0L) return@runCatching "[SKIPPED $label: ADB budget exhausted]\n"
                 val allowed = minOf(COMMAND_TIMEOUT_MS, remaining)
                 val runner = Executors.newSingleThreadExecutor { task ->
                     Thread(task, "pillion-diag-command").apply { isDaemon = true }
