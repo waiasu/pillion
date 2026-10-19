@@ -189,7 +189,6 @@ object DiagnosticExporter {
         private val deadlineMs = SystemClock.elapsedRealtime() + TOTAL_ADB_BUDGET_MS
         private var abandoned = false
         private val adb by lazy { PillionAdb.getInstance(context) }
-        @Volatile private var reconnectTried = false
 
         fun capture(label: String, command: String): String {
             if (abandoned) return "[SKIPPED $label: earlier ADB timeout]\n"
@@ -214,14 +213,7 @@ object DiagnosticExporter {
                 }
             }
 
-            var result = run()
-            if (result.isFailure && !reconnectTried && SystemClock.elapsedRealtime() < deadlineMs - 1_000L) {
-                reconnectTried = true
-                // Best-effort loopback reconnect only. Do not invoke helper setup, pairing, tcpip,
-                // privilege changes or any other recovery action during evidence collection.
-                runCatching { adb.connectDevice(PillionAdb.LOOPBACK_HOST, PillionAdb.TCPIP_PORT) }
-                result = run()
-            }
+            val result = run()
             return result.fold(
                 onSuccess = { output -> output.ifBlank { "[command returned no output]\n" } },
                 onFailure = { error ->
