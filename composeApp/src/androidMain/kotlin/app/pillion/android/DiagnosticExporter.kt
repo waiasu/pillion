@@ -15,7 +15,11 @@ import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.io.IOException
+import java.util.concurrent.ExecutionException
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.AtomicReference
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
@@ -31,7 +35,10 @@ import java.util.zip.ZipOutputStream
  */
 object DiagnosticExporter {
     private const val LOGCAT_LINES = 12_000
-    private const val TOTAL_ADB_BUDGET_MS = 180_000L
+    // Diagnostics favor readable evidence over speed; each command retains a hang safeguard.
+    private const val COMMAND_TIMEOUT_MS = 45_000L
+    private const val LOGCAT_TIMEOUT_MS = 60_000L
+    private const val MAX_CAPTURE_CHARS = 12_000_000
 
     fun export(context: Context): Result<String> {
         val app = context.applicationContext
@@ -52,6 +59,9 @@ object DiagnosticExporter {
                 writeText(File(workDir, "summary.txt"), instantSummary)
 
                 val adb = AdbSnapshot(app)
+                // Keep an independent record of ADB open/read/completion progress. Unlike logcat,
+                // this trace is written by Pillion itself even when ADB stalls or drops the stream.
+                try {
                 // Retrieve the test evidence first, before slow or truncated full logcat.
                 writeText(
                     File(workDir, "bitmap-stats.txt"),
@@ -75,12 +85,16 @@ object DiagnosticExporter {
                     adb.capture(
                         "logcat",
                         "logcat -d -v threadtime -b main -b system -b crash -b events -t $LOGCAT_LINES",
+                        LOGCAT_TIMEOUT_MS,
                     ),
                 )
                 writeText(
                     File(workDir, "system-state.txt"),
                     buildSystemState(adb),
                 )
+                } finally {
+                    writeText(File(workDir, "adb-export-trace.txt"), adb.report())
+                }
 
                 val zip = File(app.cacheDir, "Pillion-diagnostic-$stamp.zip")
                 zipDirectory(workDir, zip)
@@ -185,97 +199,164 @@ object DiagnosticExporter {
         if (!body.endsWith('\n')) builder.append('\n')
     }
 
+    /**
+     * Export-only ADB reader. The shell completion marker is checked DURING each read, because
+     * libadb may keep the stream open long after the last command output was delivered. Tracing is
+     * kept in app memory, not logcat/ADB, and is written into the same diagnostic ZIP.
+     */
     private class AdbSnapshot(private val context: Context) {
-        private val deadlineMs = SystemClock.elapsedRealtime() + TOTAL_ADB_BUDGET_MS
-        private var abandoned = false
         private val adb by lazy { PillionAdb.getInstance(context) }
+        private val startedMs = SystemClock.elapsedRealtime()
+        private val trace = StringBuilder("Pillion ADB export trace\\n")
+        private var sequence = 0
+        private var transportStalled = false
 
-        fun capture(label: String, command: String): String {
-            if (abandoned) return "[SKIPPED $label: earlier ADB timeout]\n"
-            fun run(): Result<String> = runCatching {
-                val remaining = deadlineMs - SystemClock.elapsedRealtime()
-                if (remaining <= 0L) return@runCatching "[SKIPPED $label: ADB budget exhausted]\n"
-                val allowed = minOf(COMMAND_TIMEOUT_MS, remaining)
-                val runner = Executors.newSingleThreadExecutor { task ->
-                    Thread(task, "pillion-diag-command").apply { isDaemon = true }
-                }
-                try {
-                    val future = runner.submit<String> { runBounded(command, allowed) }
-                    try {
-                        future.get(allowed + 500L, TimeUnit.MILLISECONDS)
-                    } catch (_: TimeoutException) {
-                        abandoned = true
-                        future.cancel(true)
-                        "[TIMEOUT $label (including ADB stream open); remaining ADB work skipped]\n"
-                    }
-                } finally {
-                    runner.shutdownNow()
-                }
-            }
-
-            val result = run()
-            return result.fold(
-                onSuccess = { output -> output.ifBlank { "[command returned no output]\n" } },
-                onFailure = { error ->
-                    "[FAILED $label: ${error.javaClass.simpleName}: ${error.message}]\n"
-                },
-            )
+        private class Progress {
+            val phase = AtomicReference("not-started")
+            val stream = AtomicReference<io.github.muntashirakon.adb.AdbStream?>(null)
+            val output = StringBuffer()
+            val chars = AtomicLong(0L)
+            val firstReadMs = AtomicLong(0L)
+            val lastReadMs = AtomicLong(0L)
         }
 
-        /** Close the ADB stream from a daemon timer if a diagnostic command stalls. */
-        private fun runBounded(command: String, timeoutMs: Long): String {
-            val stream = adb.openShellStream(command + "; echo __PILLION_DIAG_COMPLETE__")
-            val timedOut = AtomicBoolean(false)
-            val closer = Thread({
-                try {
-                    Thread.sleep(timeoutMs)
-                } catch (_: InterruptedException) {
-                    return@Thread
-                }
-                timedOut.set(true)
-                runCatching { stream.close() }
-            }, "pillion-diag-timeout").apply { isDaemon = true }
-            closer.start()
+        private data class ReadResult(val output: String, val status: String, val complete: Boolean)
 
-            val output = StringBuilder()
+        fun report(): String = trace.toString()
+
+        fun capture(
+            label: String,
+            command: String,
+            timeoutMs: Long = COMMAND_TIMEOUT_MS,
+        ): String {
+            sequence++
+            val start = SystemClock.elapsedRealtime()
+            val marker = "__PILLION_DIAG_DONE_${startedMs}_${sequence}__"
+            if (transportStalled) {
+                trace.appendLine("command=$label status=skipped cause=earlier_unresponsive_ADB")
+                return "[SKIPPED $label: earlier ADB stream would not close]\\n"
+            }
+            val progress = Progress()
+            val executor = Executors.newSingleThreadExecutor { task ->
+                Thread(task, "pillion-diag-${sequence}").apply { isDaemon = true }
+            }
+            val wrapped = command + "; printf '\\n${marker}:%s\\n' \\"$?\\""
+            val task = executor.submit<ReadResult> { readCommand(wrapped, marker, progress) }
+            var result: ReadResult? = null
+            var status = "unknown"
             try {
+                result = task.get(timeoutMs, TimeUnit.MILLISECONDS)
+                status = result.status
+            } catch (_: TimeoutException) {
+                status = "timeout"
+                // Close only the diagnostic stream; never reset the shared ADB manager/adbd/Helper.
+                progress.phase.set("timeout-close-requested")
+                Thread {
+                    runCatching { progress.stream.get()?.close() }
+                }.apply { name = "pillion-diag-close"; isDaemon = true; start() }
+                try {
+                    result = task.get(1_500L, TimeUnit.MILLISECONDS)
+                    status = "timeout-stream-unblocked(${result.status})"
+                } catch (_: TimeoutException) {
+                    transportStalled = true
+                    status = "timeout-worker-still-blocked"
+                } catch (e: Exception) {
+                    status = "timeout-worker-failed:${e.javaClass.simpleName}"
+                }
+                task.cancel(true)
+            } catch (e: ExecutionException) {
+                val cause = e.cause ?: e
+                status = "failed:${cause.javaClass.simpleName}:${cause.message}"
+            } catch (_: InterruptedException) {
+                Thread.currentThread().interrupt()
+                transportStalled = true
+                status = "interrupted"
+                task.cancel(true)
+            } finally {
+                executor.shutdownNow()
+                val end = SystemClock.elapsedRealtime()
+                val first = progress.firstReadMs.get()
+                val last = progress.lastReadMs.get()
+                trace.appendLine(
+                    "command=$label status=$status elapsedMs=${end - start} " +
+                        "phase=${progress.phase.get()} chars=${progress.chars.get()} " +
+                        "firstDataMs=${if (first > 0) first - start else -1} " +
+                        "lastDataMs=${if (last > 0) last - start else -1}"
+                )
+            }
+
+            val output = result?.output ?: progress.output.toString()
+            return if (result?.complete == true && status.startsWith("complete")) {
+                output.ifBlank { "[command returned no output: $label]\\n" }
+            } else {
+                output + "\\n[INCOMPLETE $label: $status; see adb-export-trace.txt]\\n"
+            }
+        }
+
+        private fun readCommand(
+            command: String,
+            marker: String,
+            progress: Progress,
+        ): ReadResult {
+            progress.phase.set("opening-adb-stream")
+            val stream = adb.openShellStream(command)
+            progress.stream.set(stream)
+            try {
+                progress.phase.set("opening-input-reader")
                 val reader = stream.openInputStream().bufferedReader()
+                progress.phase.set("reading")
                 val buffer = CharArray(DEFAULT_BUFFER_SIZE)
+                var ending = "unknown"
                 while (true) {
                     val read = try {
                         reader.read(buffer)
-                    } catch (t: Throwable) {
-                        if (timedOut.get()) break
-                        if (t is java.io.IOException &&
-                            t.message?.contains("Stream closed", ignoreCase = true) == true) {
-                            output.append("\n[ADB stream closed; output may be incomplete]\n")
-                            break
+                    } catch (e: IOException) {
+                        ending = if (e.message?.contains("Stream closed", ignoreCase = true) == true) {
+                            "stream-closed-before-marker"
+                        } else {
+                            "IOException:${e.message}"
                         }
-                        throw t
+                        break
                     }
-                    if (read < 0) break
-                    output.append(buffer, 0, read)
+                    if (read < 0) {
+                        ending = "EOF-before-marker"
+                        break
+                    }
+                    if (read == 0) continue
+                    val now = SystemClock.elapsedRealtime()
+                    progress.firstReadMs.compareAndSet(0L, now)
+                    progress.lastReadMs.set(now)
+                    val oldLength = progress.output.length
+                    progress.output.append(buffer, 0, read)
+                    progress.chars.addAndGet(read.toLong())
+                    // Only scan the new chunk plus the possible marker split over its boundary.
+                    val from = maxOf(0, oldLength - marker.length - 4)
+                    val found = progress.output.indexOf("\\n$marker:", from)
+                    if (found >= 0) {
+                        val eol = progress.output.indexOf("\\n", found + 1)
+                        if (eol >= 0) {
+                            val exitCode = progress.output.substring(found + marker.length + 2, eol).trim()
+                            progress.phase.set("marker-received")
+                            return ReadResult(
+                                progress.output.substring(0, found),
+                                "complete(exit=$exitCode)",
+                                exitCode == "0",
+                            )
+                        }
+                    }
+                    if (progress.output.length >= MAX_CAPTURE_CHARS) {
+                        ending = "size-limit-${MAX_CAPTURE_CHARS}"
+                        break
+                    }
                 }
+                progress.phase.set(ending)
+                return ReadResult(progress.output.toString(), ending, false)
             } finally {
-                closer.interrupt()
+                progress.stream.compareAndSet(stream, null)
                 runCatching { stream.close() }
-            }
-            if (timedOut.get()) {
-                output.append("\n[TIMEOUT after ").append(timeoutMs).append(" ms]\n")
-            }
-            val text = output.toString()
-            val marker = "__PILLION_DIAG_COMPLETE__"
-            return if (text.contains(marker)) {
-                text.replace(marker, "").replace(
-                    "[ADB stream closed; output may be incomplete]", ""
-                )
-            } else {
-                text + "\n[INCOMPLETE: shell completion marker not received]\n"
             }
         }
     }
-
-    private const val COMMAND_TIMEOUT_MS = 30_000L
 
     private fun writeText(file: File, text: String) {
         runCatching { file.writeText(text, Charsets.UTF_8) }
