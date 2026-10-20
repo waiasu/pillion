@@ -27,7 +27,6 @@ import java.io.DataOutputStream
 import java.net.InetAddress
 import java.net.ServerSocket
 import java.net.Socket
-import java.util.concurrent.atomic.AtomicLong
 
 /**
  * Privileged helper for the dedicated-dash feature, run as the **shell uid** via `app_process`
@@ -84,7 +83,6 @@ object DashServer {
         FLAG_OWN_FOCUS or FLAG_DEVICE_DISPLAY_GROUP
 
     private const val MIN_INTERVAL_MS = 100L // cap capture/encode to ~10fps; the app paces sends
-    private const val BITMAP_STATS_INTERVAL_MS = 10_000L // test-only diagnostics, no capture control
     private const val OCR_AREA1_INTERVAL_MS = 10_000L
     private const val OCR_AREA2_INTERVAL_MS = 1_000L
     private const val OCR2_PAYLOAD_MAGIC = 0x4F435232 // "OCR2"
@@ -120,18 +118,6 @@ object DashServer {
         style = Paint.Style.STROKE
         strokeWidth = 2f
     }
-    // Test-only counters. These do not change the ImageReader, VD, or transport lifecycle.
-    private val bitmapAcquired = AtomicLong()
-    private val bitmapProcessed = AtomicLong()
-    private val bitmapSkippedIdle = AtomicLong()
-    private val bitmapSkippedRestart = AtomicLong()
-    private val bitmapSkippedThrottle = AtomicLong()
-    private val bitmapFailed = AtomicLong()
-    private val bitmapCopyMs = AtomicLong()
-    private val bitmapScaleMs = AtomicLong()
-    private val bitmapJpegMs = AtomicLong()
-    private val bitmapTotalMs = AtomicLong()
-
     private var lastEncodeMs = 0L
     private var lastOcrArea1CropMs = 0L
     private var lastOcrArea2CropMs = 0L
@@ -232,7 +218,6 @@ object DashServer {
             dashDisplay = display
             displayId = display.display.displayId
             startSecureCameraWatcher()
-            startBitmapStatsLogger()
             Log.i(
                 TAG,
                 "trusted display created id=$displayId virtual=${virtualWidth}x$virtualHeight " +
@@ -260,29 +245,12 @@ object DashServer {
      */
     private fun onImage(reader: ImageReader) {
         val image = reader.acquireLatestImage() ?: return
-        bitmapAcquired.incrementAndGet()
         try {
-            if (!capturing || encodePausedForTransport) {
-                bitmapSkippedIdle.incrementAndGet()
-                return
-            }
-            if (restartFrameGate) {
-                bitmapSkippedRestart.incrementAndGet()
-                return
-            }
+            if (!capturing || encodePausedForTransport || restartFrameGate) return
             val now = System.currentTimeMillis()
-            if (now - lastEncodeMs < MIN_INTERVAL_MS) {
-                bitmapSkippedThrottle.incrementAndGet()
-                return
-            }
+            if (now - lastEncodeMs < MIN_INTERVAL_MS) return
             lastEncodeMs = now
-            val startedMs = System.currentTimeMillis()
             val result = toJpegTimed(image, now)
-            bitmapProcessed.incrementAndGet()
-            bitmapCopyMs.addAndGet(result.copyMs)
-            bitmapScaleMs.addAndGet(result.scaleMs)
-            bitmapJpegMs.addAndGet(result.jpegMs)
-            bitmapTotalMs.addAndGet(System.currentTimeMillis() - startedMs)
             latestJpeg = result.bytes
             latestSeq++
             result.ocrBytes?.let { crop ->
@@ -290,51 +258,10 @@ object DashServer {
                 latestOcrSeq++
             }
         } catch (t: Throwable) {
-            bitmapFailed.incrementAndGet()
             Log.w(TAG, "encode drop: ${t.javaClass.simpleName}: ${t.message}")
         } finally {
             image.close()
         }
-    }
-
-    /**
-     * Test-only measurement: always report once per ten seconds, including intervals with no
-     * frames. The helper is an independent shell process; look for PillionDash BITMAP_STATS in
-     * the exported android-logcat.txt. Wall-time measurements are not CPU time or battery power.
-     */
-    private fun startBitmapStatsLogger() {
-        Thread {
-            while (true) {
-                try {
-                    Thread.sleep(BITMAP_STATS_INTERVAL_MS)
-                } catch (_: InterruptedException) {
-                    return@Thread
-                }
-                val acquired = bitmapAcquired.getAndSet(0L)
-                val processed = bitmapProcessed.getAndSet(0L)
-                val idle = bitmapSkippedIdle.getAndSet(0L)
-                val restarting = bitmapSkippedRestart.getAndSet(0L)
-                val throttled = bitmapSkippedThrottle.getAndSet(0L)
-                val failed = bitmapFailed.getAndSet(0L)
-                val copyMs = bitmapCopyMs.getAndSet(0L)
-                val scaleMs = bitmapScaleMs.getAndSet(0L)
-                val jpegMs = bitmapJpegMs.getAndSet(0L)
-                val totalMs = bitmapTotalMs.getAndSet(0L)
-                val divisor = processed.coerceAtLeast(1L)
-                Log.i(
-                    TAG,
-                    "BITMAP_STATS intervalMs=$BITMAP_STATS_INTERVAL_MS " +
-                        "promoted=$capturing encodePaused=$encodePausedForTransport acquired=$acquired processed=$processed " +
-                        "skipIdle=$idle skipRestart=$restarting skipThrottle=$throttled " +
-                        "failed=$failed " +
-                        "copyAvg10thMs=${copyMs * 10L / divisor} " +
-                        "scaleAvg10thMs=${scaleMs * 10L / divisor} " +
-                        "jpegAvg10thMs=${jpegMs * 10L / divisor} " +
-                        "stagesTotalMs=${copyMs + scaleMs + jpegMs} " +
-                        "totalWorkMs=$totalMs",
-                )
-            }
-        }.apply { name = "pillion-bitmap-stats"; isDaemon = true; start() }
     }
 
     private fun startTcpServer() {
@@ -1238,9 +1165,6 @@ object DashServer {
     private data class JpegResult(
         val bytes: ByteArray,
         val ocrBytes: ByteArray?,
-        val copyMs: Long,
-        val scaleMs: Long,
-        val jpegMs: Long,
     )
 
     /**
@@ -1249,7 +1173,6 @@ object DashServer {
      * before scaling/margins.
      */
     private fun toJpegTimed(image: Image, nowMs: Long): JpegResult {
-        val copyStart = System.currentTimeMillis()
         val plane = image.planes[0]
         val pixelStride = plane.pixelStride
         val rowPadding = plane.rowStride - pixelStride * virtualWidth
@@ -1264,7 +1187,6 @@ object DashServer {
         } else {
             Bitmap.createBitmap(padded, 0, 0, virtualWidth, virtualHeight)
         }
-        val copyMs = System.currentTimeMillis() - copyStart
 
         // OCR source is the unscaled VD. Do not draw the diagnostic rectangle into this crop.
         // Area 1 stays on its proven ten-second cadence. Area 2 is independently refreshed every
@@ -1277,7 +1199,6 @@ object DashServer {
             null
         }
 
-        val scaleStart = System.currentTimeMillis()
         val usableWidth = (outputWidth - leftMargin).coerceAtLeast(1)
         val usableHeight = (outputHeight - bottomMargin).coerceAtLeast(1)
         val shiftPx = driveImageShiftPx.coerceIn(0, bottomMargin)
@@ -1307,17 +1228,14 @@ object DashServer {
                 }
             }
         }
-        val scaleMs = System.currentTimeMillis() - scaleStart
 
-        val jpegStart = System.currentTimeMillis()
         val out = ByteArrayOutputStream()
         output.compress(Bitmap.CompressFormat.JPEG, quality, out)
         val bytes = out.toByteArray()
-        val jpegMs = System.currentTimeMillis() - jpegStart
         if (output !== bitmap) output.recycle()
         if (bitmap !== padded) bitmap.recycle()
         padded.recycle()
-        return JpegResult(bytes, ocrBytes, copyMs, scaleMs, jpegMs)
+        return JpegResult(bytes, ocrBytes)
     }
 
     private fun encodeScheduledOcrCrops(bitmap: Bitmap, nowMs: Long): ByteArray? {
