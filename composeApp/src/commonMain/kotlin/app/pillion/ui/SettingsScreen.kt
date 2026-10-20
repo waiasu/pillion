@@ -327,7 +327,7 @@ internal fun SettingsScreen(
             // Both phone mirroring and dedicated VD send JPEG frames at the chosen cap.
             SettingSlider(stringResource(Res.string.image_quality), "$quality", quality.toFloat(), 10f, 80f) { onQuality(it.roundToInt()) }
             GroupDivider()
-            val fpsChoices = (1..15).map { it.toDouble() }
+            val fpsChoices = (1..10).map { it.toDouble() }
             val fpsIndex = fpsChoices.indexOf(maxFps).takeIf { it >= 0 } ?: 2
             SettingSlider(
                 stringResource(Res.string.max_frame_rate),
@@ -770,7 +770,7 @@ internal fun SettingsScreen(
             GroupDivider()
             LinkRow(stringResource(Res.string.changelog)) { uriHandler.openUri("$REPO_URL/blob/main/CHANGELOG.md") }
             GroupDivider()
-            LinkRow("XMAX Custom Fork v38") { uriHandler.openUri("https://github.com/waiasu/pillion") }
+            LinkRow("XMAX Custom Fork v39") { uriHandler.openUri("https://github.com/waiasu/pillion") }
         }
         Text(
             stringResource(Res.string.trademark_notice),

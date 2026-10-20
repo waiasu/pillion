@@ -8,6 +8,17 @@ The upstream Pillion changelog remains in `CHANGELOG.md` unchanged. Historical e
 
 ## [Unreleased]
 
+## [v39] - 2026-10-20
+
+- RFCOMM connect timeout 10 seconds, including aborting an in-progress socket on Stop and returning to the existing reconnect loop.
+- NaviLite JPEG IMAGE_ACK timeout 2 seconds with 16-bit sequence matching: ignore old ACKs and move to the next JPEG without forced reconnect; log each timeout.
+- Pause costly Helper JPEG encoding when transport is disconnected, while continuing to drain ImageReader. Cap encoding at approximately 10 fps and UI selectable FPS at 1–10.
+- Improve diagnostic export through loopback ADB reconnection and per-command completion traces after process restart.
+- Remove temporary 10-second Bitmap statistics logs, timing counters, and dedicated export entry.
+- 2026-10-20 XMAX stress test confirmed repeated reconnect and prompt Stop cancellation while connecting. Neither timeout threshold occurred; recovery on timeout remains to be verified in the field.
+
+
+
 - v38 maintenance (2026-10-18): one-shot post-PROMOTE sleep recovery for rapid POWER presses during the existing 3-second screen-event guard. At 3.15 s, only the still-current dedicated-VD PROMOTE is checked via `PowerManager.isInteractive`; if Android is truly asleep, existing DEMOTE/Helper wake restores phone state and the meter waiting frame. Healthy interactive sessions remain untouched. Diagnostic record `POST_PROMOTE_SLEEP_CHECK` added. XMAX field stress test: 22 PROMOTEs, 8 sleep recoveries, 14 no-op checks; rapid button testing showed correct meter/phone return. Version stays **v38**.
 - v38 maintenance (2026-10-18): on phone unlock during an active dedicated VD session, send `HOME` to the authenticated Helper, which injects `input keyevent 3` to return the VD to Launcher. The existing 1.5-second duplicate-event guard applies; this is independent of Restart-on-VD. The `am start` HOME experiment was rejected and fully reverted because it offered no animation improvement.
 - DEMOTE now relocates the remembered navigation component to display 0 **only if its task still exists**. If the task is absent, skip relocation rather than letting `relocateApp()` launch the navigation app afresh. PROMOTE, Restart-on-VD, and normal relocation remain unchanged. XMAX fork version remains v38.

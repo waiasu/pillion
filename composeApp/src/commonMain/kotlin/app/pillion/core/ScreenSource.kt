@@ -21,6 +21,12 @@ interface ScreenSource {
     /** Called before each Bluetooth/NaviLite transport attempt, including reconnect attempts. */
     fun onTransportConnecting() {}
 
+    /** RFCOMM socket connected: prepare frames while NaviLite handshake is still running. */
+    fun onTransportConnected() {}
+
+    /** RFCOMM attempt finished or failed: pause unnecessary output work while waiting. */
+    fun onTransportDisconnected() {}
+
     /** Called only after a normal IMAGE_ACK has been received for a sent image. */
     fun onImageAck() {}
 

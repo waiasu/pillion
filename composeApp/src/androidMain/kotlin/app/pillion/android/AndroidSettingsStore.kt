@@ -214,7 +214,7 @@ class AndroidSettingsStore(context: Context) : SettingsStore {
 
 
     private fun normalizeMaxFps(value: Double): Double =
-        value.toInt().coerceIn(1, 15).toDouble()
+        value.toInt().coerceIn(1, 10).toDouble()
 
     private companion object {
         const val KEY_LANGUAGE = "language_tag"

@@ -1,8 +1,17 @@
 # XMAX Pillion 開発経緯・失敗例・設計意図 引き継ぎ資料
 
 作成日：2026-10-19  
-対象：waiasu/pillion の安定ブランチ xmax-pillion、XMAX Custom Fork v38（確認基準コミット 057d74c）  
+対象：waiasu/pillion の安定ブランチ xmax-pillion、XMAX Custom Fork v39（v38時点の確認基準コミット 057d74c、v39更新はCHANGELOG参照）  
 目的：新しいチャットのAIや、開発を忘れた将来の自分が、**安定化までに実際に何を試し、何が駄目で、なぜ今の形に落ち着いたか**を理解できるようにする。
+
+## v39 追記：通信待ちの異常を閉じ込める（2026-10-20）
+
+- **実機確認**：キーOFF/ON後、Android側ACL接続が戻ってもRFCOMMが約49秒間CONNECTINGのままになった例がある。CCU/Android内部のどちらが応答しなかったかは未確定。
+- **コード対策**：RFCOMM connect()を別作業スレッドで実行し10秒で待機を終了。接続中ソケットをStopでも閉じられるようにした。失敗後の再試行は既存1.5秒周期。PROMOTE/DEMOTE/VD/Helperは触らない。
+- **コード対策**：NaviLite IMAGE_ACKを待つループは2秒上限、画像連番一致のみを採用。遅延ACKは無視し、無応答なら1件ログを残して次のJPEGへ進む（本家StreetCrossの方針を参考）。ただし発端となったメーター読み込み中現象の原因がACK未達だったかは未確定。
+- **負荷対策**：BT切断中はImageReaderを閉じながらBitmapコピー・縮小・JPEGを省略し、接続時に再開。JPEG処理は最大約10fpsへ抑制。実用3fpsの送信設定はそのまま。
+- **ログ運用**：Bitmap処理時間を10秒おきに記録した実験用BITMAP_STATSと専用カウンタを安定版から撤去。異常時のACK_TIMEOUT/CONNECT_TIMEOUTとADB診断Exportの進捗記録は残す。
+- **検証境界**：短時間のBT連打で14回の接続・ACK成功と接続中Stopの即時中断を確認。10秒/2秒のタイムアウト発動ケース自体は実機未確認。正常試験成功を異常経路の実証と混同しないこと。
 
 ## 0. この資料の扱い方（最重要）
 

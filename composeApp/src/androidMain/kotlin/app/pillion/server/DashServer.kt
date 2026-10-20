@@ -82,7 +82,7 @@ object DashServer {
         FLAG_ALWAYS_UNLOCKED or FLAG_TOUCH_FEEDBACK_DISABLED or
         FLAG_OWN_FOCUS or FLAG_DEVICE_DISPLAY_GROUP
 
-    private const val MIN_INTERVAL_MS = 50L // cap capture/encode to ~20fps; the app paces sends
+    private const val MIN_INTERVAL_MS = 100L // cap capture/encode to ~10fps; the app paces sends
     private const val OCR_AREA1_INTERVAL_MS = 10_000L
     private const val OCR_AREA2_INTERVAL_MS = 1_000L
     private const val OCR2_PAYLOAD_MAGIC = 0x4F435232 // "OCR2"
@@ -131,6 +131,7 @@ object DashServer {
     @Volatile private var ocrServerStarted = false
 
     // Battery: encode only while a foreground app is promoted (phone locked). Idle otherwise.
+    @Volatile private var encodePausedForTransport = false
     @Volatile private var capturing = false
     @Volatile private var restartPerformedForCurrentPromotion = false
     @Volatile private var restartFrameGate = false
@@ -245,7 +246,7 @@ object DashServer {
     private fun onImage(reader: ImageReader) {
         val image = reader.acquireLatestImage() ?: return
         try {
-            if (!capturing || restartFrameGate) return
+            if (!capturing || encodePausedForTransport || restartFrameGate) return
             val now = System.currentTimeMillis()
             if (now - lastEncodeMs < MIN_INTERVAL_MS) return
             lastEncodeMs = now
@@ -408,6 +409,14 @@ object DashServer {
                     }
                     line == "OCR_START" -> setOcrActive(true)
                     line == "OCR_STOP" -> setOcrActive(false)
+                    line == "ENCODE_PAUSE" -> {
+                        encodePausedForTransport = true
+                        Log.i(TAG, "transport JPEG encoding paused")
+                    }
+                    line == "ENCODE_RESUME" -> {
+                        encodePausedForTransport = false
+                        Log.i(TAG, "transport JPEG encoding resumed")
+                    }
                     line.startsWith("TAP_PERCENT ") -> {
                         val parts = line.split(' ')
                         val xPercent = parts.getOrNull(1)?.toIntOrNull()
@@ -1156,9 +1165,6 @@ object DashServer {
     private data class JpegResult(
         val bytes: ByteArray,
         val ocrBytes: ByteArray?,
-        val copyMs: Long,
-        val scaleMs: Long,
-        val jpegMs: Long,
     )
 
     /**
@@ -1167,7 +1173,6 @@ object DashServer {
      * before scaling/margins.
      */
     private fun toJpegTimed(image: Image, nowMs: Long): JpegResult {
-        val copyStart = System.currentTimeMillis()
         val plane = image.planes[0]
         val pixelStride = plane.pixelStride
         val rowPadding = plane.rowStride - pixelStride * virtualWidth
@@ -1182,7 +1187,6 @@ object DashServer {
         } else {
             Bitmap.createBitmap(padded, 0, 0, virtualWidth, virtualHeight)
         }
-        val copyMs = System.currentTimeMillis() - copyStart
 
         // OCR source is the unscaled VD. Do not draw the diagnostic rectangle into this crop.
         // Area 1 stays on its proven ten-second cadence. Area 2 is independently refreshed every
@@ -1195,7 +1199,6 @@ object DashServer {
             null
         }
 
-        val scaleStart = System.currentTimeMillis()
         val usableWidth = (outputWidth - leftMargin).coerceAtLeast(1)
         val usableHeight = (outputHeight - bottomMargin).coerceAtLeast(1)
         val shiftPx = driveImageShiftPx.coerceIn(0, bottomMargin)
@@ -1225,17 +1228,14 @@ object DashServer {
                 }
             }
         }
-        val scaleMs = System.currentTimeMillis() - scaleStart
 
-        val jpegStart = System.currentTimeMillis()
         val out = ByteArrayOutputStream()
         output.compress(Bitmap.CompressFormat.JPEG, quality, out)
         val bytes = out.toByteArray()
-        val jpegMs = System.currentTimeMillis() - jpegStart
         if (output !== bitmap) output.recycle()
         if (bitmap !== padded) bitmap.recycle()
         padded.recycle()
-        return JpegResult(bytes, ocrBytes, copyMs, scaleMs, jpegMs)
+        return JpegResult(bytes, ocrBytes)
     }
 
     private fun encodeScheduledOcrCrops(bitmap: Bitmap, nowMs: Long): ByteArray? {
