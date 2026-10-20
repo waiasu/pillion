@@ -8,6 +8,11 @@ import kotlin.concurrent.Volatile
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -88,11 +93,24 @@ class MirrorEngine(
         _state.value = MirrorState.Idle
     }
 
-    private suspend fun streamLoop(reader: FrameReader) {
-        // Stop-and-wait: send the freshest frame, then block on its IMAGE_ACK before sending the
-        // next, so exactly one frame is ever on the link. A sliding window (sending N+1 before N's
-        // ACK returns) buffered a frame ahead and added a whole round-trip of latency on slower
-        // dashes — visible as constant lag regardless of fps — which isn't worth the peak throughput.
+    private suspend fun streamLoop(reader: FrameReader) = coroutineScope {
+        // Keep the blocking transport reader on a dedicated coroutine. The sender can abandon an
+        // ACK wait after 2 seconds without closing/reconnecting RFCOMM, while late ACKs and
+        // stick input continue to be received by the same FrameReader.
+        val incomingFrames = Channel<NaviFrameView>(Channel.BUFFERED)
+        val receiver = launch(Dispatchers.IO) {
+            try {
+                while (running && isActive) incomingFrames.send(reader.next())
+            } catch (t: Throwable) {
+                if (running) incomingFrames.close(t)
+            } finally {
+                incomingFrames.close()
+            }
+        }
+        try {
+        // Stop-and-wait during healthy operation: exactly one JPEG awaits an ACK. On a 2-second
+        // timeout, skip that ACK and send the freshest next frame, just as StreetCross does.
+        // Sequence matching prevents a late ACK from acknowledging the wrong image.
         var lastSend = 0L
         var waitedForFrame = false
         var acks = 0
@@ -116,20 +134,38 @@ class MirrorEngine(
             }
             val sentAt = nowMs()
             lastSend = sentAt
+            val sentSeq = seq and 0xffff
             sendImage(jpeg)
             lastFrameKb = jpeg.size / 1024
             if (seq == 2) {
                 Logger.d("session: first image sent (${jpeg.size} bytes)")
                 Logger.trail("IMAGE FIRST_SENT bytes=${jpeg.size}")
             }
-            // Wait for this frame's ACK before capturing/sending the next one. channel.close() on
-            // stop() unblocks the reader, so this can't hang a teardown.
-            while (running) {
-                val incoming = reader.next()
-                if (incoming.serviceType == ServiceType.IMAGE_ACK) break
-                handleStickInput(incoming)
-            }
+            // Deadline is relative to the completed write. Unrelated messages and late ACKs
+            // must not reset the timer; a missing ACK must not freeze the image stream forever.
+            val acknowledged = withTimeoutOrNull(2_000L) {
+                var matched = false
+                while (running && !matched) {
+                    val incoming = incomingFrames.receiveCatching().getOrThrow()
+                    if (incoming.serviceType == ServiceType.IMAGE_ACK) {
+                        val ackSeq = imageAckSequence(incoming.payload)
+                        if (ackSeq == sentSeq) {
+                            matched = true
+                        } else {
+                            Logger.d("session: ignoring IMAGE_ACK seq=${ackSeq ?: "invalid"} expected=$sentSeq")
+                        }
+                    } else {
+                        handleStickInput(incoming)
+                    }
+                }
+                matched
+            } == true
             if (!running) break
+            if (!acknowledged) {
+                Logger.e("session: IMAGE_ACK_TIMEOUT seq=$sentSeq after 2000ms")
+                Logger.trail("IMAGE ACK_TIMEOUT seq=$sentSeq timeoutMs=2000")
+                continue
+            }
             // This is the only signal OCR uses to start its post-connect grace period. Until this
             // point the connect/handshake/image path is identical to the v17 path.
             if (!firstAckRecorded) {
@@ -163,6 +199,13 @@ class MirrorEngine(
                 ackMsMax = 0L
                 windowStart = nowMs()
             }
+        }
+        } finally {
+            // A coroutine cancel alone cannot interrupt InputStream.read(). Closing the transport
+            // also unblocks the reader if Stop or another failure ends this streaming session.
+            runCatching { channel.close() }
+            receiver.cancel()
+            incomingFrames.cancel()
         }
     }
 
@@ -204,3 +247,8 @@ class MirrorEngine(
         channel.write(NaviLiteCodec.build(FRAME_TYPE_PHONE, ServiceType.IMAGE, PDT_POINTER, payload))
     }
 }
+
+/** IMAGE_ACK carries the 16-bit little-endian sequence number of the acknowledged JPEG. */
+internal fun imageAckSequence(payload: ByteArray): Int? =
+    if (payload.size >= 2) (payload[0].toInt() and 0xff) or ((payload[1].toInt() and 0xff) shl 8)
+    else null
