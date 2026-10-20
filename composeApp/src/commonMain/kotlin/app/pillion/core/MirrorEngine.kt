@@ -152,7 +152,7 @@ class MirrorEngine(
                         if (ackSeq == sentSeq) {
                             matched = true
                         } else {
-                            Logger.d("session: ignoring IMAGE_ACK seq=${ackSeq ?: "invalid"} expected=$sentSeq")
+                            // Ignore delayed or malformed ACK without extending the deadline.
                         }
                     } else {
                         handleStickInput(incoming)
