@@ -4,11 +4,19 @@ This file is the current-state reference for the XMAX / Pixel fork.
 
 このファイルは XMAX / Pixel fork の「現在どうなっているか」を確認するための基準メモです。
 
-The implementation described here covers **stable v38 (2026-10-17)**, including v35 NAV/DRIVE behavior and v36 helper security/bootstrapping/Stop/stick-guard updates. The v35 release commit was `ea564aa`; the `xmax-v34` tag points to commit `4d994e3`. As always, source code takes precedence over these notes.
+The implementation described here covers **stable v39 (2026-10-20)**, including v35 NAV/DRIVE behavior and v36 helper security/bootstrapping/Stop/stick-guard updates. The v35 release commit was `ea564aa`; the `xmax-v34` tag points to commit `4d994e3`. As always, source code takes precedence over these notes.
 
 If this file and the source ever disagree, **the source code wins**.
 
 ---
+
+## v39 — transport and diagnostics (2026-10-20)
+
+- 10-second RFCOMM connect timeout with pending-socket close on timeout and Stop. The 1.5-second retry loop and surviving Helper/VD remain unchanged.
+- IMAGE_ACK wait has 2-second bound and JPEG sequence matching, ignoring late ACKs and moving to the next JPEG after timeout without reconnect. Bluetooth write itself is not covered by this timeout.
+- Helper drains ImageReader frames but skips Bitmap/JPEG work while transport disconnected. Minimum encoding interval is 100 ms; Android FPS control range is 1–10 fps.
+- Diagnostic exporter attempts local ADB reconnection on demand and records command progress. Temporary BITMAP_STATS monitoring is removed.
+- Field tests showed multiple reconnects and immediate Stop cancellation during connection. Neither deadline was triggered in these tests.
 
 ## v38 maintenance — recovery from real sleep during PROMOTE settle (2026-10-18)
 
@@ -67,7 +75,7 @@ The authoritative Android defaults are in `AndroidSettingsStore.kt`.
 | Restart app on VD | Off |
 | Fixed dash app | Off |
 
-Max FPS is normalized to **whole values from 1 through 15 fps**.
+Max FPS is normalized to **whole values from 1 through 10 fps**.
 
 VD scale choices are **1.0x through 3.0x in 0.2x steps**.
 
