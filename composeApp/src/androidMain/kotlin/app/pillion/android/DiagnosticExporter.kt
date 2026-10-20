@@ -62,14 +62,6 @@ object DiagnosticExporter {
                 // Keep an independent record of ADB open/read/completion progress. Unlike logcat,
                 // this trace is written by Pillion itself even when ADB stalls or drops the stream.
                 try {
-                // Retrieve the test evidence first, before slow or truncated full logcat.
-                writeText(
-                    File(workDir, "bitmap-stats.txt"),
-                    adb.capture(
-                        "bitmap stats",
-                        "logcat -d -v threadtime -b main -s PillionDash:I | grep BITMAP_STATS | tail -n 500",
-                    ),
-                )
                 // Bluetooth is the primary target of this field recorder. Take its live dumpsys
                 // before logcat/display queries so the state is as close to button-press time as possible.
                 writeText(
