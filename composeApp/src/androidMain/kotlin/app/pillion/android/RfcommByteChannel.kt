@@ -174,7 +174,7 @@ class RfcommByteChannel : ByteChannel {
     }
 
     private companion object {
-        private const val CONNECT_TIMEOUT_MS = 15_000L
+        private const val CONNECT_TIMEOUT_MS = 10_000L
         private val CONNECT_WORKERS = ThreadPoolExecutor(
             0, 2, 30L, TimeUnit.SECONDS, SynchronousQueue<Runnable>(),
         ) { runnable ->
