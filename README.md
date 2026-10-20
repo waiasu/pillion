@@ -44,7 +44,7 @@ Compatibility with other Android devices, Yamaha models, or navigation apps is n
 - Normal screen mirroring stops on screen-off or MediaProjection revocation
 - 480 × 234 XMAX dashboard layout with configurable crop and margins
 - Right-top clamped rendering for the usable dashboard area
-- Automatic Bluetooth reconnect and recovery after ignition OFF / ON
+- Automatic Bluetooth reconnect and recovery after ignition OFF / ON, with 10-second connection deadline and 2-second matched IMAGE_ACK wait
 - Dedicated VD unlock handling returns the VD to HOME via authenticated Helper HOME key event
 - DEMOTE does not relaunch a remembered navigation app when its task is already absent
 - One-shot recovery after a real phone sleep during the 3-second PROMOTE settle window (rapid POWER presses)
@@ -54,7 +54,7 @@ Compatibility with other Android devices, Yamaha models, or navigation apps is n
 - Optional Yahoo! Car Navigation Auto DRIVE mode based on OCR Area 1 after PROMOTE
 - DRIVE-only upward image shift, mode-specific stick coordinates and input suppression while the initial mode is undecided
 - First-run Yahoo! Car Navigation preset on clean installations (existing settings preserved)
-- Compact, collapsible NAV / DRIVE / OCR settings and XMAX Custom Fork v38 link in About
+- Compact, collapsible NAV / DRIVE / OCR settings and XMAX Custom Fork v39 link in About
 - Pixel SecureCamera detection and physical display wake handling
 - Start mirroring race / duplicate-start prevention
 - Reset Pillion and Save & Restart workflows
@@ -68,7 +68,7 @@ Compatibility with other Android devices, Yamaha models, or navigation apps is n
 - 通常ミラーは画面ロック・共有終了時に自動停止
 - XMAXメーター 480 × 234 に合わせたクロップ・余白調整
 - 使用可能領域への右上クランプ描画
-- Bluetooth再接続、およびキーOFF / ON後の自動復帰
+- Bluetooth再接続、およびキーOFF / ON後の自動復帰（接続待ち10秒、画像ACK待ち2秒の上限）
 - VD中のスマホロック解除でHelper経由のHOMEキー入力によりVDをホームへ復帰
 - DEMOTE時にナビの既存タスクが無ければ、意図しない再起動を抑止
 - PROMOTE直後3秒以内の電源ボタン連打でAndroidがスリープした場合に、単発確認でDEMOTE・復帰
@@ -78,7 +78,7 @@ Compatibility with other Android devices, Yamaha models, or navigation apps is n
 - OCRエリア1の判定によるYahoo!カーナビのAuto DRIVEモード
 - DRIVE時限定の映像上方向シフト、モード別スティック座標、モード判定中の誤タップ防止
 - 初回クリーンインストール時のYahoo!カーナビ向け設定プリセット（既存設定は維持）
-- NAV/DRIVE/OCR設定の折りたたみ表示、About内のXMAX Custom Fork v38リンク
+- NAV/DRIVE/OCR設定の折りたたみ表示、About内のXMAX Custom Fork v39リンク
 - Pixel SecureCamera検出と物理ディスプレイ復帰処理
 - Start mirroring の二重発火・レース対策
 - Reset Pillion / Save & Restart
