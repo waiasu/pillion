@@ -10,6 +10,8 @@ The upstream Pillion changelog remains in `CHANGELOG.md` unchanged. Historical e
 
 ## [v39] - 2026-10-20
 
+- v39 maintenance (2026-10-22): Reset only unfinished Auto DRIVE CHECKING samples and timers when RFCOMM drops, and disregard in-flight OCR from the disconnected session. Confirmed NAV/DRIVE and the 1-second stick guard are preserved. Existing OCR reconnect grace, VD/Helper and PROMOTE/DEMOTE stay unchanged. No version bump.
+
 - RFCOMM connect timeout 10 seconds, including aborting an in-progress socket on Stop and returning to the existing reconnect loop.
 - NaviLite JPEG IMAGE_ACK timeout 2 seconds with 16-bit sequence matching: ignore old ACKs and move to the next JPEG without forced reconnect; log each timeout.
 - Pause costly Helper JPEG encoding when transport is disconnected, while continuing to drain ImageReader. Cap encoding at approximately 10 fps and UI selectable FPS at 1–10.

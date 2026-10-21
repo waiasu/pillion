@@ -263,6 +263,12 @@ class DashStreamScreenSource(
 
     override fun onTransportDisconnected() {
         setEncodePausedForTransport(true, "RFCOMM disconnected")
+        if (driveState == DriveState.CHECKING) {
+            driveGeneration++ // Invalidate OCR that began before transport was lost.
+            driveSampleAtMs = 0L
+            driveEmptyCount = 0
+            DiagnosticFlightRecorder.record("DRIVE", "CHECKING reset on BT disconnect")
+        }
     }
 
     private fun setEncodePausedForTransport(paused: Boolean, reason: String) {
@@ -390,7 +396,7 @@ class DashStreamScreenSource(
         // Area 1 when that ten-second sample actually changed.
         val area1Changed = cachedOcrArea1Jpeg?.contentEquals(areas.first) != true
         // Two independent checks must occur ~10 s apart even when Yahoo's crop is identical.
-        val driveSampleDue = driveState == DriveState.CHECKING &&
+        val driveSampleDue = driveState == DriveState.CHECKING && !encodePausedForTransport &&
             (driveSampleAtMs == 0L ||
                 SystemClock.elapsedRealtime() - driveSampleAtMs >= DRIVE_CHECK_INTERVAL_MS)
         val driveSession = driveGeneration
@@ -438,7 +444,7 @@ class DashStreamScreenSource(
                         area1Cached = false
 
                         if (driveSampleDue && driveSession == driveGeneration &&
-                            driveState == DriveState.CHECKING) {
+                            driveState == DriveState.CHECKING && !encodePausedForTransport) {
                             driveSampleAtMs = SystemClock.elapsedRealtime()
                             if (area1.isNotEmpty()) {
                                 driveEmptyCount = 0

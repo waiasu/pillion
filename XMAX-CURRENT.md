@@ -17,6 +17,7 @@ If this file and the source ever disagree, **the source code wins**.
 - Helper drains ImageReader frames but skips Bitmap/JPEG work while transport disconnected. Minimum encoding interval is 100 ms; Android FPS control range is 1–10 fps.
 - Diagnostic exporter attempts local ADB reconnection on demand and records command progress. Temporary BITMAP_STATS monitoring is removed.
 - Field tests showed multiple reconnects and immediate Stop cancellation during connection. Neither deadline was triggered in these tests.
+- v39 maintenance (2026-10-22): If Bluetooth drops while Auto DRIVE is still CHECKING, invalidate pending OCR decisions and reset the two empty-sample counter and interval timer. On reconnect, normal IMAGE_ACK + 5 s OCR gating applies before checking again. Already-confirmed NAV/DRIVE (including the post-tap stick settle) stays unchanged; PROMOTE/DEMOTE, Helper and transport are untouched.
 
 ## v38 maintenance — recovery from real sleep during PROMOTE settle (2026-10-18)
 
@@ -247,7 +248,7 @@ Auto DRIVE is optional. It is enabled in the first-run Yahoo! Navi preset, but t
 - The successful tap selects **DRIVE**. Subsequent UP/DOWN stick requests use the DRIVE-specific positions (defaults **H93/V13** and **H93/V30**) after a **1-second** settling interval. The XMAX center press remains untouched.
 - An optional DRIVE-only upward output-canvas shift defaults to **5 px** and is clamped to the configured bottom margin. The VD size, OCR crops and NAV layout do not shift; DEMOTE removes the shift.
 - ROAD output in DRIVE is the literal `DRIVE MODE`, suppressing NAV arrival/map-scale OCR presentation. OCR still runs on the isolated side channel.
-- The DRIVE/NAV decision is re-armed on a new PROMOTE, not automatically on each Bluetooth reconnect. Diagnostic flight breadcrumbs record CHECKING, NAV confirmation, empty sample counts and DRIVE transition.
+- The DRIVE/NAV decision starts on a new PROMOTE. A Bluetooth loss resets only an unfinished CHECKING decision, so no partial sample from the old transport session carries over; confirmed NAV/DRIVE never re-arm merely on reconnect. Diagnostic flight breadcrumbs record CHECKING, NAV confirmation, empty sample counts and DRIVE transition.
 
 Settings UI groups NAV stick coordinates, DRIVE options and OCR-area controls in expandable sections. Only new installations with an empty preference set and Yahoo! Navi detected receive the Yahoo! preset; saved settings are not rewritten on upgrade.
 
