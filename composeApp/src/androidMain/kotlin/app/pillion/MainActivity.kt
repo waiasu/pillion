@@ -337,6 +337,10 @@ class MainActivity : ComponentActivity() {
 
     private fun toggleWatcher() {
         if (watcherBusy) return
+        if (!watcherRunning && !settingsStore.dashEnabled()) {
+            Toast.makeText(this, "常駐はVDモード専用です", Toast.LENGTH_SHORT).show()
+            return
+        }
         if (!watcherRunning && (startRequestInFlight || CaptureService.state.value !is MirrorState.Idle)) {
             Toast.makeText(this, "投影を停止してから常駐を開始してください", Toast.LENGTH_SHORT).show()
             return
@@ -368,6 +372,12 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun sendWatcherStart() {
+        // Settings may have been changed while Bluetooth/notification permission UI was open.
+        if (!settingsStore.dashEnabled()) {
+            watcherBusy = false
+            Toast.makeText(this, "常駐はVDモード専用です", Toast.LENGTH_SHORT).show()
+            return
+        }
         try {
             val intent = Intent(this, CcuWatcherService::class.java).setAction(CcuWatcherService.ACTION_START)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(intent)

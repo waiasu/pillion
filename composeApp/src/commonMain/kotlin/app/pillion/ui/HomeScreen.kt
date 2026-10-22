@@ -127,7 +127,9 @@ internal fun HomeScreen(
                 }
             }
         }
-        if (dashSupported) {
+        // The observer is VD-only. Keep its Stop available if VD was disabled while
+        // the resident service was already running or its start/stop is in flight.
+        if (dashSupported && (dashEnabled || watcherRunning || watcherBusy)) {
             WatcherButton(
                 running = watcherRunning,
                 busy = watcherBusy,
