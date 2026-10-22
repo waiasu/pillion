@@ -41,6 +41,7 @@ class CcuWatcherService : Service() {
     private var started = false
     private var registered = false
     private var connected = false
+    private var ownDiscovery = false
     private var status = R.string.watcher_searching
     private var lastDeviceName: String? = null
 
@@ -66,7 +67,8 @@ class CcuWatcherService : Service() {
                     try {
                         if (adapter?.isDiscovering != true) {
                             changeStatus(R.string.watcher_searching, "DISCOVERY_REQUEST")
-                            record("DISCOVERY_START requested=${adapter?.startDiscovery()}")
+                            ownDiscovery = adapter?.startDiscovery() == true
+                            record("DISCOVERY_START requested=$ownDiscovery")
                         }
                     } catch (e: Exception) {
                         record("DISCOVERY_ERROR ${e.javaClass.simpleName}")
@@ -84,6 +86,7 @@ class CcuWatcherService : Service() {
                 when (intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, -1)) {
                     BluetoothAdapter.STATE_OFF -> {
                         connected = false
+                        ownDiscovery = false
                         changeStatus(R.string.watcher_bt_off, "BT_OFF")
                     }
                     BluetoothAdapter.STATE_ON -> {
@@ -96,6 +99,7 @@ class CcuWatcherService : Service() {
                 return
             }
             if (action == BluetoothAdapter.ACTION_DISCOVERY_FINISHED) {
+                ownDiscovery = false
                 record("DISCOVERY_FINISHED")
                 return
             }
@@ -114,7 +118,7 @@ class CcuWatcherService : Service() {
                 BluetoothDevice.ACTION_ACL_CONNECTED -> {
                     connected = true
                     lastDeviceName = name
-                    runCatching { adapter?.cancelDiscovery() }
+                    cancelOwnedDiscovery()
                     changeStatus(R.string.watcher_found, "CCU_FOUND via=ACL_CONNECTED name=$name")
                 }
                 BluetoothDevice.ACTION_ACL_DISCONNECTED -> {
@@ -268,14 +272,21 @@ class CcuWatcherService : Service() {
         }
     }
 
+    private fun cancelOwnedDiscovery() {
+        if (!ownDiscovery) return
+        ownDiscovery = false
+        runCatching { adapter?.cancelDiscovery() }
+        record("DISCOVERY_CANCEL owned=true")
+    }
+
     override fun onDestroy() {
         started = false
         handler.removeCallbacks(scanTask)
+        cancelOwnedDiscovery()
         if (registered) {
             unregisterReceiver(events)
             registered = false
         }
-        // cancelDiscovery() is shared; do not cancel a scan owned by some other app.
         record("WATCH_STOP completed")
         publishStatus(false)
         super.onDestroy()
