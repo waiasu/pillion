@@ -121,9 +121,11 @@
     <string name="capture_denied">screen capture denied</string>
     <string name="capture_helper_unavailable">Dash helper unavailable</string>
     <string name="watcher_notification_title">Pillion resident monitor</string>
-    <string name="watcher_searching">CCU searching</string>
-    <string name="watcher_found">CCU found</string>
-    <string name="watcher_disconnected">CCU disconnected — searching</string>
+    <string name="watcher_searching">CCU connection waiting</string>
+    <string name="watcher_found">CCU ACL connected</string>
+    <string name="watcher_disconnected">CCU disconnected</string>
     <string name="watcher_bt_off">Bluetooth is off</string>
     <string name="watcher_stop">Stop</string>
+    <string name="watcher_flag_ready">OK to connect</string>
+    <string name="watcher_flag_blocked">Do not connect yet</string>
 </resources>

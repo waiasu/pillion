@@ -52,9 +52,11 @@
     <string name="capture_denied">画面共有が拒否されました</string>
     <string name="capture_helper_unavailable">VD用Helperを利用できません</string>
     <string name="watcher_notification_title">Pillion 常駐監視</string>
-    <string name="watcher_searching">CCU探索中</string>
-    <string name="watcher_found">CCU発見</string>
-    <string name="watcher_disconnected">CCU切断・再探索中</string>
+    <string name="watcher_searching">CCU接続待ち</string>
+    <string name="watcher_found">CCU接続中（ACL）</string>
+    <string name="watcher_disconnected">CCU切断</string>
     <string name="watcher_bt_off">Bluetooth OFF</string>
     <string name="watcher_stop">ストップ</string>
+    <string name="watcher_flag_ready">繋げてオッケー</string>
+    <string name="watcher_flag_blocked">繋げちゃだめ</string>
 </resources>

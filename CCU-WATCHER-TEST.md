@@ -10,3 +10,12 @@ This test is intentionally isolated from the stable v39 VD/CaptureService flow.
 - For diagnostics: notification state and `logcat -s Pillion-CCU-Watcher`. Export Diagnostics includes `ccu-watcher.log` copied from the independent bounded file in private storage. Log contains event transitions and service start/stop.
 - Runtime permissions: BLUETOOTH_CONNECT (Android 12+) and notifications (Android 13+); no BLUETOOTH_SCAN or location requirement for passive detection.
 - No edits to `CaptureService`, `DashHelper`, transport, PROMOTE/DEMOTE or the v39 engine.
+
+## 2026-10-22 — six-second trigger flag experiment
+
+- After the **first paired-CCU ACL_CONNECTED** event: mark as a candidate only (`繋げちゃだめ`).
+- After a **second ACL_CONNECTED from the same device within six seconds of the previous event**: set internal `mayConnect=true` (`繋げてオッケー`). An intervening ACL_DISCONNECTED is not required because earlier field logs contained repeated connect indications with missing intermediate disconnect broadcasts.
+- Every matching ACL_CONNECTED refreshes a six-second inactivity timer. After **six seconds without another connected indication**, clear the flag and the candidate; the next event starts the count from one. A connection gap greater than six seconds, a different CCU, or Bluetooth OFF also resets the count. An ACL_DISCONNECTED is logged and changes the informational status but **does not immediately reset the flag** (brief disconnections are tolerated until timeout).
+- Notification **title** shows the derived flag, notification **body** shows the last observed ACL status (connection waiting / connected / disconnected / Bluetooth off). These are *signals*, not RFCOMM/NaviLite availability or a real casting connection. Separate log entries include `ACL_CONNECTED intervalMs=...`, `FLAG_CANDIDATE`, `FLAG_READY`, `FLAG_WINDOW_EXPIRED`, and `FLAG_NOT_READY`.
+- An Android handler timer is deliberately lightweight and may execute later than six seconds during deep sleep. All intervals use `SystemClock.elapsedRealtime()`; late callbacks and gaps are checked against monotonic elapsed time. This prototype does not hold a wakelock, schedule alarms or change power management.
+- **Observation needed:** if Android maintains one ACL link without repeat notifications, this experimental rule will drop READY after six seconds despite a healthy link. Confirm against XMAX field logs before allowing the flag to initiate any Pillion start/stop. Neither CaptureService nor VD has been modified.

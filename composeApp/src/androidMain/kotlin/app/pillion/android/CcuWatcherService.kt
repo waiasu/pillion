@@ -16,7 +16,10 @@ import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
+import android.os.SystemClock
 import android.util.Log
 import app.pillion.MainActivity
 import app.pillion.R
@@ -34,11 +37,75 @@ import java.util.Locale
  */
 class CcuWatcherService : Service() {
     private val adapter by lazy { runCatching { BluetoothAdapter.getDefaultAdapter() }.getOrNull() }
+    private val timerHandler = Handler(Looper.getMainLooper())
     private var started = false
     private var registered = false
-    private var connected = false
     private var status = R.string.watcher_searching
-    private var lastDeviceName: String? = null
+
+    // Experimental trigger flag only. No real projection start/stop is performed here.
+    // Monotonic elapsed time prevents wall-clock changes from affecting the six-second window.
+    private var mayConnect = false
+    private var candidateAddress: String? = null
+    private var candidateAtMs = 0L
+    private var lastConnectedAtMs = 0L
+
+    private val expiryTask = object : Runnable {
+        override fun run() {
+            if (!started || lastConnectedAtMs == 0L) return
+            val elapsed = SystemClock.elapsedRealtime() - lastConnectedAtMs
+            if (elapsed < TRIGGER_WINDOW_MS) {
+                timerHandler.postDelayed(this, (TRIGGER_WINDOW_MS - elapsed).coerceAtLeast(1L))
+                return
+            }
+            record("FLAG_WINDOW_EXPIRED elapsedMs=$elapsed wasReady=$mayConnect")
+            resetTrigger("six_seconds_without_acl_connected")
+        }
+    }
+
+    private fun resetTrigger(reason: String) {
+        timerHandler.removeCallbacks(expiryTask)
+        val wasReady = mayConnect
+        mayConnect = false
+        candidateAddress = null
+        candidateAtMs = 0L
+        lastConnectedAtMs = 0L
+        if (wasReady) record("FLAG_NOT_READY reason=$reason")
+        else record("FLAG_RESET reason=$reason")
+        updateNotification()
+    }
+
+    private fun onCcuConnected(device: BluetoothDevice, name: String) {
+        val now = SystemClock.elapsedRealtime()
+        val address = runCatching { device.address }.getOrNull()
+        val elapsed = if (lastConnectedAtMs > 0L) now - lastConnectedAtMs else -1L
+        record("ACL_CONNECTED name=$name intervalMs=$elapsed")
+
+        // A stale callback after a deep sleep must not count as the second event.
+        val sameDevice = address != null && address == candidateAddress
+        val withinWindow = elapsed >= 0L && elapsed <= TRIGGER_WINDOW_MS
+        if (!sameDevice || !withinWindow) {
+            if (mayConnect) record("FLAG_NOT_READY reason=connection_gap intervalMs=$elapsed")
+            mayConnect = false
+            candidateAddress = address
+            candidateAtMs = now
+            record("FLAG_CANDIDATE first=1/2 windowMs=$TRIGGER_WINDOW_MS name=$name")
+        } else if (!mayConnect) {
+            mayConnect = true
+            record("FLAG_READY intervalMs=$elapsed name=$name")
+        }
+        lastConnectedAtMs = now
+        timerHandler.removeCallbacks(expiryTask)
+        timerHandler.postDelayed(expiryTask, TRIGGER_WINDOW_MS)
+        changeStatus(R.string.watcher_found, "CCU_FOUND via=ACL_CONNECTED name=$name")
+        // The second ACL event often does not change the status resource. Refresh for the flag.
+        updateNotification()
+    }
+
+    private fun updateNotification() {
+        if (!started) return
+        getSystemService(NotificationManager::class.java)
+            .notify(NOTIFICATION_ID, buildNotification())
+    }
 
     private val events = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -46,11 +113,11 @@ class CcuWatcherService : Service() {
             if (action == BluetoothAdapter.ACTION_STATE_CHANGED) {
                 when (intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, -1)) {
                     BluetoothAdapter.STATE_OFF -> {
-                        connected = false
+                        resetTrigger("bluetooth_off")
                         changeStatus(R.string.watcher_bt_off, "BT_OFF")
                     }
                     BluetoothAdapter.STATE_ON -> {
-                        connected = false
+                        resetTrigger("bluetooth_on")
                         changeStatus(R.string.watcher_searching, "BT_ON")
                     }
                 }
@@ -61,13 +128,13 @@ class CcuWatcherService : Service() {
             val name = runCatching { device.name }.getOrNull().orEmpty()
             when (action) {
                 BluetoothDevice.ACTION_ACL_CONNECTED -> {
-                    connected = true
-                    lastDeviceName = name
-                    changeStatus(R.string.watcher_found, "CCU_FOUND via=ACL_CONNECTED name=$name")
+                    onCcuConnected(device, name)
                 }
                 BluetoothDevice.ACTION_ACL_DISCONNECTED -> {
-                    connected = false
-                    changeStatus(R.string.watcher_disconnected, "CCU_DISCONNECTED name=$name")
+                    // A short disconnect is expected during the observed CCU cycle.
+                    // Keep the current flag until the last ACL_CONNECTED is 6s old.
+                    changeStatus(R.string.watcher_disconnected,
+                        "CCU_DISCONNECTED name=$name flagReady=$mayConnect")
                 }
             }
         }
@@ -147,7 +214,7 @@ class CcuWatcherService : Service() {
         if (status != next || event.startsWith("CCU_")) record(event)
         if (status == next) return
         status = next
-        getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID, buildNotification())
+        updateNotification()
         publishStatus(true)
     }
 
@@ -178,7 +245,9 @@ class CcuWatcherService : Service() {
             @Suppress("DEPRECATION")
             Notification.Builder(this)
         }
-        return builder.setContentTitle(getString(R.string.watcher_notification_title))
+        return builder.setContentTitle(
+                getString(if (mayConnect) R.string.watcher_flag_ready else R.string.watcher_flag_blocked)
+            )
             .setContentText(getString(status))
             .setSmallIcon(android.R.drawable.stat_notify_sync)
             .setContentIntent(open)
@@ -210,6 +279,7 @@ class CcuWatcherService : Service() {
 
     override fun onDestroy() {
         started = false
+        timerHandler.removeCallbacks(expiryTask)
         if (registered) {
             unregisterReceiver(events)
             registered = false
@@ -228,6 +298,7 @@ class CcuWatcherService : Service() {
         private const val TAG = "Pillion-CCU-Watcher"
         private const val CHANNEL_ID = "pillion-ccu-watcher"
         private const val NOTIFICATION_ID = 40
+        private const val TRIGGER_WINDOW_MS = 6_000L
         private const val MAX_LOG_BYTES = 256 * 1024L
     }
 }
