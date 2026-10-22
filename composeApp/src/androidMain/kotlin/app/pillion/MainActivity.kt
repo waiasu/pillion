@@ -257,6 +257,9 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        if (intent.hasExtra(CcuAutoTrial.EXTRA_TOKEN)) {
+            DiagnosticFlightRecorder.record("AUTO", "TRIAL_ON_NEW_INTENT")
+        }
         acceptAutoTrialIntent(intent)
     }
 

@@ -121,9 +121,16 @@ class CcuWatcherService : Service() {
             trialId = token
             trialWaiter = CountDownLatch(1)
             trialOutcome = null
-            record("TRIAL_AM_START_REQUEST")
+            // When MainActivity already exists (especially after Reset & Restart),
+            // plain 'am start' can merely foreground the task without delivering
+            // the token to onCreate/onNewIntent. Reuse the existing root Activity
+            // and dispatch its new Intent instead of creating another instance.
+            val flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            record("TRIAL_AM_START_REQUEST reuseExistingActivity=true")
             val output = adb.runShell(
-                "am start -n app.pillion/app.pillion.MainActivity --es " +
+                "am start -f 0x${flags.toString(16)} " +
+                    "-n app.pillion/app.pillion.MainActivity --es " +
                     "${CcuAutoTrial.EXTRA_TOKEN} $token"
             )
             record("TRIAL_AM_START_RESULT output=${output.trim().take(240)}")
