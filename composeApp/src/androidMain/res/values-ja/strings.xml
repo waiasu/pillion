@@ -51,4 +51,10 @@
     <string name="capture_expired">画面共有の許可が無効になりました。もう一度投影開始を押してください。</string>
     <string name="capture_denied">画面共有が拒否されました</string>
     <string name="capture_helper_unavailable">VD用Helperを利用できません</string>
+    <string name="watcher_notification_title">Pillion 常駐監視</string>
+    <string name="watcher_searching">CCU探索中</string>
+    <string name="watcher_found">CCU発見</string>
+    <string name="watcher_disconnected">CCU切断・再探索中</string>
+    <string name="watcher_bt_off">Bluetooth OFF</string>
+    <string name="watcher_stop">ストップ</string>
 </resources>

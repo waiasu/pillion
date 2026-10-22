@@ -2,7 +2,10 @@ package app.pillion
 
 import android.Manifest
 import android.app.ActivityManager
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.media.projection.MediaProjectionConfig
 import android.media.projection.MediaProjectionManager
@@ -24,6 +27,7 @@ import app.pillion.android.AndroidMirrorController
 import app.pillion.android.AndroidSettingsStore
 import app.pillion.android.AdbPairingCoordinator
 import app.pillion.android.CaptureService
+import app.pillion.android.CcuWatcherService
 import app.pillion.android.DashHelper
 import app.pillion.android.PillionAdb
 import app.pillion.android.DiagnosticExporter
@@ -58,6 +62,29 @@ class MainActivity : ComponentActivity() {
     private var pendingSdl = false // whether the in-flight projection grant is for the SDL/USB path
     @Volatile private var diagnosticExportRunning = false
     private var startRequestInFlight by mutableStateOf(false)
+    private var watcherRunning by mutableStateOf(false)
+    private var watcherBusy by mutableStateOf(false)
+    private var watcherReceiverRegistered = false
+
+    private val watcherStatusReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action != CcuWatcherService.ACTION_STATUS) return
+            watcherRunning = intent.getBooleanExtra(CcuWatcherService.EXTRA_RUNNING, false)
+            watcherBusy = false
+        }
+    }
+
+    private val watcherPermissions = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions(),
+    ) { result ->
+        if (result.values.all { it }) {
+            sendWatcherStart()
+        } else {
+            watcherBusy = false
+            Toast.makeText(this, "Bluetoothの探索・通知権限が必要です", Toast.LENGTH_LONG).show()
+        }
+    }
+
     private var dashSettingsRevision by mutableStateOf(0)
     private val settingsStore by lazy { AndroidSettingsStore(applicationContext) }
 
@@ -212,6 +239,9 @@ class MainActivity : ComponentActivity() {
                 startRequestInFlight = startRequestInFlight,
                 dashSettingsRevision = dashSettingsRevision,
                 onCheckDashAvailability = ::checkDashAvailability,
+                watcherRunning = watcherRunning,
+                watcherBusy = watcherBusy,
+                onWatcherToggle = ::toggleWatcher,
             )
         }
         if (savedInstanceState == null) {
@@ -220,6 +250,80 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+
+    override fun onStart() {
+        super.onStart()
+        val filter = IntentFilter(CcuWatcherService.ACTION_STATUS)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(watcherStatusReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            @Suppress("DEPRECATION")
+            registerReceiver(watcherStatusReceiver, filter)
+        }
+        watcherReceiverRegistered = true
+        refreshWatcherStatus()
+    }
+
+    override fun onStop() {
+        if (watcherReceiverRegistered) {
+            unregisterReceiver(watcherStatusReceiver)
+            watcherReceiverRegistered = false
+        }
+        super.onStop()
+    }
+
+    private fun refreshWatcherStatus() {
+        // getRunningServices is restricted for other apps, but still lists our own Service.
+        @Suppress("DEPRECATION")
+        val running = runCatching {
+            getSystemService(ActivityManager::class.java).getRunningServices(Int.MAX_VALUE)
+                .any { it.service.className == CcuWatcherService::class.java.name }
+        }.getOrDefault(false)
+        watcherRunning = running
+        watcherBusy = false
+    }
+
+    private fun toggleWatcher() {
+        if (watcherBusy) return
+        watcherBusy = true // Disable immediately; confirmation comes from the service broadcast.
+        if (watcherRunning) {
+            try {
+                startService(Intent(this, CcuWatcherService::class.java).setAction(CcuWatcherService.ACTION_STOP))
+            } catch (t: Exception) {
+                watcherBusy = false
+                Toast.makeText(this, "常駐停止に失敗: ${t.javaClass.simpleName}", Toast.LENGTH_LONG).show()
+            }
+        } else {
+            val needed = buildList {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    add(Manifest.permission.BLUETOOTH_CONNECT)
+                    add(Manifest.permission.BLUETOOTH_SCAN)
+                } else {
+                    add(Manifest.permission.ACCESS_FINE_LOCATION)
+                }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    add(Manifest.permission.POST_NOTIFICATIONS)
+                }
+            }.filter { checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED }
+            if (needed.isEmpty()) sendWatcherStart()
+            else watcherPermissions.launch(needed.toTypedArray())
+        }
+        // A failed process start cannot leave the button disabled forever.
+        window.decorView.postDelayed({
+            if (watcherBusy) refreshWatcherStatus()
+        }, 3_000L)
+    }
+
+    private fun sendWatcherStart() {
+        try {
+            val intent = Intent(this, CcuWatcherService::class.java).setAction(CcuWatcherService.ACTION_START)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(intent)
+            else startService(intent)
+        } catch (t: Exception) {
+            watcherBusy = false
+            Toast.makeText(this, "常駐起動に失敗: ${t.javaClass.simpleName}", Toast.LENGTH_LONG).show()
+        }
+    }
 
     /** Resource-only locale switch. Recreating the Activity does not restart an active capture service. */
     @Suppress("DEPRECATION")

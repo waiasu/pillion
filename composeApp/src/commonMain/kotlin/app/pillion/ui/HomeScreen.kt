@@ -61,6 +61,9 @@ internal fun HomeScreen(
     onStop: () -> Unit,
     onResetAndRestart: () -> Unit,
     startRequestInFlight: Boolean? = null,
+    watcherRunning: Boolean = false,
+    watcherBusy: Boolean = false,
+    onWatcherToggle: () -> Unit = {},
     dashSupported: Boolean = false,
     dashEnabled: Boolean = false,
 ) {
@@ -118,6 +121,17 @@ internal fun HomeScreen(
                     StatusDisplay(state)
                 }
             }
+        }
+        if (dashSupported) {
+            WatcherButton(running = watcherRunning, busy = watcherBusy, onToggle = onWatcherToggle)
+            Text(
+                stringResource(Res.string.ccu_watcher_help),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = 6.dp, start = 6.dp, end = 6.dp),
+            )
+            Spacer(Modifier.height(56.dp)) // 2x the existing Start -> Reset 28dp gap.
         }
         PrimaryButton(
             state = state,
@@ -377,6 +391,28 @@ private fun StepRow(number: Int, text: String) {
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+@Composable
+private fun WatcherButton(running: Boolean, busy: Boolean, onToggle: () -> Unit) {
+    Button(
+        onClick = onToggle,
+        enabled = !busy,
+        modifier = Modifier.fillMaxWidth().height(56.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = if (running) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+            contentColor = if (running) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.onPrimary,
+            disabledContainerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.18f),
+            disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        ),
+    ) {
+        Text(
+            stringResource(if (running) Res.string.ccu_watcher_stop else Res.string.ccu_watcher_start),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
         )
     }
 }

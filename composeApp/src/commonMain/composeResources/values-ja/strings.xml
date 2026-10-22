@@ -214,4 +214,7 @@
     <string name="code_or_port_code">コード、またはポート番号とコード</string>
     <string name="connected">✅ 接続しました</string>
     <string name="pairing_failed">ペア設定に失敗しました。コードを確認して再試行してください。</string>
+    <string name="ccu_watcher_start">常駐スタート</string>
+    <string name="ccu_watcher_stop">常駐ストップ</string>
+    <string name="ccu_watcher_help">CCUを見つけたら自動接続します（現在は検出テストのみ）。</string>
 </resources>

@@ -29,6 +29,9 @@
     <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <!-- CCU watcher: classic discovery only, never infer physical location. -->
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" android:maxSdkVersion="30" />
 
     <!-- SDL "Path B": the Yamaha CCU connects as a USB accessory; high-bandwidth video needs this. -->
     <uses-feature android:name="android.hardware.usb.accessory" android:required="false" />
@@ -81,6 +84,13 @@
             android:name="app.pillion.android.CaptureService"
             android:exported="false"
             android:foregroundServiceType="mediaProjection|connectedDevice" />
+
+        <!-- Standalone CCU observer: separate process; never starts/stops CaptureService. -->
+        <service
+            android:name="app.pillion.android.CcuWatcherService"
+            android:process=":ccu_watcher"
+            android:exported="false"
+            android:foregroundServiceType="connectedDevice" />
 
         <!-- SDL "Path B" (USB full-motion). The SDL session. -->
         <service

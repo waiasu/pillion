@@ -120,4 +120,10 @@
     <string name="capture_expired">Screen capture expired — tap Start again</string>
     <string name="capture_denied">screen capture denied</string>
     <string name="capture_helper_unavailable">Dash helper unavailable</string>
+    <string name="watcher_notification_title">Pillion resident monitor</string>
+    <string name="watcher_searching">CCU searching</string>
+    <string name="watcher_found">CCU found</string>
+    <string name="watcher_disconnected">CCU disconnected — searching</string>
+    <string name="watcher_bt_off">Bluetooth is off</string>
+    <string name="watcher_stop">Stop</string>
 </resources>

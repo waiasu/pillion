@@ -214,4 +214,7 @@
     <string name="code_or_port_code">코드 또는 포트 번호와 코드</string>
     <string name="connected">✅ 연결됨</string>
     <string name="pairing_failed">페어링에 실패했습니다. 코드를 확인하고 다시 시도하세요.</string>
+    <string name="ccu_watcher_start">상주 시작</string>
+    <string name="ccu_watcher_stop">상주 중지</string>
+    <string name="ccu_watcher_help">CCU를 찾으면 자동 연결합니다(현재는 감지 테스트만).</string>
 </resources>

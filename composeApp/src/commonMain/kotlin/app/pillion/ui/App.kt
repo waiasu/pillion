@@ -50,6 +50,9 @@ fun App(
     startRequestInFlight: Boolean? = null,
     dashSettingsRevision: Int = 0,
     onCheckDashAvailability: suspend () -> Boolean = { true },
+    watcherRunning: Boolean = false,
+    watcherBusy: Boolean = false,
+    onWatcherToggle: () -> Unit = {},
 ) {
     var themeMode by remember { mutableStateOf(settingsStore?.themeMode() ?: ThemeMode.SYSTEM) }
     var languageTag by remember { mutableStateOf(settingsStore?.languageTag() ?: "") }
@@ -364,6 +367,9 @@ fun App(
             HomeScreen(
                 state = state,
                 startRequestInFlight = startRequestInFlight,
+                watcherRunning = watcherRunning,
+                watcherBusy = watcherBusy,
+                onWatcherToggle = onWatcherToggle,
                 dashSupported = dashSetup != null && !profile.requiresUsb,
                 dashEnabled = dashEnabled,
                 onOpenSettings = {
