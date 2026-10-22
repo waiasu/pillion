@@ -335,6 +335,11 @@ class CaptureService : Service() {
                     }
             }
             registerScreenReceiver()
+            intent?.getStringExtra(CcuAutoTrial.EXTRA_SESSION_ID)?.let { trialId ->
+                DiagnosticFlightRecorder.record("AUTO", "TRIAL_CAPTURE_SCREEN_RECEIVER_READY")
+                sendBroadcast(Intent(CcuAutoTrial.ACTION_CAPTURE_READY).setPackage(packageName)
+                    .putExtra(CcuAutoTrial.EXTRA_SESSION_ID, trialId))
+            }
             registerBluetoothReceiver()
             registerKeyguardUnlockListener()
             // Self-heal: if the helper is killed (adbd restart on Wi-Fi/debug loss), respawn it over

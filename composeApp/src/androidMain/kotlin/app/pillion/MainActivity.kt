@@ -28,6 +28,7 @@ import app.pillion.android.AndroidSettingsStore
 import app.pillion.android.AdbPairingCoordinator
 import app.pillion.android.CaptureService
 import app.pillion.android.CcuWatcherService
+import app.pillion.android.CcuAutoTrial
 import app.pillion.android.DashHelper
 import app.pillion.android.PillionAdb
 import app.pillion.android.DiagnosticExporter
@@ -60,6 +61,7 @@ class MainActivity : ComponentActivity() {
 
     private var pendingSettings = MirrorSettings()
     private var pendingSdl = false // whether the in-flight projection grant is for the SDL/USB path
+    private var pendingTrialId: String? = null
     @Volatile private var diagnosticExportRunning = false
     private var startRequestInFlight by mutableStateOf(false)
     private var watcherRunning by mutableStateOf(false)
@@ -160,6 +162,7 @@ class MainActivity : ComponentActivity() {
             .putExtra(CaptureService.EXTRA_DRIVE_IMAGE_SHIFT, settings.driveImageShiftPx)
             .putExtra(CaptureService.EXTRA_FIXED_DASH_APP_ENABLED, settings.fixedDashAppEnabled)
             .putExtra(CaptureService.EXTRA_FIXED_DASH_APP_PACKAGE, settings.fixedDashAppPackage)
+        pendingTrialId?.let { intent.putExtra(CcuAutoTrial.EXTRA_SESSION_ID, it) }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(intent)
         else startService(intent)
     }
@@ -244,12 +247,61 @@ class MainActivity : ComponentActivity() {
                 onWatcherToggle = ::toggleWatcher,
             )
         }
-        if (savedInstanceState == null) {
+        if (savedInstanceState == null && !intent.hasExtra(CcuAutoTrial.EXTRA_TOKEN)) {
             // Ask once on a clean install, after the first Activity content has been attached.
             window.decorView.post { requestInitialRuntimePermissionsOnce() }
         }
+        acceptAutoTrialIntent(intent)
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        acceptAutoTrialIntent(intent)
+    }
+
+    private fun trialFailure(reason: String) {
+        val id = pendingTrialId ?: return
+        DiagnosticFlightRecorder.record("AUTO", "TRIAL_FAILED reason=$reason")
+        sendBroadcast(Intent(CcuAutoTrial.ACTION_START_FAILED).setPackage(packageName)
+            .putExtra(CcuAutoTrial.EXTRA_SESSION_ID, id)
+            .putExtra(CcuAutoTrial.EXTRA_REASON, reason))
+        pendingTrialId = null
+        startRequestInFlight = false
+    }
+
+    private fun acceptAutoTrialIntent(source: Intent?) {
+        val token = source?.getStringExtra(CcuAutoTrial.EXTRA_TOKEN) ?: return
+        source.removeExtra(CcuAutoTrial.EXTRA_TOKEN)
+        if (!CcuAutoTrial.consume(applicationContext, token)) {
+            DiagnosticFlightRecorder.record("AUTO", "TRIAL_REJECTED invalid_or_expired_token")
+            return
+        }
+        DiagnosticFlightRecorder.record("AUTO", "TRIAL_ACTIVITY_RECEIVED")
+        window.decorView.post {
+            if (startRequestInFlight || CaptureService.state.value !is MirrorState.Idle) {
+                pendingTrialId = token
+                trialFailure("capture_already_active")
+                return@post
+            }
+            pendingTrialId = token
+            if (!settingsStore.dashEnabled()) {
+                trialFailure("VD_disabled_no_media_projection_fallback")
+                return@post
+            }
+            val missing = requiredPermissions().filter {
+                checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED
+            }
+            if (missing.isNotEmpty()) {
+                trialFailure("runtime_permission_missing")
+                return@post
+            }
+            pendingSdl = false
+            val settings = CcuAutoTrial.settings(applicationContext)
+            DiagnosticFlightRecorder.record("AUTO", "TRIAL_START_REQUEST settings_from_saved_preferences")
+            startMirroring(settings, fromWatcher = true)
+        }
+    }
 
     override fun onStart() {
         super.onStart()
@@ -530,8 +582,12 @@ class MainActivity : ComponentActivity() {
                     startCaptureService(pendingSettings)
                     releaseStartLockWhenSessionBegins()
                 } else {
-                    // Same Start press, normal Android consent flow. Never change CaptureService.
-                    requestProjection()
+                    if (pendingTrialId != null) {
+                        trialFailure("VD_preflight_unavailable")
+                    } else {
+                        // Same manual Start press, normal Android consent flow.
+                        requestProjection()
+                    }
                 }
             } catch (t: Throwable) {
                 startRequestInFlight = false
@@ -540,9 +596,9 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun startMirroring(settings: MirrorSettings) {
-        // Manual casting and the resident watcher own the controls exclusively.
-        if (watcherRunning || watcherBusy) return
+    private fun startMirroring(settings: MirrorSettings, fromWatcher: Boolean = false) {
+        // The room trial has a one-use authenticated intent; manual Start is still exclusive.
+        if (!fromWatcher && (watcherRunning || watcherBusy)) return
         // One START request at a time. Keep the UI and framework guard locked until the request
         // either fails/cancels or the selected mirror session actually leaves Idle.
         if (startRequestInFlight) return
@@ -554,6 +610,7 @@ class MainActivity : ComponentActivity() {
         try {
             if (missing.isEmpty()) startSelectedMode() else permissionLauncher.launch(missing.toTypedArray())
         } catch (t: Throwable) {
+            trialFailure("start_exception_${t.javaClass.simpleName}")
             startRequestInFlight = false
             throw t
         }

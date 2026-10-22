@@ -80,13 +80,18 @@ internal fun HomeScreen(
             }
         }
     }
-    LaunchedEffect(startTapLocked, state) {
-        if (startRequestInFlight != null || !startTapLocked) return@LaunchedEffect
+    LaunchedEffect(startTapLocked, state, startRequestInFlight) {
+        if (!startTapLocked) return@LaunchedEffect
         if (state !is MirrorState.Idle) {
             startTapLocked = false
-        } else {
+        } else if (startRequestInFlight == null) {
             delay(1_200L)
             startTapLocked = false
+        } else if (!startRequestInFlight) {
+            // Another start (e.g. the resident button) won the same-frame race. The
+            // Activity rejected this request without raising its in-flight flag.
+            delay(250L)
+            if (startRequestInFlight == false && state is MirrorState.Idle) startTapLocked = false
         }
     }
 

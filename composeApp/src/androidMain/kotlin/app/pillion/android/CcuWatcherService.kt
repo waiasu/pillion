@@ -19,7 +19,10 @@ import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.os.PowerManager
 import android.os.SystemClock
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import android.util.Log
 import app.pillion.MainActivity
 import app.pillion.R
@@ -29,8 +32,9 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * Experimental, separate-process CCU observer. It never calls CaptureService, Helper,
- * MediaProjection, PROMOTE/DEMOTE, or RFCOMM. A discovered device is NOT a VD start.
+ * Experimental, separate-process CCU observer. Live ACL events are still diagnostic only.
+ * A one-shot 30-second room timer independently runs a synthetic auto-Start trial.
+ * Never modify the established RFCOMM, PROMOTE/DEMOTE or VD flow here.
  *
  * Android owns the service singleton. Each Start is additionally guarded here, preventing
  * duplicate receivers or foreground notifications on rapid taps.
@@ -41,6 +45,111 @@ class CcuWatcherService : Service() {
     private var started = false
     private var registered = false
     private var status = R.string.watcher_searching
+    @Volatile private var trialActive = false
+    private var trialScheduled = false
+    private var virtualFlagReady = false
+    private var trialNote: String? = null
+    @Volatile private var trialId: String? = null
+    @Volatile private var trialOutcome: String? = null
+    @Volatile private var trialWaiter: CountDownLatch? = null
+    private var trialWakeLock: PowerManager.WakeLock? = null
+
+    private val trialTask = Runnable {
+        trialScheduled = false
+        if (started && trialActive) {
+            virtualFlagReady = true
+            trialNote = "仮想接続OK・起動試験中"
+            record("TRIAL_FLAG_READY source=timer_30s")
+            updateNotification()
+            Thread({ performRoomTrial() }, "pillion-ccu-room-trial").apply {
+                isDaemon = true
+                start()
+            }
+        }
+    }
+
+    private val trialEvents = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (!trialActive || intent == null) return
+            val token = intent.getStringExtra(CcuAutoTrial.EXTRA_SESSION_ID)
+            if (token == null || token != trialId) return
+            val outcome = when (intent.action) {
+                CcuAutoTrial.ACTION_CAPTURE_READY -> "CAPTURE_READY"
+                CcuAutoTrial.ACTION_START_FAILED ->
+                    "START_FAILED " + intent.getStringExtra(CcuAutoTrial.EXTRA_REASON).orEmpty()
+                else -> return
+            }
+            trialOutcome = outcome
+            record("TRIAL_SIGNAL $outcome")
+            trialWaiter?.countDown()
+        }
+    }
+
+    private fun performRoomTrial() {
+        val initialInteractive = getSystemService(PowerManager::class.java)?.isInteractive
+        var wakeSent = false
+        try {
+            check(trialActive) { "cancelled" }
+            record("TRIAL_BEGIN initialInteractive=$initialInteractive")
+            val adb = PillionAdb.getInstance(applicationContext)
+            val connected = (adb.isConnected() && adb.getHostAddress() == PillionAdb.LOOPBACK_HOST) ||
+                adb.connectDevice(PillionAdb.LOOPBACK_HOST, PillionAdb.TCPIP_PORT)
+            check(connected) { "loopback_adb_unavailable" }
+            record("TRIAL_ADB_READY loopback=true")
+            if (!initialInteractive.orFalse()) {
+                record("TRIAL_WAKE_REQUEST keyevent=224")
+                val output = adb.runShell("input keyevent 224")
+                record("TRIAL_WAKE_RESULT output=${output.take(160)}")
+                wakeSent = true
+                val wakeDeadline = SystemClock.elapsedRealtime() + 5_000L
+                while (trialActive && getSystemService(PowerManager::class.java)?.isInteractive != true &&
+                    SystemClock.elapsedRealtime() < wakeDeadline) {
+                    Thread.sleep(250L)
+                }
+                check(getSystemService(PowerManager::class.java)?.isInteractive == true) {
+                    "wake_not_interactive"
+                }
+            } else {
+                record("TRIAL_WAKE_SKIPPED already_interactive=true")
+            }
+            check(trialActive) { "cancelled" }
+            val token = CcuAutoTrial.issue(applicationContext)
+            trialId = token
+            trialWaiter = CountDownLatch(1)
+            trialOutcome = null
+            record("TRIAL_AM_START_REQUEST")
+            val output = adb.runShell(
+                "am start -n app.pillion/app.pillion.MainActivity --es " +
+                    "${CcuAutoTrial.EXTRA_TOKEN} $token"
+            )
+            record("TRIAL_AM_START_RESULT output=${output.trim().take(240)}")
+            check(!output.contains("Error:", ignoreCase = true)) { "am_start_error" }
+            check(trialWaiter?.await(20L, TimeUnit.SECONDS) == true) {
+                "capture_ready_timeout"
+            }
+            val outcome = trialOutcome.orEmpty()
+            check(outcome == "CAPTURE_READY") { outcome }
+            check(trialActive) { "cancelled" }
+            record("TRIAL_SLEEP_REQUEST keyevent=223")
+            val sleepOutput = adb.runShell("input keyevent 223")
+            record("TRIAL_SLEEP_RESULT output=${sleepOutput.trim().take(160)}")
+            trialNote = "画面OFF指示完了・PROMOTE確認待ち"
+            record("TRIAL_COMMAND_SEQUENCE_COMPLETE")
+            timerHandler.post { updateNotification() }
+        } catch (t: Throwable) {
+            val reason = "${t.javaClass.simpleName}: ${t.message}".take(200)
+            record("TRIAL_FAILED reason=$reason wakeSent=$wakeSent")
+            trialNote = "自動起動試験失敗・ログ確認"
+            timerHandler.post { updateNotification() }
+        } finally {
+            trialWaiter = null
+            CcuAutoTrial.clear(applicationContext)
+            record("TRIAL_END")
+            trialWakeLock?.let { runCatching { if (it.isHeld) it.release() } }
+        }
+    }
+
+    private fun Boolean?.orFalse() = this == true
 
     // Experimental trigger flag only. No real projection start/stop is performed here.
     // Monotonic elapsed time prevents wall-clock changes from affecting the six-second window.
@@ -154,10 +263,32 @@ class CcuWatcherService : Service() {
             return START_STICKY
         }
         started = true
+        trialActive = intent?.action == ACTION_START // Never replay room trial after START_STICKY restoration.
+        trialScheduled = trialActive
+        if (trialActive) {
+            trialNote = "室内テスト：30秒後に仮想接続"
+            val pm = getSystemService(PowerManager::class.java)
+            trialWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "app.pillion:ccu-room-trial")
+                .apply { acquire(45_000L) } // Keep the 30s test timer accurate while the screen is OFF.
+        }
         createNotificationChannel()
         startForegroundTyped(buildNotification())
         record("WATCH_START pid=${android.os.Process.myPid()} restored=${intent == null}")
         registerEvents()
+        if (trialActive) {
+            val filter = IntentFilter().apply {
+                addAction(CcuAutoTrial.ACTION_CAPTURE_READY)
+                addAction(CcuAutoTrial.ACTION_START_FAILED)
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                registerReceiver(trialEvents, filter, Context.RECEIVER_NOT_EXPORTED)
+            } else {
+                @Suppress("DEPRECATION")
+                registerReceiver(trialEvents, filter)
+            }
+            record("TRIAL_SCHEDULED delayMs=30000 syntheticOnly=true")
+            timerHandler.postDelayed(trialTask, 30_000L)
+        }
         if (adapter?.isEnabled != true) {
             changeStatus(R.string.watcher_bt_off, "BT_OFF initial")
         } else {
@@ -246,9 +377,10 @@ class CcuWatcherService : Service() {
             Notification.Builder(this)
         }
         return builder.setContentTitle(
-                getString(if (mayConnect) R.string.watcher_flag_ready else R.string.watcher_flag_blocked)
+                getString(if (if (trialActive) virtualFlagReady else mayConnect)
+                    R.string.watcher_flag_ready else R.string.watcher_flag_blocked)
             )
-            .setContentText(getString(status))
+            .setContentText(trialNote ?: getString(status))
             .setSmallIcon(android.R.drawable.stat_notify_sync)
             .setContentIntent(open)
             .setOngoing(true)
@@ -278,8 +410,16 @@ class CcuWatcherService : Service() {
     }
 
     override fun onDestroy() {
+        trialActive = false
         started = false
         timerHandler.removeCallbacks(expiryTask)
+        timerHandler.removeCallbacks(trialTask)
+        trialWaiter?.countDown()
+        CcuAutoTrial.clear(applicationContext)
+        trialWakeLock?.let { runCatching { if (it.isHeld) it.release() } }
+        if (trialScheduled || virtualFlagReady) {
+            runCatching { unregisterReceiver(trialEvents) }
+        }
         if (registered) {
             unregisterReceiver(events)
             registered = false
