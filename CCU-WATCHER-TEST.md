@@ -37,3 +37,11 @@ This test is intentionally isolated from the stable v39 VD/CaptureService flow.
 - Resident watcher Start is shown only for **NaviLite with VD ON**, and is rejected by MainActivity if VD is disabled. If an observer is already running when VD is switched OFF, its Stop control stays visible until stopped; no stranded foreground service.
 - User verified the simultaneous Start-button recovery is working in the earlier build; no further change to capture or button start locks here.
 - Earlier room logs showed intermittent `TRIAL_REJECTED invalid_or_expired_token` when the main process was reused. Switched the 90-second, one-shot challenge handover from cross-process cached SharedPreferences to an app-private Android `AtomicFile` read afresh in both processes. Missing/expired tokens still reject auto-start; guessed tokens cannot consume a valid challenge. No change to manual Start, Wake/Sleep order, PROMOTE/DEMOTE, Helper, or actual CCU flag.
+
+## 2026-10-22 — preserve screen-ON state during automatic VD Start
+
+- Immediately **before** sending shell WAKEUP (after local ADB is connected), sample `PowerManager.isInteractive` and log `TRIAL_DISPLAY_BEFORE_WAKE interactive=true/false/null`. Do not sample at the beginning of the trial, since ADB setup may take time.
+- Always send the **idempotent** shell `input keyevent 224` regardless of the sampled state. This handles a physical POWER/screen-off press racing the state sample. Wait for actual interactivity before starting the Activity.
+- Only if the **pre-Wake** sample was explicitly `false`, send the final shell `input keyevent 223` after `TRIAL_CAPTURE_SCREEN_RECEIVER_READY` to restore a dark screen and reuse the established `SCREEN_OFF → PROMOTE` transition.
+- If the pre-Wake sample was `true` (user operating the phone), or `null` (unknown), **skip the forced Sleep** and log `TRIAL_SLEEP_SKIPPED reason=initial_screen_on/initial_state_unknown`. VD Start remains active in STATUS until the user locks the phone naturally; their display is not forcibly turned off.
+- The physical POWER race cannot be entirely eliminated by a single state check; keep logs for all wake/sleep commands and their decision. No changes to manual Start, the existing 3 s PROMOTE guard / 3.15 s recovery, Helper, Bluetooth, OCR, or the ACL six-second observation flag.

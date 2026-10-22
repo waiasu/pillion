@@ -86,31 +86,34 @@ class CcuWatcherService : Service() {
     }
 
     private fun performRoomTrial() {
-        val initialInteractive = getSystemService(PowerManager::class.java)?.isInteractive
         var wakeSent = false
         try {
             check(trialActive) { "cancelled" }
-            record("TRIAL_BEGIN initialInteractive=$initialInteractive")
+            record("TRIAL_BEGIN")
             val adb = PillionAdb.getInstance(applicationContext)
             val connected = (adb.isConnected() && adb.getHostAddress() == PillionAdb.LOOPBACK_HOST) ||
                 adb.connectDevice(PillionAdb.LOOPBACK_HOST, PillionAdb.TCPIP_PORT)
             check(connected) { "loopback_adb_unavailable" }
             record("TRIAL_ADB_READY loopback=true")
-            if (!initialInteractive.orFalse()) {
-                record("TRIAL_WAKE_REQUEST keyevent=224")
-                val output = adb.runShell("input keyevent 224")
-                record("TRIAL_WAKE_RESULT output=${output.take(160)}")
-                wakeSent = true
-                val wakeDeadline = SystemClock.elapsedRealtime() + 5_000L
-                while (trialActive && getSystemService(PowerManager::class.java)?.isInteractive != true &&
-                    SystemClock.elapsedRealtime() < wakeDeadline) {
-                    Thread.sleep(250L)
-                }
-                check(getSystemService(PowerManager::class.java)?.isInteractive == true) {
-                    "wake_not_interactive"
-                }
-            } else {
-                record("TRIAL_WAKE_SKIPPED already_interactive=true")
+            // Sample immediately before WAKEUP, not before the ADB connection.
+            // An already-interactive phone belongs to its user: auto-Start must not
+            // force it to sleep afterward. Null is treated conservatively as ON.
+            val interactiveBeforeWake = getSystemService(PowerManager::class.java)?.isInteractive
+            record("TRIAL_DISPLAY_BEFORE_WAKE interactive=$interactiveBeforeWake")
+            // Always issue the idempotent WAKEUP key, even if already interactive:
+            // a physical power press may race the narrow sample-to-command window.
+            check(trialActive) { "cancelled" }
+            record("TRIAL_WAKE_REQUEST keyevent=224")
+            val wakeOutput = adb.runShell("input keyevent 224")
+            record("TRIAL_WAKE_RESULT output=${wakeOutput.trim().take(160)}")
+            wakeSent = true
+            val wakeDeadline = SystemClock.elapsedRealtime() + 5_000L
+            while (trialActive && getSystemService(PowerManager::class.java)?.isInteractive != true &&
+                SystemClock.elapsedRealtime() < wakeDeadline) {
+                Thread.sleep(250L)
+            }
+            check(getSystemService(PowerManager::class.java)?.isInteractive == true) {
+                "wake_not_interactive"
             }
             check(trialActive) { "cancelled" }
             val token = CcuAutoTrial.issue(applicationContext)
@@ -130,10 +133,17 @@ class CcuWatcherService : Service() {
             val outcome = trialOutcome.orEmpty()
             check(outcome == "CAPTURE_READY") { outcome }
             check(trialActive) { "cancelled" }
-            record("TRIAL_SLEEP_REQUEST keyevent=223")
-            val sleepOutput = adb.runShell("input keyevent 223")
-            record("TRIAL_SLEEP_RESULT output=${sleepOutput.trim().take(160)}")
-            trialNote = "画面OFF指示完了・PROMOTE確認待ち"
+            if (interactiveBeforeWake == false) {
+                // Restore only the screen-OFF state that the auto-run temporarily woke.
+                record("TRIAL_SLEEP_REQUEST keyevent=223 reason=restore_initial_off")
+                val sleepOutput = adb.runShell("input keyevent 223")
+                record("TRIAL_SLEEP_RESULT output=${sleepOutput.trim().take(160)}")
+                trialNote = "画面OFF指示完了・PROMOTE確認待ち"
+            } else {
+                val reason = if (interactiveBeforeWake == true) "initial_screen_on" else "initial_state_unknown"
+                record("TRIAL_SLEEP_SKIPPED reason=$reason")
+                trialNote = "自動Start完了・画面ON維持"
+            }
             record("TRIAL_COMMAND_SEQUENCE_COMPLETE")
             timerHandler.post { updateNotification() }
         } catch (t: Throwable) {
@@ -148,8 +158,6 @@ class CcuWatcherService : Service() {
             trialWakeLock?.let { runCatching { if (it.isHeld) it.release() } }
         }
     }
-
-    private fun Boolean?.orFalse() = this == true
 
     // Experimental trigger flag only. No real projection start/stop is performed here.
     // Monotonic elapsed time prevents wall-clock changes from affecting the six-second window.
