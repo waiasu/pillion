@@ -34,7 +34,8 @@ import java.util.Locale
 /**
  * Experimental, separate-process CCU observer. Live ACL events are still diagnostic only.
  * A one-shot 30-second room timer independently runs a synthetic auto-Start trial.
- * Never modify the established RFCOMM, PROMOTE/DEMOTE or VD flow here.
+ * Resident Stop delegates to CaptureService's established explicit Stop without changing
+ * the RFCOMM, PROMOTE/DEMOTE or VD implementation.
  *
  * Android owns the service singleton. Each Start is additionally guarded here, preventing
  * duplicate receivers or foreground notifications on rapid taps.
@@ -159,7 +160,7 @@ class CcuWatcherService : Service() {
         }
     }
 
-    // Experimental trigger flag only. No real projection start/stop is performed here.
+    // Experimental ACL trigger flag is observation-only; it never starts/stops projection.
     // Monotonic elapsed time prevents wall-clock changes from affecting the six-second window.
     private var mayConnect = false
     private var candidateAddress: String? = null
@@ -262,7 +263,24 @@ class CcuWatcherService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) {
             record("WATCH_STOP requested")
-            stopSelf()
+            // Stop the current cast through its existing explicit Stop path. This also
+            // DEMOTEs the VD target and preserves the idle Helper for a later Start.
+            // The watcher is a separate process: its static CaptureService state is
+            // not shared with the main process, so dispatch Stop directly.
+            try {
+                startService(
+                    Intent(this, CaptureService::class.java)
+                        .setAction(CaptureService.ACTION_STOP)
+                        .putExtra(CaptureService.EXTRA_KEEP_DASH_HELPER, true)
+                )
+                record("WATCH_CAPTURE_STOP requested keepHelper=true")
+            } catch (t: Exception) {
+                record("WATCH_CAPTURE_STOP fallback reason=${t.javaClass.simpleName}")
+                // Last resort if Android refuses the explicit service command.
+                runCatching { stopService(Intent(this, CaptureService::class.java)) }
+            } finally {
+                stopSelf()
+            }
             return START_NOT_STICKY
         }
         if (started) {

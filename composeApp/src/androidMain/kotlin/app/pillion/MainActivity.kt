@@ -442,6 +442,16 @@ class MainActivity : ComponentActivity() {
             DashHelper.stopWatchdog()
             AdbPairingCoordinator.stop(applicationContext)
 
+            // Stop the independent resident watcher before stopping capture or scheduling
+            // the shell-assisted app restart. stopService never creates a new watcher
+            // and its onDestroy cleans receivers, timers, trial token and wake lock.
+            val watcherStopRequested = runCatching {
+                stopService(Intent(this@MainActivity, CcuWatcherService::class.java))
+            }.getOrDefault(false)
+            DiagnosticFlightRecorder.record(
+                "APP", "WATCH_STOP_FOR_RESTART requested=$watcherStopRequested",
+            )
+
             // Ask the foreground services to release their own MediaProjection / SDL state first.
             runCatching {
                 startService(
@@ -458,6 +468,7 @@ class MainActivity : ComponentActivity() {
             runCatching { stopService(Intent(this@MainActivity, CaptureService::class.java)) }
             runCatching { stopService(Intent(this@MainActivity, SdlService::class.java)) }
             runCatching { stopService(Intent(this@MainActivity, SdlRouterService::class.java)) }
+            runCatching { stopService(Intent(this@MainActivity, CcuWatcherService::class.java)) }
 
             // SdlRouterService runs in its own process, so wait until Android no longer reports any
             // Pillion service before handing the final process restart to the shell-side helper.
@@ -466,6 +477,7 @@ class MainActivity : ComponentActivity() {
                 CaptureService::class.java.name,
                 SdlService::class.java.name,
                 SdlRouterService::class.java.name,
+                CcuWatcherService::class.java.name,
             )
             val deadline = android.os.SystemClock.elapsedRealtime() + 5_000L
             while (android.os.SystemClock.elapsedRealtime() < deadline) {
@@ -479,6 +491,7 @@ class MainActivity : ComponentActivity() {
                 runCatching { stopService(Intent(this@MainActivity, CaptureService::class.java)) }
                 runCatching { stopService(Intent(this@MainActivity, SdlService::class.java)) }
                 runCatching { stopService(Intent(this@MainActivity, SdlRouterService::class.java)) }
+                runCatching { stopService(Intent(this@MainActivity, CcuWatcherService::class.java)) }
                 delay(100)
             }
 
