@@ -2,7 +2,6 @@ package app.pillion.android
 
 import android.Manifest
 import android.annotation.SuppressLint
-import android.app.ActivityManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -17,9 +16,7 @@ import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.os.Build
-import android.os.Handler
 import android.os.IBinder
-import android.os.Looper
 import android.util.Log
 import app.pillion.MainActivity
 import app.pillion.R
@@ -33,51 +30,15 @@ import java.util.Locale
  * MediaProjection, PROMOTE/DEMOTE, or RFCOMM. A discovered device is NOT a VD start.
  *
  * Android owns the service singleton. Each Start is additionally guarded here, preventing
- * duplicate receivers, discovery loops, or foreground notifications on rapid taps.
+ * duplicate receivers or foreground notifications on rapid taps.
  */
 class CcuWatcherService : Service() {
-    private val handler = Handler(Looper.getMainLooper())
     private val adapter by lazy { runCatching { BluetoothAdapter.getDefaultAdapter() }.getOrNull() }
     private var started = false
     private var registered = false
     private var connected = false
-    private var ownDiscovery = false
     private var status = R.string.watcher_searching
     private var lastDeviceName: String? = null
-
-    private val scanTask = object : Runnable {
-        override fun run() {
-            if (!started) return
-            if (connected) {
-                handler.postDelayed(this, SCAN_PERIOD_MS)
-                return
-            }
-            when {
-                !hasBluetoothPermission() -> {
-                    record("SCAN_SKIP missing_permission")
-                }
-                adapter?.isEnabled != true -> {
-                    changeStatus(R.string.watcher_bt_off, "BT_OFF")
-                }
-                captureRunning() -> {
-                    // Discovery contends with an existing RFCOMM stream; never scan while casting.
-                    record("SCAN_SKIP capture_service_running")
-                }
-                else -> {
-                    try {
-                        if (adapter?.isDiscovering != true) {
-                            changeStatus(R.string.watcher_searching, "DISCOVERY_REQUEST")
-                            ownDiscovery = adapter?.startDiscovery() == true
-                            record("DISCOVERY_START requested=$ownDiscovery")
-                        }
-                    } catch (e: Exception) {
-                        record("DISCOVERY_ERROR ${e.javaClass.simpleName}")
-                    }
-                }
-            }
-            handler.postDelayed(this, SCAN_PERIOD_MS)
-        }
-    }
 
     private val events = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -86,46 +47,27 @@ class CcuWatcherService : Service() {
                 when (intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, -1)) {
                     BluetoothAdapter.STATE_OFF -> {
                         connected = false
-                        ownDiscovery = false
                         changeStatus(R.string.watcher_bt_off, "BT_OFF")
                     }
                     BluetoothAdapter.STATE_ON -> {
                         connected = false
                         changeStatus(R.string.watcher_searching, "BT_ON")
-                        handler.removeCallbacks(scanTask)
-                        handler.post(scanTask)
                     }
                 }
-                return
-            }
-            if (action == BluetoothAdapter.ACTION_DISCOVERY_FINISHED) {
-                ownDiscovery = false
-                record("DISCOVERY_FINISHED")
-                return
-            }
-            if (action == BluetoothAdapter.ACTION_DISCOVERY_STARTED) {
-                record("DISCOVERY_STARTED")
                 return
             }
             val device = readDevice(intent) ?: return
             if (!isTarget(device)) return
             val name = runCatching { device.name }.getOrNull().orEmpty()
             when (action) {
-                BluetoothDevice.ACTION_FOUND -> {
-                    lastDeviceName = name
-                    changeStatus(R.string.watcher_found, "CCU_FOUND via=DISCOVERY name=$name")
-                }
                 BluetoothDevice.ACTION_ACL_CONNECTED -> {
                     connected = true
                     lastDeviceName = name
-                    cancelOwnedDiscovery()
                     changeStatus(R.string.watcher_found, "CCU_FOUND via=ACL_CONNECTED name=$name")
                 }
                 BluetoothDevice.ACTION_ACL_DISCONNECTED -> {
                     connected = false
                     changeStatus(R.string.watcher_disconnected, "CCU_DISCONNECTED name=$name")
-                    handler.removeCallbacks(scanTask)
-                    handler.postDelayed(scanTask, 4_000L)
                 }
             }
         }
@@ -149,19 +91,20 @@ class CcuWatcherService : Service() {
         startForegroundTyped(buildNotification())
         record("WATCH_START pid=${android.os.Process.myPid()} restored=${intent == null}")
         registerEvents()
+        if (adapter?.isEnabled != true) {
+            changeStatus(R.string.watcher_bt_off, "BT_OFF initial")
+        } else {
+            record("ACL_EVENT_WAITING passive=true")
+        }
         publishStatus(true)
-        handler.post(scanTask)
         return START_STICKY
     }
 
     private fun registerEvents() {
         val filter = IntentFilter().apply {
-            addAction(BluetoothDevice.ACTION_FOUND)
             addAction(BluetoothDevice.ACTION_ACL_CONNECTED)
             addAction(BluetoothDevice.ACTION_ACL_DISCONNECTED)
             addAction(BluetoothAdapter.ACTION_STATE_CHANGED)
-            addAction(BluetoothAdapter.ACTION_DISCOVERY_STARTED)
-            addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED)
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(events, filter, Context.RECEIVER_EXPORTED)
@@ -197,14 +140,7 @@ class CcuWatcherService : Service() {
 
     private fun hasBluetoothPermission(): Boolean =
         Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
-            (checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED &&
-                checkSelfPermission(Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED)
-
-    @Suppress("DEPRECATION")
-    private fun captureRunning(): Boolean = runCatching {
-        getSystemService(ActivityManager::class.java).getRunningServices(Int.MAX_VALUE)
-            .any { it.service.className == CaptureService::class.java.name }
-    }.getOrDefault(false)
+            checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
 
     private fun changeStatus(next: Int, event: String) {
         if (!started) return
@@ -272,17 +208,8 @@ class CcuWatcherService : Service() {
         }
     }
 
-    private fun cancelOwnedDiscovery() {
-        if (!ownDiscovery) return
-        ownDiscovery = false
-        runCatching { adapter?.cancelDiscovery() }
-        record("DISCOVERY_CANCEL owned=true")
-    }
-
     override fun onDestroy() {
         started = false
-        handler.removeCallbacks(scanTask)
-        cancelOwnedDiscovery()
         if (registered) {
             unregisterReceiver(events)
             registered = false
@@ -301,7 +228,6 @@ class CcuWatcherService : Service() {
         private const val TAG = "Pillion-CCU-Watcher"
         private const val CHANNEL_ID = "pillion-ccu-watcher"
         private const val NOTIFICATION_ID = 40
-        private const val SCAN_PERIOD_MS = 45_000L
         private const val MAX_LOG_BYTES = 256 * 1024L
     }
 }

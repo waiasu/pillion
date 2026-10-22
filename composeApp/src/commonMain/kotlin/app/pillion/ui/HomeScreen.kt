@@ -123,7 +123,12 @@ internal fun HomeScreen(
             }
         }
         if (dashSupported) {
-            WatcherButton(running = watcherRunning, busy = watcherBusy, onToggle = onWatcherToggle)
+            WatcherButton(
+                running = watcherRunning,
+                busy = watcherBusy,
+                startAllowed = state is MirrorState.Idle && !startLocked,
+                onToggle = onWatcherToggle,
+            )
             Text(
                 stringResource(Res.string.ccu_watcher_help),
                 style = MaterialTheme.typography.bodySmall,
@@ -136,8 +141,9 @@ internal fun HomeScreen(
         PrimaryButton(
             state = state,
             startEnabled = !startLocked,
+            manuallyEnabled = !watcherRunning && !watcherBusy,
             onStart = {
-                if (!startLocked) {
+                if (!startLocked && !watcherRunning && !watcherBusy) {
                     startTapLocked = true
                     onStart()
                 }
@@ -396,10 +402,15 @@ private fun StepRow(number: Int, text: String) {
 }
 
 @Composable
-private fun WatcherButton(running: Boolean, busy: Boolean, onToggle: () -> Unit) {
+private fun WatcherButton(
+    running: Boolean,
+    busy: Boolean,
+    startAllowed: Boolean,
+    onToggle: () -> Unit,
+) {
     Button(
         onClick = onToggle,
-        enabled = !busy,
+        enabled = !busy && (running || startAllowed),
         modifier = Modifier.fillMaxWidth().height(56.dp),
         shape = RoundedCornerShape(16.dp),
         colors = ButtonDefaults.buttonColors(
@@ -421,6 +432,7 @@ private fun WatcherButton(running: Boolean, busy: Boolean, onToggle: () -> Unit)
 private fun PrimaryButton(
     state: MirrorState,
     startEnabled: Boolean,
+    manuallyEnabled: Boolean,
     onStart: () -> Unit,
     onStop: () -> Unit,
 ) {
@@ -428,12 +440,14 @@ private fun PrimaryButton(
         state is MirrorState.Broadcasting
     Button(
         onClick = if (active) onStop else onStart,
-        enabled = active || startEnabled,
+        enabled = manuallyEnabled && (active || startEnabled),
         modifier = Modifier.fillMaxWidth().height(56.dp),
         shape = RoundedCornerShape(16.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = if (active) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary,
+            contentColor = if (active) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.onPrimary,
+            disabledContainerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.18f),
+            disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
         ),
     ) {
         Text(

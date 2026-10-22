@@ -81,7 +81,7 @@ class MainActivity : ComponentActivity() {
             sendWatcherStart()
         } else {
             watcherBusy = false
-            Toast.makeText(this, "Bluetoothの探索・通知権限が必要です", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Bluetooth・通知権限が必要です", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -285,6 +285,10 @@ class MainActivity : ComponentActivity() {
 
     private fun toggleWatcher() {
         if (watcherBusy) return
+        if (!watcherRunning && (startRequestInFlight || CaptureService.state.value !is MirrorState.Idle)) {
+            Toast.makeText(this, "投影を停止してから常駐を開始してください", Toast.LENGTH_SHORT).show()
+            return
+        }
         watcherBusy = true // Disable immediately; confirmation comes from the service broadcast.
         if (watcherRunning) {
             try {
@@ -297,9 +301,6 @@ class MainActivity : ComponentActivity() {
             val needed = buildList {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                     add(Manifest.permission.BLUETOOTH_CONNECT)
-                    add(Manifest.permission.BLUETOOTH_SCAN)
-                } else {
-                    add(Manifest.permission.ACCESS_FINE_LOCATION)
                 }
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     add(Manifest.permission.POST_NOTIFICATIONS)
@@ -540,6 +541,8 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun startMirroring(settings: MirrorSettings) {
+        // Manual casting and the resident watcher own the controls exclusively.
+        if (watcherRunning || watcherBusy) return
         // One START request at a time. Keep the UI and framework guard locked until the request
         // either fails/cancels or the selected mirror session actually leaves Idle.
         if (startRequestInFlight) return
