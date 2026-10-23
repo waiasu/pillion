@@ -375,19 +375,21 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun sendWatcherStart() {
-        // Settings may have been changed while Bluetooth/notification permission UI was open.
-        if (!settingsStore.dashEnabled()) {
-            watcherBusy = false
-            Toast.makeText(this, "常駐はVDモード専用です", Toast.LENGTH_SHORT).show()
-            return
-        }
-        try {
-            val intent = Intent(this, CcuWatcherService::class.java).setAction(CcuWatcherService.ACTION_START)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(intent)
-            else startService(intent)
-        } catch (t: Exception) {
-            watcherBusy = false
-            Toast.makeText(this, "常駐起動に失敗: ${t.javaClass.simpleName}", Toast.LENGTH_LONG).show()
+        lifecycleScope.launch {
+            try {
+                if (!settingsStore.dashEnabled() || !checkDashAvailability()) {
+                    Toast.makeText(this@MainActivity, "VDを利用できないためCCU連動を開始しません", Toast.LENGTH_LONG).show()
+                    return@launch
+                }
+                val intent = Intent(this@MainActivity, CcuWatcherService::class.java).setAction(CcuWatcherService.ACTION_START)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(intent)
+                else startService(intent)
+            } catch (t: Exception) {
+                Toast.makeText(this@MainActivity, "CCU連動開始に失敗: ${t.javaClass.simpleName}", Toast.LENGTH_LONG).show()
+            } finally {
+                watcherBusy = false
+                refreshWatcherStatus()
+            }
         }
     }
 

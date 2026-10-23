@@ -214,7 +214,7 @@
     <string name="code_or_port_code">Code, or port number and code</string>
     <string name="connected">✅ Connected</string>
     <string name="pairing_failed">Pairing failed. Check the code and try again.</string>
-    <string name="ccu_watcher_start">Resident Start</string>
-    <string name="ccu_watcher_stop">Resident Stop</string>
-    <string name="ccu_watcher_help">Automatically start VD when the CCU is detected. Stop after a sustained Bluetooth disconnect.</string>
+    <string name="ccu_watcher_start">CCU Linked Start</string>
+    <string name="ccu_watcher_stop">CCU Linked Stop</string>
+    <string name="ccu_watcher_help">Automatically start and stop VD in response to the motorcycle CCU.</string>
 </resources>

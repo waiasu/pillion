@@ -69,3 +69,12 @@ This test is intentionally isolated from the stable v39 VD/CaptureService flow.
 - A locked phone may be briefly awakened by the original Helper DEMOTE. After CaptureService stops and a 1.2-second settle, the watcher sends one SLEEP (223) if the phone is still locked and loopback ADB works. This is a deliberately simple heuristic, not a physical-panel acknowledgment. If verification fails, skip SLEEP. Track logs for timing races.
 - WakeLocks now cover only active auto-Start/Stop work, not idle watching. Notification shows CCU status only. Reset and Save & Restart still stop the resident watcher. CaptureService and DashServer unchanged.
 - Field-test caveats: a started-after-connection watcher may miss ACL broadcasts; a CCU without repeated ACL_CONNECTED events cannot trigger Start; quick intermittent ACL events may still require tuning. Not yet confirmed on the bike.
+
+## 2026-10-23 — CCU-linked quick trigger / UI field test
+
+- First paired-CCU ACL_CONNECTED immediately sets availability and launches one auto Start, rather than requiring two events in 6 s.
+- First matching ACL_DISCONNECTED starts one five-second grace; duplicates do not extend it. Reconnecting during the grace cancels Stop. Expiry clears availability and invokes existing CaptureService Stop.
+- Home entry and CCU Linked Start both use existing Helper/loopback-ADB preflight, synchronizing VD disabled after failure. PROMOTE/DEMOTE, CaptureService and DashServer are untouched.
+- Notification only shows BT OFF / CCU 圏外 / CCU 圏内, with a distinct small icon per state, no app-provided time or chronometer, and Stop on the same content row via decorated RemoteViews. Android can still add platform-generated headers or runtime information.
+- ACTION_SCREEN_ON re-posts a notification only if missing; no periodic polling. State is based on CCU events and may differ from physical radio range.
+- Home buttons say CCU連動 スタート/ストップ. Confirm Pixel notification layout, reboot preflight, and first-ACL auto-start on-bike before release.

@@ -157,8 +157,17 @@ fun App(
         var showDashOnboarding by rememberSaveable { mutableStateOf(false) }
         var restartAction by remember { mutableStateOf<RestartAction?>(null) }
         var dashEnabled by remember { mutableStateOf(settingsStore?.dashEnabled() ?: false) }
-        var checkingDash by remember { mutableStateOf(false) }
+        var checkingDash by remember { mutableStateOf(settingsStore?.dashEnabled() == true) }
         val scope = rememberCoroutineScope()
+        LaunchedEffect(Unit) {
+            if (dashEnabled && dashSetup != null && state is MirrorState.Idle && !watcherRunning) {
+                checkingDash = true
+                try {
+                    onCheckDashAvailability()
+                    dashEnabled = settingsStore?.dashEnabled() ?: false
+                } finally { checkingDash = false }
+            } else checkingDash = false
+        }
         // A failed Start preflight can disable the stored toggle while Home is visible.
         LaunchedEffect(dashSettingsRevision) {
             dashEnabled = settingsStore?.dashEnabled() ?: false
@@ -368,10 +377,10 @@ fun App(
                 state = state,
                 startRequestInFlight = startRequestInFlight,
                 watcherRunning = watcherRunning,
-                watcherBusy = watcherBusy,
+                watcherBusy = watcherBusy || checkingDash,
                 onWatcherToggle = onWatcherToggle,
                 dashSupported = dashSetup != null && !profile.requiresUsb,
-                dashEnabled = dashEnabled,
+                dashEnabled = dashEnabled && !checkingDash,
                 onOpenSettings = {
                     showSettings = true
                     // Check once per entry, not on every recomposition. Never turn off VD
