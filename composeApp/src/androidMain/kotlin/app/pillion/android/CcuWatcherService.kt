@@ -477,7 +477,7 @@ class CcuWatcherService : Service() {
 
         val icon = when {
             adapter?.isEnabled != true -> R.drawable.search_off_24
-            ccuAvailable -> R.drawable.search_check_24
+            ccuAvailable -> R.drawable.two_wheeler_24
             else -> R.drawable.search_24
         }
         val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

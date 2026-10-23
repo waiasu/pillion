@@ -86,3 +86,9 @@ This test is intentionally isolated from the stable v39 VD/CaptureService flow.
 - Icons sourced from `google/material-design-icons` commit `10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7` under Apache-2.0; see `THIRD_PARTY_GOOGLE_MATERIAL_SYMBOLS_NOTICE.md` and `THIRD_PARTY_GOOGLE_MATERIAL_SYMBOLS_LICENSE.txt`.
 - Keep existing watcher notification channel and user-set Default/Silent setting. No forced importance changes; maintain icon state updates, screen-ON redisplay, no app timestamp, and existing CCU auto-Start/Stop behavior.
 - Pixel layout and status bar appearance require device testing; CI build and unit tests cannot validate Android's rendered notification.
+
+## 2026-10-23 — CCU state legibility polish
+
+- Notification Japanese state strings: `CCU 圏外` → **`CCU 検索中`**, `CCU 圏内` → **`CCU 接続`**. English fallbacks updated to CCU searching / CCU connected. `BT OFF` remains unchanged.
+- The connected-state small icon uses the genuine Google Material Symbols Outlined `two_wheeler` 24px vector, from the same pinned Google repository revision and Apache-2.0 license as the other two icons. The previous `search_check` vector remains an unused test resource; no modifications to Bluetooth handling or the existing native notification layout.
+- Check actual Pixel 10a status-bar legibility; device may apply scaling and color tint to the small icon.

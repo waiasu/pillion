@@ -121,8 +121,8 @@
     <string name="capture_denied">screen capture denied</string>
     <string name="capture_helper_unavailable">Dash helper unavailable</string>
     <string name="watcher_notification_title">Pillion CCU linked</string>
-    <string name="watcher_searching">CCU out of range</string>
-    <string name="watcher_found">CCU in range</string>
+    <string name="watcher_searching">CCU searching</string>
+    <string name="watcher_found">CCU connected</string>
     <string name="watcher_disconnected">CCU disconnected</string>
     <string name="watcher_bt_off">BT OFF</string>
     <string name="watcher_stop">Stop</string>
