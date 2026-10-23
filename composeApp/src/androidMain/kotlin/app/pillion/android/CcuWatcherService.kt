@@ -7,7 +7,6 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
-import android.widget.RemoteViews
 import android.app.ActivityManager
 import android.app.KeyguardManager
 import android.bluetooth.BluetoothAdapter
@@ -465,6 +464,9 @@ class CcuWatcherService : Service() {
         }
     }
 
+    /** Native Android notification template, matching CaptureService's action placement.
+     * CCU icons are Google's Material Symbols (Apache-2.0).
+     */
     private fun buildNotification(): Notification {
         val open = PendingIntent.getActivity(this, 21,
             Intent(this, MainActivity::class.java),
@@ -472,15 +474,11 @@ class CcuWatcherService : Service() {
         val stop = PendingIntent.getService(this, 22,
             Intent(this, CcuWatcherService::class.java).setAction(ACTION_STOP),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+
         val icon = when {
-            adapter?.isEnabled != true -> R.drawable.ic_ccu_bt_off
-            ccuAvailable -> R.drawable.ic_ccu_in
-            else -> R.drawable.ic_ccu_out
-        }
-        val content = RemoteViews(packageName, R.layout.notification_ccu_watcher).apply {
-            setTextViewText(R.id.ccu_state, getString(status))
-            setTextViewText(R.id.ccu_stop, getString(R.string.watcher_stop))
-            setOnClickPendingIntent(R.id.ccu_stop, stop)
+            adapter?.isEnabled != true -> R.drawable.search_off_24
+            ccuAvailable -> R.drawable.search_check_24
+            else -> R.drawable.search_24
         }
         val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             Notification.Builder(this, CHANNEL_ID)
@@ -492,13 +490,18 @@ class CcuWatcherService : Service() {
             .setContentText(getString(status))
             .setSmallIcon(icon)
             .setContentIntent(open)
+            .setCategory(Notification.CATEGORY_SERVICE)
             .setShowWhen(false)
             .setUsesChronometer(false)
-            .setCustomContentView(content)
-            .setCustomBigContentView(content)
-            .setStyle(Notification.DecoratedCustomViewStyle())
             .setOngoing(true)
+            .setAutoCancel(false)
             .setOnlyAlertOnce(true)
+            .setVisibility(Notification.VISIBILITY_PUBLIC)
+            .addAction(Notification.Action.Builder(
+                android.R.drawable.ic_menu_close_clear_cancel,
+                getString(R.string.watcher_stop),
+                stop
+            ).build())
             .build()
     }
 

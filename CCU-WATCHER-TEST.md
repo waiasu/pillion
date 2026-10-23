@@ -78,3 +78,11 @@ This test is intentionally isolated from the stable v39 VD/CaptureService flow.
 - Notification only shows BT OFF / CCU 圏外 / CCU 圏内, with a distinct small icon per state, no app-provided time or chronometer, and Stop on the same content row via decorated RemoteViews. Android can still add platform-generated headers or runtime information.
 - ACTION_SCREEN_ON re-posts a notification only if missing; no periodic polling. State is based on CCU events and may differ from physical radio range.
 - Home buttons say CCU連動 スタート/ストップ. Confirm Pixel notification layout, reboot preflight, and first-ACL auto-start on-bike before release.
+
+## 2026-10-23 — native Android notification and Material Symbols icons
+
+- Return the CCU linked foreground notification to the same **standard Android Notification.Builder and native Stop action** pattern as CaptureService; remove decorated custom layout. This fixes low-contrast content text on Pixel's dark notification shade.
+- Small icon mappings: **BT OFF** → Google Material Symbols Outlined `search_off` (24px); **CCU 圏外** → `search`; **CCU 圏内** → `search_check`. The official icon path is converted from Google's 960-unit SVG to Android VectorDrawable with a vertical group translation.
+- Icons sourced from `google/material-design-icons` commit `10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7` under Apache-2.0; see `THIRD_PARTY_GOOGLE_MATERIAL_SYMBOLS_NOTICE.md` and `THIRD_PARTY_GOOGLE_MATERIAL_SYMBOLS_LICENSE.txt`.
+- Keep existing watcher notification channel and user-set Default/Silent setting. No forced importance changes; maintain icon state updates, screen-ON redisplay, no app timestamp, and existing CCU auto-Start/Stop behavior.
+- Pixel layout and status bar appearance require device testing; CI build and unit tests cannot validate Android's rendered notification.
