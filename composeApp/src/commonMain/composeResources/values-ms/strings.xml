@@ -216,5 +216,5 @@
     <string name="pairing_failed">Padanan gagal. Semak kod dan cuba lagi.</string>
     <string name="ccu_watcher_start">Mula pemantauan</string>
     <string name="ccu_watcher_stop">Henti pemantauan</string>
-    <string name="ccu_watcher_help">Akan bersambung apabila CCU ditemui (ujian pengesanan sahaja buat masa ini).</string>
+    <string name="ccu_watcher_help">Mulakan VD apabila CCU dikesan dan hentikan jika sambungan terputus berterusan.</string>
 </resources>

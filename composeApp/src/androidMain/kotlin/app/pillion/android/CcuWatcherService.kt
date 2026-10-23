@@ -7,6 +7,8 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.app.ActivityManager
+import android.app.KeyguardManager
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.content.BroadcastReceiver
@@ -32,8 +34,8 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * Experimental, separate-process CCU observer. Live ACL events are still diagnostic only.
- * A one-shot 30-second room timer independently runs a synthetic auto-Start trial.
+ * Passive CCU ACL watcher. Real connection events start VD; sustained disconnection stops it.
+ * CaptureService and DashServer remain unchanged.
  * Resident Stop delegates to CaptureService's established explicit Stop without changing
  * the RFCOMM, PROMOTE/DEMOTE or VD implementation.
  *
@@ -43,30 +45,131 @@ import java.util.Locale
 class CcuWatcherService : Service() {
     private val adapter by lazy { runCatching { BluetoothAdapter.getDefaultAdapter() }.getOrNull() }
     private val timerHandler = Handler(Looper.getMainLooper())
-    private var started = false
+    @Volatile private var started = false
     private var registered = false
+    private var trialReceiverRegistered = false
     private var status = R.string.watcher_searching
     @Volatile private var trialActive = false
-    private var trialScheduled = false
-    private var virtualFlagReady = false
-    private var trialNote: String? = null
+    private var autoSessionOwned = false
+    private var autoStopInFlight = false
+    private var sessionCcuAddress: String? = null
+    private var disconnectedAtMs = 0L
+    private var disconnectReason = ""
     @Volatile private var trialId: String? = null
     @Volatile private var trialOutcome: String? = null
     @Volatile private var trialWaiter: CountDownLatch? = null
-    private var trialWakeLock: PowerManager.WakeLock? = null
 
-    private val trialTask = Runnable {
-        trialScheduled = false
-        if (started && trialActive) {
-            virtualFlagReady = true
-            trialNote = "仮想接続OK・起動試験中"
-            record("TRIAL_FLAG_READY source=timer_30s")
-            updateNotification()
-            Thread({ performRoomTrial() }, "pillion-ccu-room-trial").apply {
-                isDaemon = true
-                start()
+    private val disconnectTask = object : Runnable {
+        override fun run() {
+            if (!started || !autoSessionOwned || disconnectedAtMs == 0L) return
+            val elapsed = SystemClock.elapsedRealtime() - disconnectedAtMs
+            if (elapsed < AUTO_STOP_GRACE_MS) {
+                timerHandler.postDelayed(this, AUTO_STOP_GRACE_MS - elapsed)
+                return
             }
+            record("AUTO_STOP_CONFIRMED elapsedMs=$elapsed reason=$disconnectReason")
+            beginAutoStop(disconnectReason)
         }
+    }
+
+    private fun scheduleDisconnect(reason: String) {
+        if (!autoSessionOwned || autoStopInFlight) return
+        disconnectedAtMs = SystemClock.elapsedRealtime()
+        disconnectReason = reason
+        timerHandler.removeCallbacks(disconnectTask)
+        timerHandler.postDelayed(disconnectTask, AUTO_STOP_GRACE_MS)
+        record("AUTO_STOP_PENDING reason=$reason delayMs=$AUTO_STOP_GRACE_MS")
+    }
+
+    private fun cancelDisconnect(reason: String) {
+        if (disconnectedAtMs == 0L) return
+        timerHandler.removeCallbacks(disconnectTask)
+        disconnectedAtMs = 0L
+        record("AUTO_STOP_CANCELLED reason=$reason")
+    }
+
+    private fun beginAutoStart(address: String?) {
+        if (!started || autoSessionOwned || autoStopInFlight) {
+            record("AUTO_START_SUPPRESSED owned=$autoSessionOwned stopping=$autoStopInFlight")
+            return
+        }
+        autoSessionOwned = true
+        sessionCcuAddress = address
+        trialActive = true
+        record("AUTO_START_TRIGGER source=acl_flag_ready")
+        Thread({ performRoomTrial() }, "pillion-ccu-auto-start").apply {
+            isDaemon = true
+            start()
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun captureServiceRunning(): Boolean =
+        runCatching {
+            getSystemService(ActivityManager::class.java)
+                .getRunningServices(Int.MAX_VALUE)
+                .any { it.service.className == CaptureService::class.java.name }
+        }.getOrDefault(false)
+
+    private fun requestCaptureStop() {
+        startService(
+            Intent(this, CaptureService::class.java)
+                .setAction(CaptureService.ACTION_STOP)
+                .putExtra(CaptureService.EXTRA_KEEP_DASH_HELPER, true)
+        )
+    }
+
+    private fun beginAutoStop(reason: String) {
+        if (!started || !autoSessionOwned || autoStopInFlight) return
+        autoSessionOwned = false
+        sessionCcuAddress = null
+        autoStopInFlight = true
+        cancelDisconnect("confirmed_stop")
+        trialActive = false
+        trialWaiter?.countDown()
+        val interactiveBefore = getSystemService(PowerManager::class.java)?.isInteractive
+        val lockedBefore = getSystemService(KeyguardManager::class.java)?.isKeyguardLocked == true
+        val captureBefore = captureServiceRunning()
+        val restoreDark = captureBefore && (interactiveBefore == false || lockedBefore)
+        record("AUTO_STOP_BEGIN reason=$reason capture=$captureBefore interactive=$interactiveBefore locked=$lockedBefore restoreDark=$restoreDark")
+        Thread({
+            val wakeLock = getSystemService(PowerManager::class.java)
+                .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "app.pillion:ccu-auto-stop")
+                .apply { acquire(STOP_WAKELOCK_MS) }
+            try {
+                requestCaptureStop()
+                record("AUTO_STOP_CAPTURE_REQUESTED")
+                val deadline = SystemClock.elapsedRealtime() + STOP_SERVICE_WAIT_MS
+                while (started && captureServiceRunning() && SystemClock.elapsedRealtime() < deadline) {
+                    Thread.sleep(150L)
+                }
+                val stopped = !captureServiceRunning()
+                record("AUTO_STOP_CAPTURE_EXIT stopped=$stopped")
+                if (restoreDark && stopped && started) {
+                    // DEMOTE injects WAKEUP; allow a short settle after service exit.
+                    Thread.sleep(1_200L)
+                    val stillLocked = getSystemService(KeyguardManager::class.java)?.isKeyguardLocked == true
+                    if (started && stillLocked) {
+                        val adb = PillionAdb.getInstance(applicationContext)
+                        val connected = (adb.isConnected() && adb.getHostAddress() == PillionAdb.LOOPBACK_HOST) ||
+                            adb.connectDevice(PillionAdb.LOOPBACK_HOST, PillionAdb.TCPIP_PORT)
+                        if (connected) {
+                            record("AUTO_STOP_SLEEP_REQUEST keyevent=223")
+                            val output = adb.runShell("input keyevent 223")
+                            record("AUTO_STOP_SLEEP_RESULT output=${output.trim().take(160)}")
+                        } else record("AUTO_STOP_SLEEP_SKIPPED reason=adb_unavailable")
+                    } else record("AUTO_STOP_SLEEP_SKIPPED reason=phone_unlocked_or_watcher_stopped")
+                } else record("AUTO_STOP_SLEEP_SKIPPED reason=not_dark_or_capture_not_stopped")
+            } catch (t: Throwable) {
+                record("AUTO_STOP_FAILED reason=${t.javaClass.simpleName}: ${t.message}".take(230))
+            } finally {
+                runCatching { if (wakeLock.isHeld) wakeLock.release() }
+                timerHandler.post {
+                    autoStopInFlight = false
+                    record("AUTO_STOP_END")
+                }
+            }
+        }, "pillion-ccu-auto-stop").apply { isDaemon = true; start() }
     }
 
     private val trialEvents = object : BroadcastReceiver() {
@@ -87,6 +190,9 @@ class CcuWatcherService : Service() {
     }
 
     private fun performRoomTrial() {
+        val wakeLock = getSystemService(PowerManager::class.java)
+            .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "app.pillion:ccu-auto-start")
+            .apply { acquire(START_WAKELOCK_MS) }
         var wakeSent = false
         try {
             check(trialActive) { "cancelled" }
@@ -146,28 +252,26 @@ class CcuWatcherService : Service() {
                 record("TRIAL_SLEEP_REQUEST keyevent=223 reason=restore_initial_off")
                 val sleepOutput = adb.runShell("input keyevent 223")
                 record("TRIAL_SLEEP_RESULT output=${sleepOutput.trim().take(160)}")
-                trialNote = "画面OFF指示完了・PROMOTE確認待ち"
             } else {
                 val reason = if (interactiveBeforeWake == true) "initial_screen_on" else "initial_state_unknown"
                 record("TRIAL_SLEEP_SKIPPED reason=$reason")
-                trialNote = "自動Start完了・画面ON維持"
             }
             record("TRIAL_COMMAND_SEQUENCE_COMPLETE")
             timerHandler.post { updateNotification() }
         } catch (t: Throwable) {
             val reason = "${t.javaClass.simpleName}: ${t.message}".take(200)
             record("TRIAL_FAILED reason=$reason wakeSent=$wakeSent")
-            trialNote = "自動起動試験失敗・ログ確認"
             timerHandler.post { updateNotification() }
         } finally {
             trialWaiter = null
             CcuAutoTrial.clear(applicationContext)
+            trialActive = false
             record("TRIAL_END")
-            trialWakeLock?.let { runCatching { if (it.isHeld) it.release() } }
+            runCatching { if (wakeLock.isHeld) wakeLock.release() }
         }
     }
 
-    // Experimental ACL trigger flag is observation-only; it never starts/stops projection.
+    // Six-second flag is for START only; its expiration is not a Stop signal.
     // Monotonic elapsed time prevents wall-clock changes from affecting the six-second window.
     private var mayConnect = false
     private var candidateAddress: String? = null
@@ -217,7 +321,9 @@ class CcuWatcherService : Service() {
         } else if (!mayConnect) {
             mayConnect = true
             record("FLAG_READY intervalMs=$elapsed name=$name")
+            beginAutoStart(address)
         }
+        if (sessionCcuAddress == null || sessionCcuAddress == address) cancelDisconnect("acl_connected")
         lastConnectedAtMs = now
         timerHandler.removeCallbacks(expiryTask)
         timerHandler.postDelayed(expiryTask, TRIGGER_WINDOW_MS)
@@ -239,6 +345,7 @@ class CcuWatcherService : Service() {
                 when (intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, -1)) {
                     BluetoothAdapter.STATE_OFF -> {
                         resetTrigger("bluetooth_off")
+                        scheduleDisconnect("bluetooth_off")
                         changeStatus(R.string.watcher_bt_off, "BT_OFF")
                     }
                     BluetoothAdapter.STATE_ON -> {
@@ -256,8 +363,11 @@ class CcuWatcherService : Service() {
                     onCcuConnected(device, name)
                 }
                 BluetoothDevice.ACTION_ACL_DISCONNECTED -> {
-                    // A short disconnect is expected during the observed CCU cycle.
-                    // Keep the current flag until the last ACL_CONNECTED is 6s old.
+                    // Debounce auto-Stop separately from the six-second READY flag.
+                    val address = runCatching { device.address }.getOrNull()
+                    if (sessionCcuAddress == null || sessionCcuAddress == address) {
+                        scheduleDisconnect("acl_disconnected")
+                    }
                     changeStatus(R.string.watcher_disconnected,
                         "CCU_DISCONNECTED name=$name flagReady=$mayConnect")
                 }
@@ -270,16 +380,14 @@ class CcuWatcherService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) {
             record("WATCH_STOP requested")
+            trialActive = false
+            trialWaiter?.countDown()
             // Stop the current cast through its existing explicit Stop path. This also
             // DEMOTEs the VD target and preserves the idle Helper for a later Start.
             // The watcher is a separate process: its static CaptureService state is
             // not shared with the main process, so dispatch Stop directly.
             try {
-                startService(
-                    Intent(this, CaptureService::class.java)
-                        .setAction(CaptureService.ACTION_STOP)
-                        .putExtra(CaptureService.EXTRA_KEEP_DASH_HELPER, true)
-                )
+                requestCaptureStop()
                 record("WATCH_CAPTURE_STOP requested keepHelper=true")
             } catch (t: Exception) {
                 record("WATCH_CAPTURE_STOP fallback reason=${t.javaClass.simpleName}")
@@ -296,32 +404,22 @@ class CcuWatcherService : Service() {
             return START_STICKY
         }
         started = true
-        trialActive = intent?.action == ACTION_START // Never replay room trial after START_STICKY restoration.
-        trialScheduled = trialActive
-        if (trialActive) {
-            trialNote = "室内テスト：30秒後に仮想接続"
-            val pm = getSystemService(PowerManager::class.java)
-            trialWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "app.pillion:ccu-room-trial")
-                .apply { acquire(45_000L) } // Keep the 30s test timer accurate while the screen is OFF.
-        }
         createNotificationChannel()
         startForegroundTyped(buildNotification())
         record("WATCH_START pid=${android.os.Process.myPid()} restored=${intent == null}")
         registerEvents()
-        if (trialActive) {
-            val filter = IntentFilter().apply {
-                addAction(CcuAutoTrial.ACTION_CAPTURE_READY)
-                addAction(CcuAutoTrial.ACTION_START_FAILED)
-            }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                registerReceiver(trialEvents, filter, Context.RECEIVER_NOT_EXPORTED)
-            } else {
-                @Suppress("DEPRECATION")
-                registerReceiver(trialEvents, filter)
-            }
-            record("TRIAL_SCHEDULED delayMs=30000 syntheticOnly=true")
-            timerHandler.postDelayed(trialTask, 30_000L)
+        val filter = IntentFilter().apply {
+            addAction(CcuAutoTrial.ACTION_CAPTURE_READY)
+            addAction(CcuAutoTrial.ACTION_START_FAILED)
         }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(trialEvents, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            @Suppress("DEPRECATION")
+            registerReceiver(trialEvents, filter)
+        }
+        trialReceiverRegistered = true
+        record("AUTO_READY passive_acl=true start_windowMs=$TRIGGER_WINDOW_MS stop_graceMs=$AUTO_STOP_GRACE_MS")
         if (adapter?.isEnabled != true) {
             changeStatus(R.string.watcher_bt_off, "BT_OFF initial")
         } else {
@@ -409,11 +507,8 @@ class CcuWatcherService : Service() {
             @Suppress("DEPRECATION")
             Notification.Builder(this)
         }
-        return builder.setContentTitle(
-                getString(if (if (trialActive) virtualFlagReady else mayConnect)
-                    R.string.watcher_flag_ready else R.string.watcher_flag_blocked)
-            )
-            .setContentText(trialNote ?: getString(status))
+        return builder.setContentTitle(getString(R.string.watcher_notification_title))
+            .setContentText(getString(status))
             .setSmallIcon(android.R.drawable.stat_notify_sync)
             .setContentIntent(open)
             .setOngoing(true)
@@ -446,12 +541,12 @@ class CcuWatcherService : Service() {
         trialActive = false
         started = false
         timerHandler.removeCallbacks(expiryTask)
-        timerHandler.removeCallbacks(trialTask)
+        timerHandler.removeCallbacks(disconnectTask)
         trialWaiter?.countDown()
         CcuAutoTrial.clear(applicationContext)
-        trialWakeLock?.let { runCatching { if (it.isHeld) it.release() } }
-        if (trialScheduled || virtualFlagReady) {
+        if (trialReceiverRegistered) {
             runCatching { unregisterReceiver(trialEvents) }
+            trialReceiverRegistered = false
         }
         if (registered) {
             unregisterReceiver(events)
@@ -472,6 +567,10 @@ class CcuWatcherService : Service() {
         private const val CHANNEL_ID = "pillion-ccu-watcher"
         private const val NOTIFICATION_ID = 40
         private const val TRIGGER_WINDOW_MS = 6_000L
+        private const val AUTO_STOP_GRACE_MS = 10_000L
+        private const val STOP_SERVICE_WAIT_MS = 7_000L
+        private const val START_WAKELOCK_MS = 45_000L
+        private const val STOP_WAKELOCK_MS = 20_000L
         private const val MAX_LOG_BYTES = 256 * 1024L
     }
 }

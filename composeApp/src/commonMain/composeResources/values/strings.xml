@@ -216,5 +216,5 @@
     <string name="pairing_failed">Pairing failed. Check the code and try again.</string>
     <string name="ccu_watcher_start">Resident Start</string>
     <string name="ccu_watcher_stop">Resident Stop</string>
-    <string name="ccu_watcher_help">Room test: 30 seconds after Resident Start, automatically start VD once (no CCU needed).</string>
+    <string name="ccu_watcher_help">Automatically start VD when the CCU is detected. Stop after a sustained Bluetooth disconnect.</string>
 </resources>

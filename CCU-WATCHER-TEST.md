@@ -61,3 +61,11 @@ This test is intentionally isolated from the stable v39 VD/CaptureService flow.
 - Use `FLAG_ACTIVITY_NEW_TASK | FLAG_ACTIVITY_CLEAR_TOP | FLAG_ACTIVITY_SINGLE_TOP` in the shell launch. If the Pillion Activity is already alive in its task, Android should call its existing `onNewIntent` handler with the authenticated one-use token. If not alive, it should create one normally. Add `TRIAL_ON_NEW_INTENT` to distinguish actual delivery from mere foregrounding.
 - The pre-WAKE screen state and conditional SLEEP remain unchanged. At 00:17:32 `interactive=true` means a successful auto-Start would have kept the user's screen ON until manual lock; however this particular session did not start. No changes to real CCU ACL flag, 30-second trial scheduling, VD PROMOTE/DEMOTE or Reset semantics.
 - **Unverified until tested on device**: check launch both from a removed Recents task and from an already-alive MainActivity immediately after Save & Restart / Reset.
+
+## 2026-10-23 CCU-driven field test
+
+- Synthetic 30-second Start removed. Two ACL_CONNECTED events from the same paired CCU within 6 seconds start one authenticated VD session. Six-second READY expiry is not a disconnect signal.
+- A matching ACL_DISCONNECTED or Bluetooth OFF starts a separate 10-second auto-Stop debounce; a new ACL_CONNECTED cancels it. Stop delegates to the original CaptureService Stop with idle Helper preservation. Manually stopping capture from its notification does not restart it merely because the six-second flag expires.
+- A locked phone may be briefly awakened by the original Helper DEMOTE. After CaptureService stops and a 1.2-second settle, the watcher sends one SLEEP (223) if the phone is still locked and loopback ADB works. This is a deliberately simple heuristic, not a physical-panel acknowledgment. If verification fails, skip SLEEP. Track logs for timing races.
+- WakeLocks now cover only active auto-Start/Stop work, not idle watching. Notification shows CCU status only. Reset and Save & Restart still stop the resident watcher. CaptureService and DashServer unchanged.
+- Field-test caveats: a started-after-connection watcher may miss ACL broadcasts; a CCU without repeated ACL_CONNECTED events cannot trigger Start; quick intermittent ACL events may still require tuning. Not yet confirmed on the bike.

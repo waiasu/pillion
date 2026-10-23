@@ -82,7 +82,7 @@
             android:exported="false"
             android:foregroundServiceType="mediaProjection|connectedDevice" />
 
-        <!-- Standalone CCU observer: separate process; never starts/stops CaptureService. -->
+        <!-- Standalone CCU observer: separate process; invokes existing CaptureService Stop and Activity Start. -->
         <service
             android:name="app.pillion.android.CcuWatcherService"
             android:process=":ccu_watcher"

@@ -216,5 +216,5 @@
     <string name="pairing_failed">Error al emparejar. Comprueba el código e inténtalo de nuevo.</string>
     <string name="ccu_watcher_start">Iniciar vigilancia</string>
     <string name="ccu_watcher_stop">Detener vigilancia</string>
-    <string name="ccu_watcher_help">Se conectará al detectar CCU (por ahora solo prueba de detección).</string>
+    <string name="ccu_watcher_help">Inicia VD al detectar CCU y lo detiene si la desconexión persiste.</string>
 </resources>

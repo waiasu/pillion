@@ -216,5 +216,5 @@
     <string name="pairing_failed">ペア設定に失敗しました。コードを確認して再試行してください。</string>
     <string name="ccu_watcher_start">常駐スタート</string>
     <string name="ccu_watcher_stop">常駐ストップ</string>
-    <string name="ccu_watcher_help">室内テスト：常駐スタート30秒後、CCU無しでVD自動起動を1回試します。</string>
+    <string name="ccu_watcher_help">CCUを検出したらVDを自動起動。切断が続いた場合は自動停止します。</string>
 </resources>
