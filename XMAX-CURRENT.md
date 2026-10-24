@@ -10,6 +10,10 @@ If this file and the source ever disagree, **the source code wins**.
 
 ---
 
+## v40 maintenance — already-connected loopback ADB on restart (2026-10-24)
+
+- Save & Restart / Reset & Restart first attempt the existing DashServer Helper, then a reusable RestartHelper. If neither exists, the fallback creates one using ADB. The fallback now accepts an **already-connected loopback `127.0.0.1:5555` session** as ready, because libadb `connectDevice()` returns false when the connection already exists. If no live local connection exists, the original connection attempts and Wi-Fi/mDNS fallback remain unchanged. This only corrects the restart availability gate, not the Helper/VD/CCU watcher lifecycle or PROMOTE/DEMOTE. See `DashHelper.schedulePillionRestart()`.
+
 ## v40 — CCU-linked resident VD (2026-10-24)
 
 - The optional **CCU連動** button is shown only for NaviLite dedicated VD. `CcuWatcherService` runs as a foreground service in the separate `:ccu_watcher` process, receiving Android Bluetooth ACL connect/disconnect and BT adapter changes. It does not scan/pair/connect to Bluetooth; its status describes observed ACL events, not NaviLite streaming success. Starts and stops use the existing Android Activity/CaptureService entry points. Ordinary manual casting remains separate.
