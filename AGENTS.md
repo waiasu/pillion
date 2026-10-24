@@ -18,13 +18,14 @@ Before changing XMAX-specific behavior, read:
 
 ## Stability constraints
 
-The stable `xmax-pillion` line includes v39 transport timeouts and image workload reduction, v38 localization and UI polish, plus v35 Auto DRIVE/NAV, v36 helper security/stick safety, and v37 dedicated VD-only startup and normal-mirror lifecycle/UI fixes, validated primarily on Yamaha XMAX + Google Pixel 10a + Yahoo! Car Navigation.
+The stable `xmax-pillion` line includes v40 optional CCU-linked resident Start/Stop and patched libadb, v39 transport timeouts and image workload reduction, v38 localization and UI polish, plus v35 Auto DRIVE/NAV, v36 helper security/stick safety, and v37 dedicated VD-only startup and normal-mirror lifecycle/UI fixes, validated primarily on Yamaha XMAX + Google Pixel 10a + Yahoo! Car Navigation.
 
 Unless a task explicitly requires it:
 
 - Do not change the established PROMOTE / DEMOTE state flow.
 - Preserve the v38 post-PROMOTE one-shot sleep recovery check (3,150 ms, current promotion only, `PowerManager.isInteractive == false` → normal DEMOTE/Helper wake); never weaken the existing 3-second synthetic screen-event guard without dedicated validation.
-- Do not demote merely because Bluetooth/RFCOMM disconnects.
+- Do not demote merely because Bluetooth/RFCOMM disconnects in the established manual session. v40's separate, opt-in CCU watcher may request the existing CaptureService Stop only after a matching paired-CCU ACL disconnect remains unresolved for five seconds.
+- Keep v40 CCU-linked watcher event-driven and independent of the VD/Helper PROMOTE/DEMOTE state machine. Preserve the authenticated one-use auto-start token, conditional WAKE/SLEEP, and one-shot post-auto-Stop unlock HOME. See `CCU-LINKED-V40.md`.
 - Preserve the existing ScreenSource/helper/VD while transport reconnects.
 - Keep OCR traffic isolated from the main NaviLite JPEG frame stream.
 - Keep Restart-on-VD as a separate path from the normal relocation path.
@@ -36,6 +37,8 @@ Unless a task explicitly requires it:
 - Preserve v36 authentication on DASH/OCR sockets and the RestartHelper channel; avoid weakening local command access or exposing secrets in diagnostic logs.
 - Keep the 2-second ADB tcpip ACK wait separate from the 20-second helper prepare timeout, and do not move Stop helper network operations back onto the UI thread.
 - Do not overwrite existing installations' preferences with the v35 clean-install Yahoo! Navi preset; the preset applies only when the preference file is genuinely empty and Yahoo! Navi is installed.
+
+- Preserve the locally vendored, minimally patched `libadb-android 3.1.1` and upstream attribution/LICENSES under `third_party/libadb-android`; see `PATCHES.md` before altering ADB synchronization.
 
 ## Build / validation
 
@@ -58,7 +61,7 @@ For behavior changes, prefer this order:
 3. Bench-test when possible.
 4. Treat on-bike XMAX testing as the final validation for power/lock, Bluetooth reconnect, stick input, camera wake, and rendering timing.
 
-When a stable fork milestone is reached, update `CHANGELOG-XMAX.md`, `XMAX-CURRENT.md`, and the README feature summary as needed, and update the in-app XMAX fork version label when applicable. v39 is the current stable milestone; create a fresh test branch only when the next development cycle is requested.
+When a stable fork milestone is reached, update `CHANGELOG-XMAX.md`, `XMAX-CURRENT.md`, and the README feature summary as needed, and update the in-app XMAX fork version label when applicable. v40 is the current stable milestone; create a fresh test branch only when the next development cycle is requested.
 
 ## Branch / merge workflow
 
@@ -69,5 +72,5 @@ When a stable fork milestone is reached, update `CHANGELOG-XMAX.md`, `XMAX-CURRE
 - Only after explicit user approval, open a Pull Request from the test branch into `xmax-pillion`. Prefer **Create a merge commit** so individual development/fix commits remain inspectable; do not squash by default. If a different method is desired, follow the explicit release instruction.
 - Preserve full Git history, including experiments and reverts, for retrospective inspection. Rejected experiments must not remain active in the final code. Never rewrite existing stable-branch history merely to tidy commits.
 - Keep release documentation and upstream-review checkpoints accurate. As of 2026-10-13, upstream `alexandrevega/pillion` `main` through `29497f4ea3bccc5cd40c4647f8e4d8345eeddda3` has been reviewed; necessary XMAX changes are addressed, but not every upstream commit is merged verbatim.
-- After a successful merge and verification, retain or delete the old test branch according to the user's cleanup instruction. When deleting, ensure its commits are reachable from stable history, then create a fresh next-version test branch from `xmax-pillion` only when requested. Do not create a new test branch after v39 unless requested.
+- After a successful merge and verification, retain or delete the old test branch according to the user's cleanup instruction. When deleting, ensure its commits are reachable from stable history, then create a fresh next-version test branch from `xmax-pillion` only when requested. Do not create a new test branch after v40 unless requested.
 
