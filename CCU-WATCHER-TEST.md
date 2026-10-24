@@ -98,3 +98,10 @@ This test is intentionally isolated from the stable v39 VD/CaptureService flow.
 - Replace the binary dependency with local upstream 3.1.1 source and original license notices. Only AdbStream.read() pending-close wait and AdbConnection.open() initial A_OKAY wait differ.
 - Leave Pillion CCU rules, Helper, VD, PROMOTE/DEMOTE and adb tcpip fallback unchanged. See third_party/libadb-android/PATCHES.md.
 - Build and run unit tests; XMAX field regression remains necessary for loopback/VD/Stop/Reset and screen OFF/ON.
+
+## 2026-10-24 — one-shot HOME after CCU auto-Stop (test only)
+
+- When automatic Stop begins while the phone is locked and CaptureService exists, reserve a one-shot HOME. The resident watcher listens for Android `ACTION_USER_PRESENT` (no polling).
+- Both unlock delivery and auto-Stop completion check the same main-thread condition: Stop complete, watcher active, session not restarted, and keyguard unlocked. The first successful eligibility check consumes the reservation and sends `input keyevent 3` asynchronously over existing loopback ADB.
+- Wait for CaptureService exit and the same 1.2-second settle window used for the DEMOTE wake before making HOME eligible. Skip HOME when CaptureService did not stop; discard the reservation on new CCU auto-Start, resident Stop, or watcher destruction. No changes to CaptureService, Helper, PROMOTE/DEMOTE, or ordinary manual Stop.
+- Device validation: unlock before / during / after auto-Stop, a locked phone left alone, reconnect before unlock, and watcher Stop while HOME is pending. Verify `AUTO_STOP_HOME_REQUEST`, `AUTO_STOP_HOME_RESULT` and no duplicate HOME.
