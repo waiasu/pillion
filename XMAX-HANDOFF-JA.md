@@ -4,6 +4,12 @@
 対象：waiasu/pillion の安定ブランチ xmax-pillion、XMAX Custom Fork v40（v38時点の確認基準コミット 057d74c、v39更新はCHANGELOG参照）  
 目的：新しいチャットのAIや、開発を忘れた将来の自分が、**安定化までに実際に何を試し、何が駄目で、なぜ今の形に落ち着いたか**を理解できるようにする。
 
+## v40 追記：再起動でWi-Fiが要るように見えた理由（2026-10-24、番号維持）
+
+- **実機ログ**：同じv40でもSave & Restart / Reset後の再起動に成功する場合と `RESTART_FAILED no helper/adb` となる場合が混在。失敗後もVD事前チェックでローカルADBが使える記録があり、「Wi-Fiが必須」とは断定できない。
+- **コードで判明した条件**：通常は生きているDashServer Helperから再起動、駄目なら既存RestartHelper、最後にADBでRestartHelperを生成。最後の経路が `adb.connectDevice(loopback) || adb.autoConnectDevice(...)` で、**libadbのconnectは接続済みならfalse**という仕様を忘れていた。既存のループバック接続が正常でもWi-Fi側探索へ落ち、Wi-Fi OFFで「ADBなし」と判定され得た。
+- **最小修正**：最後の経路でも `isConnected() && getHostAddress()==LOOPBACK_HOST` を先に確認。新規接続やWi-Fi/mDNSの既存フォールバックは残す。v40番号据置、常駐・VD・PROMOTE/DEMOTEは変更なし。すべての失敗要因の証明ではないため、実機再現テストは必要。
+
 ## v40 追記：CCU連動常駐、画面状態と終了タイミング（2026-10-24）
 
 - **設計理由**：完成済みのCaptureService/Helper/VDに自動化の責務を混ぜず、別プロセス`CcuWatcherService`を「Androidが教えてくれるBT ACL接続/切断を受信 → 既存Start/Stopを呼ぶ」薄い層にする。能動スキャンや定期ポーリングはしない。常駐通知はAndroid管理の低重要度チャンネルで、ユーザーが端末設定でデフォルト通知へ変更するとロック画面の点灯や表示タイミングに影響し得る。通知だけでWakeの原因を断定しない。
