@@ -55,7 +55,7 @@ object DiagnosticExporter {
 
             try {
                 // Preserve the long-term Pillion evidence before running any system query.
-                snapshotFlightLogs(workDir)
+                snapshotFlightLogs(workDir, app)
                 writeText(File(workDir, "summary.txt"), instantSummary)
 
                 val adb = AdbSnapshot(app)
@@ -106,7 +106,7 @@ object DiagnosticExporter {
         return result
     }
 
-    private fun snapshotFlightLogs(workDir: File) {
+    private fun snapshotFlightLogs(workDir: File, context: Context) {
         val out = File(workDir, "pillion-flight.log")
         runCatching { DiagnosticFlightRecorder.snapshotTo(out) }
             .onFailure { error ->
@@ -119,6 +119,12 @@ object DiagnosticExporter {
                     )
                 }
             }
+        // The watcher is a separate Android process and has its own single-writer log.
+        // Do not let it share DiagnosticFlightRecorder's rotating files.
+        runCatching {
+            val watcherFile = File(context.filesDir, "diagnostics/ccu-watcher.log")
+            if (watcherFile.isFile) watcherFile.copyTo(File(workDir, "ccu-watcher.log"), overwrite = true)
+        }
     }
 
     @SuppressLint("MissingPermission")

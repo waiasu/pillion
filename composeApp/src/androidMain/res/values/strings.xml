@@ -120,4 +120,12 @@
     <string name="capture_expired">Screen capture expired — tap Start again</string>
     <string name="capture_denied">screen capture denied</string>
     <string name="capture_helper_unavailable">Dash helper unavailable</string>
+    <string name="watcher_notification_title">Pillion CCU linked</string>
+    <string name="watcher_searching">CCU searching</string>
+    <string name="watcher_found">CCU connected</string>
+    <string name="watcher_disconnected">CCU disconnected</string>
+    <string name="watcher_bt_off">BT OFF</string>
+    <string name="watcher_stop">Stop</string>
+    <string name="watcher_flag_ready">OK to connect</string>
+    <string name="watcher_flag_blocked">Do not connect yet</string>
 </resources>

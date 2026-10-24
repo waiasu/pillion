@@ -61,6 +61,9 @@ internal fun HomeScreen(
     onStop: () -> Unit,
     onResetAndRestart: () -> Unit,
     startRequestInFlight: Boolean? = null,
+    watcherRunning: Boolean = false,
+    watcherBusy: Boolean = false,
+    onWatcherToggle: () -> Unit = {},
     dashSupported: Boolean = false,
     dashEnabled: Boolean = false,
 ) {
@@ -77,13 +80,18 @@ internal fun HomeScreen(
             }
         }
     }
-    LaunchedEffect(startTapLocked, state) {
-        if (startRequestInFlight != null || !startTapLocked) return@LaunchedEffect
+    LaunchedEffect(startTapLocked, state, startRequestInFlight) {
+        if (!startTapLocked) return@LaunchedEffect
         if (state !is MirrorState.Idle) {
             startTapLocked = false
-        } else {
+        } else if (startRequestInFlight == null) {
             delay(1_200L)
             startTapLocked = false
+        } else if (!startRequestInFlight) {
+            // Another start (e.g. the resident button) won the same-frame race. The
+            // Activity rejected this request without raising its in-flight flag.
+            delay(250L)
+            if (startRequestInFlight == false && state is MirrorState.Idle) startTapLocked = false
         }
     }
 
@@ -119,11 +127,30 @@ internal fun HomeScreen(
                 }
             }
         }
+        // The observer is VD-only. Keep its Stop available if VD was disabled while
+        // the resident service was already running or its start/stop is in flight.
+        if (dashSupported && (dashEnabled || watcherRunning || watcherBusy)) {
+            WatcherButton(
+                running = watcherRunning,
+                busy = watcherBusy,
+                startAllowed = state is MirrorState.Idle && !startLocked,
+                onToggle = onWatcherToggle,
+            )
+            Text(
+                stringResource(Res.string.ccu_watcher_help),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = 6.dp, start = 6.dp, end = 6.dp),
+            )
+            Spacer(Modifier.height(56.dp)) // 2x the existing Start -> Reset 28dp gap.
+        }
         PrimaryButton(
             state = state,
             startEnabled = !startLocked,
+            manuallyEnabled = !watcherRunning && !watcherBusy,
             onStart = {
-                if (!startLocked) {
+                if (!startLocked && !watcherRunning && !watcherBusy) {
                     startTapLocked = true
                     onStart()
                 }
@@ -382,9 +409,37 @@ private fun StepRow(number: Int, text: String) {
 }
 
 @Composable
+private fun WatcherButton(
+    running: Boolean,
+    busy: Boolean,
+    startAllowed: Boolean,
+    onToggle: () -> Unit,
+) {
+    Button(
+        onClick = onToggle,
+        enabled = !busy && (running || startAllowed),
+        modifier = Modifier.fillMaxWidth().height(56.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = if (running) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+            contentColor = if (running) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.onPrimary,
+            disabledContainerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.18f),
+            disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        ),
+    ) {
+        Text(
+            stringResource(if (running) Res.string.ccu_watcher_stop else Res.string.ccu_watcher_start),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+        )
+    }
+}
+
+@Composable
 private fun PrimaryButton(
     state: MirrorState,
     startEnabled: Boolean,
+    manuallyEnabled: Boolean,
     onStart: () -> Unit,
     onStop: () -> Unit,
 ) {
@@ -392,12 +447,14 @@ private fun PrimaryButton(
         state is MirrorState.Broadcasting
     Button(
         onClick = if (active) onStop else onStart,
-        enabled = active || startEnabled,
+        enabled = manuallyEnabled && (active || startEnabled),
         modifier = Modifier.fillMaxWidth().height(56.dp),
         shape = RoundedCornerShape(16.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = if (active) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary,
+            contentColor = if (active) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.onPrimary,
+            disabledContainerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.18f),
+            disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
         ),
     ) {
         Text(

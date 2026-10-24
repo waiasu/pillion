@@ -60,6 +60,7 @@ class CaptureService : Service() {
     @Volatile private var lastNotificationText: String? = null
     private var wakeLock: PowerManager.WakeLock? = null
     private var dashEnabled = false
+    private var roomTrialId: String? = null
     private var dashSwitch: SwitchableScreenSource? = null
     private var screenReceiver: BroadcastReceiver? = null
     private var bluetoothReceiver: BroadcastReceiver? = null
@@ -108,6 +109,7 @@ class CaptureService : Service() {
             return START_NOT_STICKY
         }
         normalMirrorStopRequested.set(false)
+        roomTrialId = intent?.getStringExtra(CcuAutoTrial.EXTRA_SESSION_ID)
         acquireWakeLock()
         _state.value = MirrorState.Connecting
 
@@ -335,6 +337,11 @@ class CaptureService : Service() {
                     }
             }
             registerScreenReceiver()
+            roomTrialId?.let { trialId ->
+                DiagnosticFlightRecorder.record("AUTO", "TRIAL_CAPTURE_SCREEN_RECEIVER_READY")
+                sendBroadcast(Intent(CcuAutoTrial.ACTION_CAPTURE_READY).setPackage(packageName)
+                    .putExtra(CcuAutoTrial.EXTRA_SESSION_ID, trialId))
+            }
             registerBluetoothReceiver()
             registerKeyguardUnlockListener()
             // Self-heal: if the helper is killed (adbd restart on Wi-Fi/debug loss), respawn it over

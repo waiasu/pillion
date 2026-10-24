@@ -2,7 +2,10 @@ package app.pillion
 
 import android.Manifest
 import android.app.ActivityManager
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.media.projection.MediaProjectionConfig
 import android.media.projection.MediaProjectionManager
@@ -24,6 +27,8 @@ import app.pillion.android.AndroidMirrorController
 import app.pillion.android.AndroidSettingsStore
 import app.pillion.android.AdbPairingCoordinator
 import app.pillion.android.CaptureService
+import app.pillion.android.CcuWatcherService
+import app.pillion.android.CcuAutoTrial
 import app.pillion.android.DashHelper
 import app.pillion.android.PillionAdb
 import app.pillion.android.DiagnosticExporter
@@ -56,8 +61,32 @@ class MainActivity : ComponentActivity() {
 
     private var pendingSettings = MirrorSettings()
     private var pendingSdl = false // whether the in-flight projection grant is for the SDL/USB path
+    private var pendingTrialId: String? = null
     @Volatile private var diagnosticExportRunning = false
     private var startRequestInFlight by mutableStateOf(false)
+    private var watcherRunning by mutableStateOf(false)
+    private var watcherBusy by mutableStateOf(false)
+    private var watcherReceiverRegistered = false
+
+    private val watcherStatusReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action != CcuWatcherService.ACTION_STATUS) return
+            watcherRunning = intent.getBooleanExtra(CcuWatcherService.EXTRA_RUNNING, false)
+            watcherBusy = false
+        }
+    }
+
+    private val watcherPermissions = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions(),
+    ) { result ->
+        if (result.values.all { it }) {
+            sendWatcherStart()
+        } else {
+            watcherBusy = false
+            Toast.makeText(this, "Bluetooth・通知権限が必要です", Toast.LENGTH_LONG).show()
+        }
+    }
+
     private var dashSettingsRevision by mutableStateOf(0)
     private val settingsStore by lazy { AndroidSettingsStore(applicationContext) }
 
@@ -133,6 +162,7 @@ class MainActivity : ComponentActivity() {
             .putExtra(CaptureService.EXTRA_DRIVE_IMAGE_SHIFT, settings.driveImageShiftPx)
             .putExtra(CaptureService.EXTRA_FIXED_DASH_APP_ENABLED, settings.fixedDashAppEnabled)
             .putExtra(CaptureService.EXTRA_FIXED_DASH_APP_PACKAGE, settings.fixedDashAppPackage)
+        pendingTrialId?.let { intent.putExtra(CcuAutoTrial.EXTRA_SESSION_ID, it) }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(intent)
         else startService(intent)
     }
@@ -212,14 +242,156 @@ class MainActivity : ComponentActivity() {
                 startRequestInFlight = startRequestInFlight,
                 dashSettingsRevision = dashSettingsRevision,
                 onCheckDashAvailability = ::checkDashAvailability,
+                watcherRunning = watcherRunning,
+                watcherBusy = watcherBusy,
+                onWatcherToggle = ::toggleWatcher,
             )
         }
-        if (savedInstanceState == null) {
+        if (savedInstanceState == null && !intent.hasExtra(CcuAutoTrial.EXTRA_TOKEN)) {
             // Ask once on a clean install, after the first Activity content has been attached.
             window.decorView.post { requestInitialRuntimePermissionsOnce() }
         }
+        acceptAutoTrialIntent(intent)
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (intent.hasExtra(CcuAutoTrial.EXTRA_TOKEN)) {
+            DiagnosticFlightRecorder.record("AUTO", "TRIAL_ON_NEW_INTENT")
+        }
+        acceptAutoTrialIntent(intent)
+    }
+
+    private fun trialFailure(reason: String) {
+        val id = pendingTrialId ?: return
+        DiagnosticFlightRecorder.record("AUTO", "TRIAL_FAILED reason=$reason")
+        sendBroadcast(Intent(CcuAutoTrial.ACTION_START_FAILED).setPackage(packageName)
+            .putExtra(CcuAutoTrial.EXTRA_SESSION_ID, id)
+            .putExtra(CcuAutoTrial.EXTRA_REASON, reason))
+        pendingTrialId = null
+        startRequestInFlight = false
+    }
+
+    private fun acceptAutoTrialIntent(source: Intent?) {
+        val token = source?.getStringExtra(CcuAutoTrial.EXTRA_TOKEN) ?: return
+        source.removeExtra(CcuAutoTrial.EXTRA_TOKEN)
+        if (!CcuAutoTrial.consume(applicationContext, token)) {
+            DiagnosticFlightRecorder.record("AUTO", "TRIAL_REJECTED invalid_or_expired_token")
+            return
+        }
+        DiagnosticFlightRecorder.record("AUTO", "TRIAL_ACTIVITY_RECEIVED")
+        window.decorView.post {
+            if (startRequestInFlight || CaptureService.state.value !is MirrorState.Idle) {
+                pendingTrialId = token
+                trialFailure("capture_already_active")
+                return@post
+            }
+            pendingTrialId = token
+            if (!settingsStore.dashEnabled()) {
+                trialFailure("VD_disabled_no_media_projection_fallback")
+                return@post
+            }
+            val missing = requiredPermissions().filter {
+                checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED
+            }
+            if (missing.isNotEmpty()) {
+                trialFailure("runtime_permission_missing")
+                return@post
+            }
+            pendingSdl = false
+            val settings = CcuAutoTrial.settings(applicationContext)
+            DiagnosticFlightRecorder.record("AUTO", "TRIAL_START_REQUEST settings_from_saved_preferences")
+            startMirroring(settings, fromWatcher = true)
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        val filter = IntentFilter(CcuWatcherService.ACTION_STATUS)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(watcherStatusReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            @Suppress("DEPRECATION")
+            registerReceiver(watcherStatusReceiver, filter)
+        }
+        watcherReceiverRegistered = true
+        refreshWatcherStatus()
+    }
+
+    override fun onStop() {
+        if (watcherReceiverRegistered) {
+            unregisterReceiver(watcherStatusReceiver)
+            watcherReceiverRegistered = false
+        }
+        super.onStop()
+    }
+
+    private fun refreshWatcherStatus() {
+        // getRunningServices is restricted for other apps, but still lists our own Service.
+        @Suppress("DEPRECATION")
+        val running = runCatching {
+            getSystemService(ActivityManager::class.java).getRunningServices(Int.MAX_VALUE)
+                .any { it.service.className == CcuWatcherService::class.java.name }
+        }.getOrDefault(false)
+        watcherRunning = running
+        watcherBusy = false
+    }
+
+    private fun toggleWatcher() {
+        if (watcherBusy) return
+        if (!watcherRunning && !settingsStore.dashEnabled()) {
+            Toast.makeText(this, "常駐はVDモード専用です", Toast.LENGTH_SHORT).show()
+            return
+        }
+        if (!watcherRunning && (startRequestInFlight || CaptureService.state.value !is MirrorState.Idle)) {
+            Toast.makeText(this, "投影を停止してから常駐を開始してください", Toast.LENGTH_SHORT).show()
+            return
+        }
+        watcherBusy = true // Disable immediately; confirmation comes from the service broadcast.
+        if (watcherRunning) {
+            try {
+                startService(Intent(this, CcuWatcherService::class.java).setAction(CcuWatcherService.ACTION_STOP))
+            } catch (t: Exception) {
+                watcherBusy = false
+                Toast.makeText(this, "常駐停止に失敗: ${t.javaClass.simpleName}", Toast.LENGTH_LONG).show()
+            }
+        } else {
+            val needed = buildList {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    add(Manifest.permission.BLUETOOTH_CONNECT)
+                }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    add(Manifest.permission.POST_NOTIFICATIONS)
+                }
+            }.filter { checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED }
+            if (needed.isEmpty()) sendWatcherStart()
+            else watcherPermissions.launch(needed.toTypedArray())
+        }
+        // A failed process start cannot leave the button disabled forever.
+        window.decorView.postDelayed({
+            if (watcherBusy) refreshWatcherStatus()
+        }, 3_000L)
+    }
+
+    private fun sendWatcherStart() {
+        lifecycleScope.launch {
+            try {
+                if (!settingsStore.dashEnabled() || !checkDashAvailability()) {
+                    Toast.makeText(this@MainActivity, "VDを利用できないためCCU連動を開始しません", Toast.LENGTH_LONG).show()
+                    return@launch
+                }
+                val intent = Intent(this@MainActivity, CcuWatcherService::class.java).setAction(CcuWatcherService.ACTION_START)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(intent)
+                else startService(intent)
+            } catch (t: Exception) {
+                Toast.makeText(this@MainActivity, "CCU連動開始に失敗: ${t.javaClass.simpleName}", Toast.LENGTH_LONG).show()
+            } finally {
+                watcherBusy = false
+                refreshWatcherStatus()
+            }
+        }
+    }
 
     /** Resource-only locale switch. Recreating the Activity does not restart an active capture service. */
     @Suppress("DEPRECATION")
@@ -275,6 +447,16 @@ class MainActivity : ComponentActivity() {
             DashHelper.stopWatchdog()
             AdbPairingCoordinator.stop(applicationContext)
 
+            // Stop the independent resident watcher before stopping capture or scheduling
+            // the shell-assisted app restart. stopService never creates a new watcher
+            // and its onDestroy cleans receivers, timers, trial token and wake lock.
+            val watcherStopRequested = runCatching {
+                stopService(Intent(this@MainActivity, CcuWatcherService::class.java))
+            }.getOrDefault(false)
+            DiagnosticFlightRecorder.record(
+                "APP", "WATCH_STOP_FOR_RESTART requested=$watcherStopRequested",
+            )
+
             // Ask the foreground services to release their own MediaProjection / SDL state first.
             runCatching {
                 startService(
@@ -291,6 +473,7 @@ class MainActivity : ComponentActivity() {
             runCatching { stopService(Intent(this@MainActivity, CaptureService::class.java)) }
             runCatching { stopService(Intent(this@MainActivity, SdlService::class.java)) }
             runCatching { stopService(Intent(this@MainActivity, SdlRouterService::class.java)) }
+            runCatching { stopService(Intent(this@MainActivity, CcuWatcherService::class.java)) }
 
             // SdlRouterService runs in its own process, so wait until Android no longer reports any
             // Pillion service before handing the final process restart to the shell-side helper.
@@ -299,6 +482,7 @@ class MainActivity : ComponentActivity() {
                 CaptureService::class.java.name,
                 SdlService::class.java.name,
                 SdlRouterService::class.java.name,
+                CcuWatcherService::class.java.name,
             )
             val deadline = android.os.SystemClock.elapsedRealtime() + 5_000L
             while (android.os.SystemClock.elapsedRealtime() < deadline) {
@@ -312,6 +496,7 @@ class MainActivity : ComponentActivity() {
                 runCatching { stopService(Intent(this@MainActivity, CaptureService::class.java)) }
                 runCatching { stopService(Intent(this@MainActivity, SdlService::class.java)) }
                 runCatching { stopService(Intent(this@MainActivity, SdlRouterService::class.java)) }
+                runCatching { stopService(Intent(this@MainActivity, CcuWatcherService::class.java)) }
                 delay(100)
             }
 
@@ -425,8 +610,12 @@ class MainActivity : ComponentActivity() {
                     startCaptureService(pendingSettings)
                     releaseStartLockWhenSessionBegins()
                 } else {
-                    // Same Start press, normal Android consent flow. Never change CaptureService.
-                    requestProjection()
+                    if (pendingTrialId != null) {
+                        trialFailure("VD_preflight_unavailable")
+                    } else {
+                        // Same manual Start press, normal Android consent flow.
+                        requestProjection()
+                    }
                 }
             } catch (t: Throwable) {
                 startRequestInFlight = false
@@ -435,7 +624,9 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun startMirroring(settings: MirrorSettings) {
+    private fun startMirroring(settings: MirrorSettings, fromWatcher: Boolean = false) {
+        // The room trial has a one-use authenticated intent; manual Start is still exclusive.
+        if (!fromWatcher && (watcherRunning || watcherBusy)) return
         // One START request at a time. Keep the UI and framework guard locked until the request
         // either fails/cancels or the selected mirror session actually leaves Idle.
         if (startRequestInFlight) return
@@ -447,6 +638,7 @@ class MainActivity : ComponentActivity() {
         try {
             if (missing.isEmpty()) startSelectedMode() else permissionLauncher.launch(missing.toTypedArray())
         } catch (t: Throwable) {
+            trialFailure("start_exception_${t.javaClass.simpleName}")
             startRequestInFlight = false
             throw t
         }

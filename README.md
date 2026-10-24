@@ -37,6 +37,8 @@ Compatibility with other Android devices, Yamaha models, or navigation apps is n
 
 ---
 
+For the v40 CCU-linked resident Start/Stop behavior, lifecycle, and limitations, see [CCU-LINKED-V40.md](CCU-LINKED-V40.md). 通常の手動Start/Stopとは別に、CCU接続に応じてVDを自動起動・停止するv40常駐機能の詳細も記載しています。
+
 ## Main changes from upstream / 主な変更点
 
 - Virtual Display based casting optimized for Yahoo! Car Navigation
@@ -45,6 +47,7 @@ Compatibility with other Android devices, Yamaha models, or navigation apps is n
 - 480 × 234 XMAX dashboard layout with configurable crop and margins
 - Right-top clamped rendering for the usable dashboard area
 - Automatic Bluetooth reconnect and recovery after ignition OFF / ON, with 10-second connection deadline and 2-second matched IMAGE_ACK wait
+- Optional CCU-linked resident mode: paired CCU Bluetooth ACL connection starts dedicated VD, sustained disconnection stops it, and the next phone unlock returns to HOME
 - Dedicated VD unlock handling returns the VD to HOME via authenticated Helper HOME key event
 - DEMOTE does not relaunch a remembered navigation app when its task is already absent
 - One-shot recovery after a real phone sleep during the 3-second PROMOTE settle window (rapid POWER presses)
@@ -54,12 +57,12 @@ Compatibility with other Android devices, Yamaha models, or navigation apps is n
 - Optional Yahoo! Car Navigation Auto DRIVE mode based on OCR Area 1 after PROMOTE
 - DRIVE-only upward image shift, mode-specific stick coordinates and input suppression while the initial mode is undecided
 - First-run Yahoo! Car Navigation preset on clean installations (existing settings preserved)
-- Compact, collapsible NAV / DRIVE / OCR settings and XMAX Custom Fork v39 link in About
+- Compact, collapsible NAV / DRIVE / OCR settings and XMAX Custom Fork v40 link in About
 - Pixel SecureCamera detection and physical display wake handling
 - Start mirroring race / duplicate-start prevention
 - Reset Pillion and Save & Restart workflows
 - Authenticated DASH/OCR and restart-helper local control channels, bounded wireless ADB TCP/IP acknowledgement wait, and safer Stop handling
-- Diagnostic flight recorder and diagnostic export
+- Diagnostic flight recorder and diagnostic export (including separate CCU watcher log)
 - Five UI languages: Japanese, English, Korean, Spanish and Malay (plus automatic system language)\n- Additional recovery and stability improvements for long-running use
 <br>
 
@@ -69,6 +72,7 @@ Compatibility with other Android devices, Yamaha models, or navigation apps is n
 - XMAXメーター 480 × 234 に合わせたクロップ・余白調整
 - 使用可能領域への右上クランプ描画
 - Bluetooth再接続、およびキーOFF / ON後の自動復帰（接続待ち10秒、画像ACK待ち2秒の上限）
+- CCU連動の常駐モード（任意）：CCUのBluetooth接続でVD自動Start、切断が5秒継続すると自動Stop、停止後の初回ロック解除でHOMEへ復帰
 - VD中のスマホロック解除でHelper経由のHOMEキー入力によりVDをホームへ復帰
 - DEMOTE時にナビの既存タスクが無ければ、意図しない再起動を抑止
 - PROMOTE直後3秒以内の電源ボタン連打でAndroidがスリープした場合に、単発確認でDEMOTE・復帰
@@ -78,7 +82,7 @@ Compatibility with other Android devices, Yamaha models, or navigation apps is n
 - OCRエリア1の判定によるYahoo!カーナビのAuto DRIVEモード
 - DRIVE時限定の映像上方向シフト、モード別スティック座標、モード判定中の誤タップ防止
 - 初回クリーンインストール時のYahoo!カーナビ向け設定プリセット（既存設定は維持）
-- NAV/DRIVE/OCR設定の折りたたみ表示、About内のXMAX Custom Fork v39リンク
+- NAV/DRIVE/OCR設定の折りたたみ表示、About内のXMAX Custom Fork v40リンク
 - Pixel SecureCamera検出と物理ディスプレイ復帰処理
 - Start mirroring の二重発火・レース対策
 - Reset Pillion / Save & Restart

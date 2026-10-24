@@ -214,4 +214,7 @@
     <string name="code_or_port_code">コード、またはポート番号とコード</string>
     <string name="connected">✅ 接続しました</string>
     <string name="pairing_failed">ペア設定に失敗しました。コードを確認して再試行してください。</string>
+    <string name="ccu_watcher_start">CCU連動 スタート</string>
+    <string name="ccu_watcher_stop">CCU連動 ストップ</string>
+    <string name="ccu_watcher_help">車体のキーON/OFFに合わせてVD投影を自動で開始・停止します。待機中はVDを動かしません。</string>
 </resources>
