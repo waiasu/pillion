@@ -4,11 +4,22 @@ This file is the current-state reference for the XMAX / Pixel fork.
 
 このファイルは XMAX / Pixel fork の「現在どうなっているか」を確認するための基準メモです。
 
-The implementation described here covers **stable v39 (2026-10-20)**, including v35 NAV/DRIVE behavior and v36 helper security/bootstrapping/Stop/stick-guard updates. The v35 release commit was `ea564aa`; the `xmax-v34` tag points to commit `4d994e3`. As always, source code takes precedence over these notes.
+The implementation described here covers **stable v40 (2026-10-24)**, including v35 NAV/DRIVE behavior and v36 helper security/bootstrapping/Stop/stick-guard updates. The v35 release commit was `ea564aa`; the `xmax-v34` tag points to commit `4d994e3`. As always, source code takes precedence over these notes.
 
 If this file and the source ever disagree, **the source code wins**.
 
 ---
+
+## v40 — CCU-linked resident VD (2026-10-24)
+
+- The optional **CCU連動** button is shown only for NaviLite dedicated VD. `CcuWatcherService` runs as a foreground service in the separate `:ccu_watcher` process, receiving Android Bluetooth ACL connect/disconnect and BT adapter changes. It does not scan/pair/connect to Bluetooth; its status describes observed ACL events, not NaviLite streaming success. Starts and stops use the existing Android Activity/CaptureService entry points. Ordinary manual casting remains separate.
+- The first matching paired CCU `ACL_CONNECTED` (name `YCCU...` / containing `CCU`) triggers one guarded auto-start. A private one-shot `AtomicFile` challenge authorizes the exported MainActivity shell wake/launch. Persisted settings are used; VD must already be enabled and local ADB/Helper available. Failure does not silently fall back to MediaProjection. If the phone was OFF before the watcher WAKEUP (224), the watcher SLEEPs (223) after CaptureService registered its receiver to invoke the **existing** `SCREEN_OFF → PROMOTE` chain; an initially interactive phone is left ON.
+- A matching `ACL_DISCONNECTED` or Bluetooth adapter OFF begins a **5-second grace**; reconnect cancels it. When it expires, the watcher changes CCU status/notification and triggers the existing `CaptureService.ACTION_STOP` with idle Helper preservation. DEMOTE emits its established KEYCODE_WAKEUP; after capture teardown and a ~1.2-second settle, watcher SLEEPs the phone again if still locked and the original state warrants dark recovery. The notifications' CCU-connected → searching transition is at **grace expiry**, not at the instant of ACL disconnection.
+- If the phone was locked at auto-Stop initiation, the watcher reserves **one HOME after Stop completion and the first actual unlock** (whichever comes later). A single main-thread predicate is called on `ACTION_USER_PRESENT` and at Stop completion. HOME is sent asynchronously over loopback ADB; the flag is consumed once. A new auto-Start, resident Stop or service destruction clears it. This does not modify the ordinary CaptureService unlock HOME/DEMOTE behavior.
+- A resident Stop (button or notification) also stops the active cast, whereas the capture notification's Stop only stops that cast. Reset/Save & Restart stop the watcher and leave it off afterward. No polling or long-lived watcher wakelock while waiting.
+- `libadb-android 3.1.1` is now compiled from pinned local source (`third_party/libadb-android`) with **two synchronization fixes**: `AdbStream.read` pending-close handling and `AdbConnection.open` OPEN acknowledgment wakeup race. Preserve upstream licenses/notice files; see `PATCHES.md`.
+- Field observations: auto Start/Stop, delayed unlock HOME, and one-vs-two POWER presses around the watcher SLEEP have been verified on XMAX/Pixel. Key-OFF → Bluetooth disconnect can lag the display/indicator power-off, then another five seconds precedes auto-Stop. A first POWER press while Android is still internally interactive may turn it OFF instead of ON. Do not confuse display blanking with lock/unlock state, and do not infer CCU power timing solely from the phone logs.
+- Release guide: [CCU-LINKED-V40.md](CCU-LINKED-V40.md). User settings of the low-importance foreground notification (silent/default, lock-screen appearance) are Android-controlled.
 
 ## v39 — transport and diagnostics (2026-10-20)
 
