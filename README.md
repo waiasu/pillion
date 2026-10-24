@@ -146,6 +146,18 @@ For the v40 CCU-linked resident Start/Stop behavior, lifecycle, and limitations,
 
 ---
 
+- `v39` (2026-10-20)  
+  Added 10-second RFCOMM connection and 2-second matched IMAGE_ACK deadlines; reduced JPEG processing while disconnected; improved diagnostic export and reset pending Auto DRIVE checks on disconnection. Existing VD/Helper and PROMOTE/DEMOTE behavior retained.  
+  RFCOMM接続待ち10秒・画像ACK待ち2秒の上限、BT切断中のJPEG処理負荷削減、診断ログExport改善、切断時の未確定Auto DRIVE判定リセット。既存のVD/Helper・PROMOTE/DEMOTE動作は維持。
+
+---
+
+- `v40` (2026-10-24)  
+  Added optional CCU-linked resident mode: automatically start dedicated VD on CCU Bluetooth connection and stop after a 5-second disconnect grace; preserve phone lock state and return to HOME after the first unlock following auto-Stop. Patched two libadb-android synchronization races and fixed restart when loopback ADB is already connected. Squash release, with the intermediate experiments retained on the test branch. See [v40 CCU-linked behavior](CCU-LINKED-V40.md).  
+  CCU連動の任意常駐機能を追加。CCUのBT接続でVDを自動Start、切断から5秒経過で自動Stop。スマホのロック状態を考慮し、自動Stop後の初回ロック解除でHOMEに復帰。libadb-androidの待機競合2か所と、ループバックADB接続済み時の再起動判定を修正。試行錯誤の履歴はテストブランチに残し、スカッシュでリリース。[v40の詳しい仕様](CCU-LINKED-V40.md)も参照。
+
+---
+
 ## Upstream / オリジナル
 
 This project is based on the original Pillion project by alexandrevega. Many thanks to the original author for making the project available.
