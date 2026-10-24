@@ -1,8 +1,18 @@
 # XMAX Pillion 開発経緯・失敗例・設計意図 引き継ぎ資料
 
 作成日：2026-10-19  
-対象：waiasu/pillion の安定ブランチ xmax-pillion、XMAX Custom Fork v39（v38時点の確認基準コミット 057d74c、v39更新はCHANGELOG参照）  
+対象：waiasu/pillion の安定ブランチ xmax-pillion、XMAX Custom Fork v40（v38時点の確認基準コミット 057d74c、v39更新はCHANGELOG参照）  
 目的：新しいチャットのAIや、開発を忘れた将来の自分が、**安定化までに実際に何を試し、何が駄目で、なぜ今の形に落ち着いたか**を理解できるようにする。
+
+## v40 追記：CCU連動常駐、画面状態と終了タイミング（2026-10-24）
+
+- **設計理由**：完成済みのCaptureService/Helper/VDに自動化の責務を混ぜず、別プロセス`CcuWatcherService`を「Androidが教えてくれるBT ACL接続/切断を受信 → 既存Start/Stopを呼ぶ」薄い層にする。能動スキャンや定期ポーリングはしない。常駐通知はAndroid管理の低重要度チャンネルで、ユーザーが端末設定でデフォルト通知へ変更するとロック画面の点灯や表示タイミングに影響し得る。通知だけでWakeの原因を断定しない。
+- **開始時**：初回の対象CCU ACL_CONNECTEDで1回だけStart。シェルからの外部Activity起動は一度きりの認証トークン（別プロセス共有のAndroid `AtomicFile`）が必要。Androidの既存Activityへも `onNewIntent` で渡す。Wake前に画面状態を読み、もともと画面OFFならCaptureServiceがSCREEN_OFF受信準備を完了してからSLEEPして従来のPROMOTEへ。もともと操作中なら画面を落とさない。画面操作中の自動起動を犠牲にして「無理に寝かせない」を優先した。
+- **停止時**：対象CCUのACL_DISCONNECTED/BT OFFを受けて初めて5秒待ち始め、復帰したら取消。5秒満了で通知が「CCU 検索中」に切り替わり、同時に既存Stopへ依頼する。車体キーOFFでメーター画面・キーレスマークが先に落ちても、Androidから見たBT接続はさらに生きている場合がある。キーOFFからの体感時間で「PillionがStopしていない」と即断しない。
+- **2回電源ボタン問題**：VDのパネル暗転中にAndroid内部ではまだ `interactive=true` のことがある。DEMOTEが送るWAKEUP、常駐の約1.2秒後のSLEEP、その間の人間のPOWER押下が競合すると、最初の押下はOFF扱い、次の押下でONになる。停止処理が落ち着いてからなら1回でONになることを実機確認。ここを短絡的な追加Wake/SLEEPで修正しない。
+- **HOME予約の理由**：手動運用はスマホ点灯/ロック解除が先でCaptureServiceがHOMEを送っていた。自動Stopはユーザーが触る前にCaptureServiceが終了するため、その後の初回解除には従来のHOME送信者がいない。常駐がStop開始時にまだロック中なら1回だけHOMEを予約し、Stop完了と解除の両方が揃った時にADBでHOME。順序の前後は共通判定で吸収、次回Start/常駐終了なら破棄。DEMOTEとHOMEを同時に投げない。これにより「次にスマホを使う時は自然にホーム」が成立。電池コストは受信型で小さい。
+- **libadbの教訓**：アプリ側の `am start` 自体は実行されていてもADB `runShell` が戻らず後続のSLEEPが飛ばない場合があり、`libadb-android 3.1.1` の `AdbStream.read()` のpending CLOSE処理と `AdbConnection.open()` のOPEN ACK通知競合を修正。自前で巨大なADB再試行機構を作るより、ライブラリ内の2箇所を最小修正して固定ソースとして管理。サードパーティ権利表記とパッチ説明を必ず保持。
+- **非採用の試行を復活させない**：30秒試行Start、CCU連続2回/6秒判定、独自通知RemoteViewsは途中の実験。最終形は初回ACL_CONNECTEDで開始、切断5秒猶予、Android標準通知。途中の詳細はv40テストブランチ履歴に残す。最終仕様は `CCU-LINKED-V40.md` を参照。
 
 ## v39 追記：通信待ちの異常を閉じ込める（2026-10-20）
 
@@ -295,7 +305,7 @@ KoveMirror、KoveDash、better-dash等の方式も調査したが、物理画面
 ### 主要な参照先
 
 - [AGENTS.md](AGENTS.md)：作業・マージ方針、触るべきでない境界
-- [XMAX-CURRENT.md](XMAX-CURRENT.md)：現行v38の仕様・設定・確認済みコード
+- [XMAX-CURRENT.md](XMAX-CURRENT.md)：現行v40の仕様・設定・確認済みコード
 - [CHANGELOG-XMAX.md](CHANGELOG-XMAX.md)：バージョン・採用機能の履歴
 - [README.md](README.md)：forkの用途と通常ミラー／VDのユーザー向け説明
 - [CaptureService.kt](composeApp/src/androidMain/kotlin/app/pillion/android/CaptureService.kt)：Start後のセッション、BT再接続、画面イベント、PROMOTE/DEMOTEの指示
