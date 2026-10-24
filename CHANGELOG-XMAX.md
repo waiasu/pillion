@@ -10,6 +10,10 @@ The upstream Pillion changelog remains in `CHANGELOG.md` unchanged. Historical e
 
 ## [v40] - 2026-10-24
 
+- v40 maintenance (2026-10-24, no version bump): Fix Save & Restart / Reset & Restart's fallback ADB check when the main Helper is absent. A live `127.0.0.1:5555` libadb session must count as ready even though `connectDevice()` returns `false` when already connected. Reuse the existing loopback connection before trying new loopback connection or Wi-Fi/mDNS discovery. Fixes sporadic `RESTART_FAILED no helper/adb` despite local ADB readiness, without changing watcher, VD, or helper restart scheduling. Confirm full restart behavior on device.
+
+
+
 ### Added / changed
 
 - Optional **CCU linked** foreground watcher in a separate Android process for NaviLite dedicated VD. Passive Android Bluetooth ACL connect starts one VD session through the authenticated, one-use shell Activity launch; ACL disconnect/BT OFF starts a five-second grace and sustained absence invokes the **existing** CaptureService Stop/DEMOTE. Reconnect within the grace cancels Stop. Watcher does not scan/pair/connect to the CCU.
