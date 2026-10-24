@@ -8,6 +8,23 @@ The upstream Pillion changelog remains in `CHANGELOG.md` unchanged. Historical e
 
 ## [Unreleased]
 
+## [v40] - 2026-10-24
+
+### Added / changed
+
+- Optional **CCU linked** foreground watcher in a separate Android process for NaviLite dedicated VD. Passive Android Bluetooth ACL connect starts one VD session through the authenticated, one-use shell Activity launch; ACL disconnect/BT OFF starts a five-second grace and sustained absence invokes the **existing** CaptureService Stop/DEMOTE. Reconnect within the grace cancels Stop. Watcher does not scan/pair/connect to the CCU.
+- Auto-start uses saved VD settings and existing Helper/ADB preflight, WAKEUP and conditional SLEEP to enter the established `SCREEN_OFF → PROMOTE` flow. If the phone was already interactive, no forced screen-off. A stopped/invalid configuration never silently starts ordinary MediaProjection.
+- Auto-Stop preserves idle Helper and restores a locked screen to dark after Stop/DEMOTE with an existing ~1.2 s settle. A single one-shot HOME reservation handles the first actual unlock **after** auto-Stop, even when Stop and unlock overlap. It is canceled on the next auto-start or resident shutdown. The ordinary manual VD/session/Helper behavior is unchanged.
+- Distinct CCU connected/searching/BT OFF small notification icons and a native notification Stop action. Notification importance starts at LOW; Android notification-channel preferences remain user controlled. Resident Stop stops both watcher and cast; capture notification Stop stops only capture. Reset and Save & Restart tear down the watcher.
+- Vendored `libadb-android 3.1.1` source with original attribution/licenses and precisely two wait/synchronization corrections to `AdbStream.read()` and `AdbConnection.open()`, avoiding two observed/reviewed ADB indefinite-wait races. See `third_party/libadb-android/PATCHES.md`.
+- About updated to **XMAX Custom Fork v40**. Android package metadata stays unchanged. Final behavior and caveats: [CCU-LINKED-V40.md](CCU-LINKED-V40.md).
+
+### Validation / release
+
+- XMAX / Pixel field testing confirmed CCU-driven auto-start and auto-stop, repeated transitions, notification status, delayed unlock HOME, and the timing-sensitive POWER-button behavior after Stop. The CCU's power-down/BT tear-down lag is external to Pillion and not reduced by this change.
+- GitHub Actions assembleDebug and unit tests passed on the final v40 test code before release. Clean release build is performed on `xmax-pillion` after squash.
+- **Squash into `xmax-pillion` by explicit release choice**, leaving the iterative 30-second/6-second room experiments and abandoned notification prototypes out of the final source and stable history. Test branch history remains intact for reference; do not treat early milestones in it as current behavior.
+
 ## [v39] - 2026-10-20
 
 - v39 maintenance (2026-10-22): Reset only unfinished Auto DRIVE CHECKING samples and timers when RFCOMM drops, and disregard in-flight OCR from the disconnected session. Confirmed NAV/DRIVE and the 1-second stick guard are preserved. Existing OCR reconnect grace, VD/Helper and PROMOTE/DEMOTE stay unchanged. No version bump.
