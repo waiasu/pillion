@@ -333,7 +333,10 @@ object DashHelper {
         val appContext = context.applicationContext
         val adb = PillionAdb.getInstance(appContext)
         val connected = runCatching {
-            adb.connectDevice(PillionAdb.LOOPBACK_HOST, PillionAdb.TCPIP_PORT) ||
+            // libadb's connect() returns false when already connected. Reuse a live loopback
+            // session first so an offline Restart does not incorrectly depend on Wi-Fi.
+            (adb.isConnected() && adb.getHostAddress() == PillionAdb.LOOPBACK_HOST) ||
+                adb.connectDevice(PillionAdb.LOOPBACK_HOST, PillionAdb.TCPIP_PORT) ||
                 adb.autoConnectDevice(appContext, timeoutMs = 5_000)
         }.getOrDefault(false)
         if (!connected) {
