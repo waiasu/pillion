@@ -9,7 +9,7 @@ import app.pillion.core.MirrorSettings
 import java.util.UUID
 
 /**
- * Temporary v40 room test. A private AtomicFile bridges the separate watcher and app
+ * v40 CCU-linked auto-start challenge. A private AtomicFile bridges the watcher and app
  * processes; SharedPreferences is not safe for fresh cross-process challenge handover.
  * A public shell-launchable Activity must never accept an unauthenticated auto-Start extra.
  */
