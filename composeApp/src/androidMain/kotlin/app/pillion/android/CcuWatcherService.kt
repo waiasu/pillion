@@ -53,6 +53,8 @@ class CcuWatcherService : Service() {
     @Volatile private var trialActive = false
     private var autoSessionOwned = false
     private var autoStopInFlight = false
+    // Only auto-Stop owns this one-shot HOME; manual VD Stop and the normal unlock path stay unchanged.
+    private var pendingHomeAfterAutoStop = false
     private var sessionCcuAddress: String? = null
     private var disconnectedAtMs = 0L
     private var disconnectReason = ""
@@ -98,6 +100,7 @@ class CcuWatcherService : Service() {
             record("AUTO_START_SUPPRESSED owned=$autoSessionOwned stopping=$autoStopInFlight")
             return
         }
+        pendingHomeAfterAutoStop = false // A new ride invalidates any previous auto-Stop HOME.
         autoSessionOwned = true
         sessionCcuAddress = address
         trialActive = true
@@ -124,6 +127,34 @@ class CcuWatcherService : Service() {
         )
     }
 
+    /** Both unlock and Stop completion test the same gate, on the service's main thread. */
+    private fun tryPendingHomeAfterAutoStop(trigger: String) {
+        if (!started || !pendingHomeAfterAutoStop || autoStopInFlight || autoSessionOwned) return
+        if (getSystemService(KeyguardManager::class.java)?.isKeyguardLocked != false) return
+        pendingHomeAfterAutoStop = false
+        record("AUTO_STOP_HOME_REQUEST trigger=$trigger")
+        // Never block Android's broadcast/service main thread on an ADB shell command.
+        Thread({
+            try {
+                if (!started || autoSessionOwned) {
+                    record("AUTO_STOP_HOME_SKIPPED reason=watcher_stopped_or_new_session")
+                    return@Thread
+                }
+                val adb = PillionAdb.getInstance(applicationContext)
+                val connected = (adb.isConnected() && adb.getHostAddress() == PillionAdb.LOOPBACK_HOST) ||
+                    adb.connectDevice(PillionAdb.LOOPBACK_HOST, PillionAdb.TCPIP_PORT)
+                if (connected && started && !autoSessionOwned) {
+                    val output = adb.runShell("input keyevent 3")
+                    record("AUTO_STOP_HOME_RESULT output=${output.trim().take(160)}")
+                } else {
+                    record("AUTO_STOP_HOME_SKIPPED reason=adb_unavailable_or_new_session")
+                }
+            } catch (t: Throwable) {
+                record("AUTO_STOP_HOME_FAILED reason=${t.javaClass.simpleName}: ${t.message}".take(230))
+            }
+        }, "pillion-ccu-auto-stop-home").apply { isDaemon = true; start() }
+    }
+
     private fun beginAutoStop(reason: String) {
         if (!started || !autoSessionOwned || autoStopInFlight) return
         autoSessionOwned = false
@@ -135,9 +166,12 @@ class CcuWatcherService : Service() {
         val interactiveBefore = getSystemService(PowerManager::class.java)?.isInteractive
         val lockedBefore = getSystemService(KeyguardManager::class.java)?.isKeyguardLocked == true
         val captureBefore = captureServiceRunning()
+        // When Stop begins locked, send HOME after its completion or the next unlock, whichever is later.
+        pendingHomeAfterAutoStop = captureBefore && lockedBefore
         val restoreDark = captureBefore && (interactiveBefore == false || lockedBefore)
         record("AUTO_STOP_BEGIN reason=$reason capture=$captureBefore interactive=$interactiveBefore locked=$lockedBefore restoreDark=$restoreDark")
         Thread({
+            var captureStopped = false
             val wakeLock = getSystemService(PowerManager::class.java)
                 .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "app.pillion:ccu-auto-stop")
                 .apply { acquire(STOP_WAKELOCK_MS) }
@@ -149,10 +183,12 @@ class CcuWatcherService : Service() {
                     Thread.sleep(150L)
                 }
                 val stopped = !captureServiceRunning()
+                captureStopped = stopped
                 record("AUTO_STOP_CAPTURE_EXIT stopped=$stopped")
+                // DEMOTE is dispatched asynchronously to the Helper. Keep HOME after the existing
+                // settle window, even when the user unlocks during Stop.
+                if (captureBefore && stopped && started) Thread.sleep(1_200L)
                 if (restoreDark && stopped && started) {
-                    // DEMOTE injects WAKEUP; allow a short settle after service exit.
-                    Thread.sleep(1_200L)
                     val stillLocked = getSystemService(KeyguardManager::class.java)?.isKeyguardLocked == true
                     if (started && stillLocked) {
                         val adb = PillionAdb.getInstance(applicationContext)
@@ -171,7 +207,9 @@ class CcuWatcherService : Service() {
                 runCatching { if (wakeLock.isHeld) wakeLock.release() }
                 timerHandler.post {
                     autoStopInFlight = false
+                    if (!captureStopped) pendingHomeAfterAutoStop = false
                     record("AUTO_STOP_END")
+                    tryPendingHomeAfterAutoStop("stop_complete")
                 }
             }
         }, "pillion-ccu-auto-stop").apply { isDaemon = true; start() }
@@ -307,6 +345,10 @@ class CcuWatcherService : Service() {
     private val events = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             val action = intent?.action ?: return
+            if (action == Intent.ACTION_USER_PRESENT) {
+                tryPendingHomeAfterAutoStop("user_present")
+                return
+            }
             if (action == Intent.ACTION_SCREEN_ON) {
                 val nm = getSystemService(NotificationManager::class.java)
                 if (started && nm.activeNotifications.none { it.id == NOTIFICATION_ID }) {
@@ -351,6 +393,7 @@ class CcuWatcherService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) {
+            pendingHomeAfterAutoStop = false
             record("WATCH_STOP requested")
             trialActive = false
             trialWaiter?.countDown()
@@ -404,6 +447,7 @@ class CcuWatcherService : Service() {
             addAction(BluetoothDevice.ACTION_ACL_DISCONNECTED)
             addAction(BluetoothAdapter.ACTION_STATE_CHANGED)
             addAction(Intent.ACTION_SCREEN_ON)
+            addAction(Intent.ACTION_USER_PRESENT)
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(events, filter, Context.RECEIVER_EXPORTED)
@@ -525,6 +569,7 @@ class CcuWatcherService : Service() {
     }
 
     override fun onDestroy() {
+        pendingHomeAfterAutoStop = false
         trialActive = false
         started = false
         timerHandler.removeCallbacks(disconnectTask)
