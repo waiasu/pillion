@@ -50,7 +50,6 @@ private data class PairingNotificationSpec(
     val text: String,
     val ongoing: Boolean,
     val action: PairingNotificationAction,
-    val alert: Boolean,
 )
 
 /**
@@ -61,7 +60,7 @@ private data class PairingNotificationSpec(
  *
  * 1. discovery of the ephemeral `_adb-tls-pairing._tcp` service while Android's pairing-code dialog
  *    is open;
- * 2. silent progress updates and alert notifications for PIN entry and final outcomes; and
+ * 2. the high-priority setup notification used to enter the PIN; and
  * 3. pairing + the first authenticated ADB connection.
  *
  * Once the pairing key is accepted, discovery is stopped immediately. AndroidDashSetup then prepares
@@ -72,9 +71,7 @@ object AdbPairingCoordinator {
     const val KEY_PAIRING_CODE = "app.pillion.extra.PAIRING_CODE"
 
     private const val CHANNEL_ID = "pillion_adb_pairing"
-    private const val PROGRESS_CHANNEL_ID = "pillion_adb_pairing_progress"
     private const val NOTIFICATION_ID = 42
-    private const val PROGRESS_NOTIFICATION_ID = 43
     private const val SERVICE_TYPE = "_adb-tls-pairing._tcp."
     private const val SERVICE_TYPE_NORMALIZED = "_adb-tls-pairing._tcp"
     private const val LOCALHOST = "127.0.0.1"
@@ -122,7 +119,6 @@ object AdbPairingCoordinator {
                 appContext,
                 appContext.getString(app.pillion.R.string.adb_found_port_notification, endpoint.port),
                 ongoing = true,
-                alert = true,
                 action = PairingNotificationAction.Reply,
             )
         } else {
@@ -176,7 +172,6 @@ object AdbPairingCoordinator {
                     appContext,
                     appContext.getString(app.pillion.R.string.adb_setup_complete_return),
                     ongoing = false,
-                    alert = true,
                     action = PairingNotificationAction.Open,
                 )
             }
@@ -222,10 +217,7 @@ object AdbPairingCoordinator {
         setupSessionActive = false
         stopDiscovery(appContext)
         resolvedServiceName = null
-        appContext.getSystemService(NotificationManager::class.java).apply {
-            cancel(NOTIFICATION_ID)
-            cancel(PROGRESS_NOTIFICATION_ID)
-        }
+        appContext.getSystemService(NotificationManager::class.java).cancel(NOTIFICATION_ID)
         synchronized(notificationLock) {
             pendingNotification = null
             lastPostedNotificationKey = null
@@ -286,7 +278,6 @@ object AdbPairingCoordinator {
                             appContext,
                             appContext.getString(app.pillion.R.string.adb_setup_retry_failed),
                             ongoing = false,
-                            alert = true,
                             action = PairingNotificationAction.Open,
                         )
                     }
@@ -302,7 +293,6 @@ object AdbPairingCoordinator {
                         appContext,
                         appContext.getString(app.pillion.R.string.adb_setup_retry_failed),
                         ongoing = false,
-                        alert = true,
                         action = PairingNotificationAction.Open,
                     )
                 }
@@ -343,7 +333,6 @@ object AdbPairingCoordinator {
             appContext,
             appContext.getString(app.pillion.R.string.adb_setup_complete_return),
             ongoing = false,
-            alert = true,
             action = PairingNotificationAction.Open,
         )
     }
@@ -364,7 +353,6 @@ object AdbPairingCoordinator {
             appContext,
             appContext.getString(app.pillion.R.string.adb_setup_failed_return),
             ongoing = false,
-            alert = true,
             action = PairingNotificationAction.Open,
         )
     }
@@ -382,7 +370,6 @@ object AdbPairingCoordinator {
                 context,
                 context.getString(app.pillion.R.string.adb_notification_enter_code_or_port),
                 ongoing = true,
-                alert = true,
                 action = PairingNotificationAction.Reply,
             )
             return
@@ -407,7 +394,6 @@ object AdbPairingCoordinator {
                 context,
                 context.getString(app.pillion.R.string.adb_notification_port_not_found),
                 ongoing = true,
-                alert = true,
                 action = PairingNotificationAction.Reply,
             )
             return
@@ -473,7 +459,6 @@ object AdbPairingCoordinator {
                 if (paired == null) context.getString(app.pillion.R.string.adb_pairing_timed_out)
                 else context.getString(app.pillion.R.string.adb_pairing_failed_retry),
                 ongoing = true,
-                alert = true,
                 action = PairingNotificationAction.Reply,
             )
             return
@@ -526,7 +511,6 @@ object AdbPairingCoordinator {
                 context,
                 context.getString(app.pillion.R.string.adb_paired_connect_failed_return),
                 ongoing = false,
-                alert = true,
                 action = PairingNotificationAction.Open,
             )
         }
@@ -612,7 +596,6 @@ object AdbPairingCoordinator {
                             context,
                             context.getString(app.pillion.R.string.adb_found_port_notification, endpoint.port),
                             ongoing = true,
-                            alert = true,
                             action = PairingNotificationAction.Reply,
                         )
                     }
@@ -658,7 +641,6 @@ object AdbPairingCoordinator {
                     context,
                     context.getString(app.pillion.R.string.adb_discovery_failed_notification),
                     ongoing = true,
-                    alert = true,
                     action = PairingNotificationAction.Reply,
                 )
             }
@@ -680,7 +662,6 @@ object AdbPairingCoordinator {
                     context,
                     context.getString(app.pillion.R.string.adb_discovery_failed_notification),
                     ongoing = true,
-                    alert = true,
                     action = PairingNotificationAction.Reply,
                 )
             }
@@ -724,27 +705,19 @@ object AdbPairingCoordinator {
                 NotificationManager.IMPORTANCE_HIGH,
             ),
         )
-        manager.createNotificationChannel(
-            NotificationChannel(
-                PROGRESS_CHANNEL_ID,
-                context.getString(app.pillion.R.string.adb_setup_channel) + " (progress)",
-                NotificationManager.IMPORTANCE_LOW,
-            ).apply {
-                setSound(null, null)
-                enableVibration(false)
-            },
-        )
     }
 
-    /** Progress stays silent. Only a resolved PIN-entry prompt or setup outcome alerts. */
+    /**
+     * Setup notifications are intentionally noisy on meaningful state changes. Exact duplicate
+     * updates are suppressed, so repeated NSD callbacks do not buzz the user again.
+     */
     private fun postPairingNotification(
         context: Context,
         text: String,
         ongoing: Boolean,
         action: PairingNotificationAction,
-        alert: Boolean = false,
     ) {
-        val spec = PairingNotificationSpec(text, ongoing, action, alert)
+        val spec = PairingNotificationSpec(text, ongoing, action)
         synchronized(notificationLock) { pendingNotification = spec }
         postNotificationSpec(context, spec)
     }
@@ -754,7 +727,7 @@ object AdbPairingCoordinator {
             context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) return
 
-        val key = "${spec.text}|${spec.ongoing}|${spec.action}|${spec.alert}"
+        val key = "${spec.text}|${spec.ongoing}|${spec.action}"
         val shouldPost = synchronized(notificationLock) {
             if (lastPostedNotificationKey == key) false
             else {
@@ -788,7 +761,7 @@ object AdbPairingCoordinator {
         ).build()
 
         val builder = (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            Notification.Builder(context, if (spec.alert) CHANNEL_ID else PROGRESS_CHANNEL_ID)
+            Notification.Builder(context, CHANNEL_ID)
         } else {
             @Suppress("DEPRECATION")
             Notification.Builder(context)
@@ -799,8 +772,7 @@ object AdbPairingCoordinator {
             .setStyle(Notification.BigTextStyle().bigText(spec.text))
             .setOngoing(spec.ongoing)
             .setAutoCancel(!spec.ongoing)
-            .setOnlyAlertOnce(!spec.alert)
-            .setPriority(if (spec.alert) Notification.PRIORITY_HIGH else Notification.PRIORITY_LOW)
+            .setOnlyAlertOnce(false)
             .setContentIntent(contentIntent)
 
         when (spec.action) {
@@ -809,16 +781,7 @@ object AdbPairingCoordinator {
             PairingNotificationAction.None -> Unit
         }
 
-        context.getSystemService(NotificationManager::class.java).apply {
-            // Separate IDs avoid relying on Android changing a posted notification's channel.
-            if (spec.alert) {
-                cancel(PROGRESS_NOTIFICATION_ID)
-                notify(NOTIFICATION_ID, builder.build())
-            } else {
-                cancel(NOTIFICATION_ID)
-                notify(PROGRESS_NOTIFICATION_ID, builder.build())
-            }
-        }
+        context.getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID, builder.build())
     }
 
     private fun openPillionPendingIntent(context: Context): PendingIntent {
