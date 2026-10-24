@@ -92,3 +92,9 @@ This test is intentionally isolated from the stable v39 VD/CaptureService flow.
 - Notification Japanese state strings: `CCU 圏外` → **`CCU 検索中`**, `CCU 圏内` → **`CCU 接続`**. English fallbacks updated to CCU searching / CCU connected. `BT OFF` remains unchanged.
 - The connected-state small icon uses the genuine Google Material Symbols Outlined `two_wheeler` 24px vector, from the same pinned Google repository revision and Apache-2.0 license as the other two icons. The previous `search_check` vector remains an unused test resource; no modifications to Bluetooth handling or the existing native notification layout.
 - Check actual Pixel 10a status-bar legibility; device may apply scaling and color tint to the small icon.
+
+## 2026-10-24 — local libadb-android 3.1.1 synchronization fixes (test only)
+
+- Replace the binary dependency with local upstream 3.1.1 source and original license notices. Only AdbStream.read() pending-close wait and AdbConnection.open() initial A_OKAY wait differ.
+- Leave Pillion CCU rules, Helper, VD, PROMOTE/DEMOTE and adb tcpip fallback unchanged. See third_party/libadb-android/PATCHES.md.
+- Build and run unit tests; XMAX field regression remains necessary for loopback/VD/Stop/Reset and screen OFF/ON.
