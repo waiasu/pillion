@@ -79,6 +79,7 @@ internal fun SettingsScreen(
     onChangeBike: () -> Unit = {},
     update: UpdateInfo?,
     onBack: () -> Unit,
+    onExportDiagnostics: (() -> Unit)? = null,
 ) {
     val uriHandler = LocalUriHandler.current
     Column(
@@ -137,6 +138,23 @@ internal fun SettingsScreen(
                         modifier = Modifier.padding(vertical = 12.dp),
                     )
                 }
+            }
+            Spacer(Modifier.height(24.dp))
+        }
+
+        if (onExportDiagnostics != null) {
+            SectionHeader("Test-base diagnostics")
+            SettingsGroup {
+                Button(
+                    onClick = onExportDiagnostics,
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text("Export diagnostic ZIP") }
+                Text(
+                    "Saves persistent flight breadcrumbs and best-effort Android logcat to Downloads.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(vertical = 8.dp),
+                )
             }
             Spacer(Modifier.height(24.dp))
         }

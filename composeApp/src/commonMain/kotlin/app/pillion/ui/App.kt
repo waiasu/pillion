@@ -35,6 +35,7 @@ fun App(
     updateChecker: UpdateChecker? = null,
     settingsStore: SettingsStore? = null,
     dashSetup: DashSetup? = null,
+    onExportDiagnostics: (() -> Unit)? = null,
 ) {
     var themeMode by remember { mutableStateOf(settingsStore?.themeMode() ?: ThemeMode.SYSTEM) }
     PillionTheme(themeMode) {
@@ -102,6 +103,7 @@ fun App(
                 onChangeBike = { showSettings = false; changingBike = true; selectedBikeId = null },
                 update = update,
                 onBack = { showSettings = false },
+                onExportDiagnostics = onExportDiagnostics,
             )
         } else {
             HomeScreen(
