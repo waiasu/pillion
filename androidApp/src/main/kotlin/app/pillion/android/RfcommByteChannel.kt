@@ -28,11 +28,15 @@ class RfcommByteChannel : ByteChannel {
         val candidates = adapter.bondedDevices
             .filter { d -> d.name?.let { it.startsWith("YCCU") || it.contains("CCU") } == true }
             .sortedBy { d -> val n = d.name?.lowercase().orEmpty(); if ("dev" in n || "test" in n) 1 else 0 }
-        if (candidates.isEmpty()) error("dash (YCCU…) is not paired")
+        if (candidates.isEmpty()) {
+            DiagnosticFlightRecorder.record("RFCOMM", "no paired CCU")
+            error("dash (YCCU…) is not paired")
+        }
         // cancelDiscovery() needs BLUETOOTH_SCAN on Android 12+; it's only a connect-speed
         // optimization (nothing is discovering here), so ignore it if the permission is absent.
         runCatching { adapter.cancelDiscovery() }
         var lastError: Throwable? = null
+        DiagnosticFlightRecorder.record("RFCOMM", "connecting candidates=" + candidates.size)
         for (dash in candidates) {
             Log.d("Pillion", "rfcomm: connecting to ${dash.name}")
             try {
@@ -41,14 +45,17 @@ class RfcommByteChannel : ByteChannel {
                 socket = s
                 input = s.inputStream
                 output = s.outputStream
+                DiagnosticFlightRecorder.record("RFCOMM", "connected")
                 Log.d("Pillion", "rfcomm: connected to ${dash.name}")
                 return
             } catch (t: Throwable) {
                 lastError = t
+                DiagnosticFlightRecorder.record("RFCOMM", "connect failed: " + t.javaClass.simpleName)
                 Log.d("Pillion", "rfcomm: ${dash.name} unreachable (${t.message}); trying next")
                 runCatching { socket?.close() }
             }
         }
+        DiagnosticFlightRecorder.record("RFCOMM", "all candidates failed")
         throw lastError ?: IllegalStateException("no CCU dash connectable")
     }
 
@@ -62,6 +69,7 @@ class RfcommByteChannel : ByteChannel {
         (input ?: error("channel not open")).read(buffer)
 
     override fun close() {
+        DiagnosticFlightRecorder.record("RFCOMM", "close")
         runCatching { socket?.close() }
         socket = null; input = null; output = null
     }

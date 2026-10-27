@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -15,6 +16,8 @@ import app.pillion.android.AndroidSettingsStore
 import app.pillion.android.AdbPairingCoordinator
 import app.pillion.android.CaptureService
 import app.pillion.android.GitHubUpdateChecker
+import app.pillion.android.DiagnosticExporter
+import app.pillion.android.DiagnosticFlightRecorder
 import app.pillion.android.SdlMirrorController
 import app.pillion.android.sdl.ProjectionHolder
 import app.pillion.android.sdl.SdlService
@@ -83,7 +86,18 @@ class MainActivity : ComponentActivity() {
             context = applicationContext,
             requestNotificationPermission = ::requestNotificationPermission,
         )
-        setContent { App(::controllerFor, updateChecker, settingsStore, dashSetup) }
+        setContent { App(::controllerFor, updateChecker, settingsStore, dashSetup, onExportDiagnostics = ::exportDiagnostics) }
+    }
+
+    private fun exportDiagnostics() {
+        DiagnosticExporter.exportAsync(applicationContext) { result ->
+            runOnUiThread {
+                Toast.makeText(this, result.fold(
+                    onSuccess = { "Diagnostic saved to Downloads: $it" },
+                    onFailure = { "Diagnostic export failed: ${it.javaClass.simpleName}" },
+                ), Toast.LENGTH_LONG).show()
+            }
+        }
     }
 
     /** Resolve the [MirrorController] for the selected head unit (DIP — the UI doesn't know which). */
@@ -102,6 +116,7 @@ class MainActivity : ComponentActivity() {
 
     private fun startMirroring(settings: MirrorSettings) {
         pendingSettings = settings
+        DiagnosticFlightRecorder.record("UI", "Start requested")
         val missing = requiredPermissions().filter {
             checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED
         }
@@ -114,6 +129,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun stopMirroring() {
+        DiagnosticFlightRecorder.record("UI", "Stop requested")
         startService(Intent(this, CaptureService::class.java).setAction(CaptureService.ACTION_STOP))
     }
 

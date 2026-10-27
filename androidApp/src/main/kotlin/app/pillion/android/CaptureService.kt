@@ -53,9 +53,11 @@ class CaptureService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) {
+            DiagnosticFlightRecorder.record("CAPTURE", "Stop action")
             stopSelf()
             return START_NOT_STICKY
         }
+        DiagnosticFlightRecorder.record("CAPTURE", "Start action")
         acquireWakeLock()
         _state.value = MirrorState.Connecting
 
@@ -152,6 +154,7 @@ class CaptureService : Service() {
                             if (component == null) {
                                 Log.w(TAG, "dash: no foreground app; usage access may be missing")
                             } else {
+                                DiagnosticFlightRecorder.record("VD", "promote requested")
                                 dashSwitch?.promote(component)
                                 dashPromotedAtMs = System.currentTimeMillis()
                                 dashSawLockedKeyguard = isKeyguardLockedNow()
@@ -291,6 +294,7 @@ class CaptureService : Service() {
         Log.d(TAG, "dash: $reason; returning to phone")
         dashPromotedAtMs = 0L
         dashSawLockedKeyguard = false
+        DiagnosticFlightRecorder.record("VD", "demote requested: " + reason)
         dashSwitch?.demote()
     }
 
@@ -340,7 +344,7 @@ class CaptureService : Service() {
                 _state.value = state
                 when (state) {
                     is MirrorState.Streaming -> updateNotification("Streaming — ${state.kbPerFrame} KB/frame")
-                    is MirrorState.Error -> { updateNotification(state.message); stopSelf() }
+                    is MirrorState.Error -> { DiagnosticFlightRecorder.record("ENGINE", "Error: " + state.message.take(120)); updateNotification(state.message); stopSelf() }
                     else -> {}
                 }
             }
@@ -362,11 +366,13 @@ class CaptureService : Service() {
     }
 
     private fun fail(message: String) {
+        DiagnosticFlightRecorder.record("CAPTURE", "Error: " + message.take(120))
         _state.value = MirrorState.Error(message)
         stopSelf()
     }
 
     override fun onDestroy() {
+        DiagnosticFlightRecorder.record("CAPTURE", "destroy")
         engine?.stop()
         DashHelper.stopWatchdog() // stop first, so it doesn't respawn the helper we're tearing down
         screenReceiver?.let { runCatching { unregisterReceiver(it) } }
