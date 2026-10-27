@@ -12,6 +12,7 @@ import com.smartdevicelink.util.DebugTool
 class PillionApp : Application() {
     override fun onCreate() {
         super.onCreate()
+        DiagnosticFlightRecorder.initialize(this)
         DebugTool.enableDebugTool()
         installSdlCrashGuard()
     }
