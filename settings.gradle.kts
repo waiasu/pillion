@@ -18,3 +18,5 @@ dependencyResolutionManagement {
 
 include(":composeApp")
 include(":androidApp")
+include(":libadbPatched")
+project(":libadbPatched").projectDir = file("third_party/libadb-android")

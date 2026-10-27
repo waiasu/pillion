@@ -70,7 +70,7 @@ dependencies {
     implementation(compose.ui)
     implementation(libs.kotlinx.coroutines.core)
     // In-app ADB (wireless-debugging pairing + shell) for the dedicated-dash bootstrap.
-    implementation(libs.libadb.android)
+    implementation(project(":libadbPatched"))
     implementation(libs.bouncycastle.pkix)
     implementation(libs.conscrypt.android)
     // SDL "Path B": USB/AOA full-motion H.264 to USB head units (Tracer etc.).
