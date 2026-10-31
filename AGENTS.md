@@ -94,14 +94,4 @@ Before opening any upstream PR, verify **all** of the following:
 Do not solve contamination by merging the experimental branch and deleting files afterward;
 start over from clean `main` if necessary.
 
-## Example / 今回実際に使った段取り
-
-- `test/mirror-projection-cleanup` (from `test-base`): fix + diagnostic event logs; build APK,
-  field-test normal mirror/VD, confirm stale mirror frames no longer appear.
-- `pr/cleanup-stopped-mirror-and-vd-fallback` (from `main`): port only MediaProjection cleanup
-  and removal of stale mirror fallback; exclude diagnostic logs and ADB/CI changes.
-- Upstream PR #16: <https://github.com/alexandrevega/pillion/pull/16>.
-- The earlier RFCOMM socket fix followed the same pattern (upstream PR #15):
-  <https://github.com/alexandrevega/pillion/pull/15>.
-
 **Guiding rule: verify and squash one focused experiment at a time on `test-base`; submit narrowly to upstream only when requested.**

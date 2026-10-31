@@ -24,6 +24,7 @@ import app.pillion.android.sdl.SdlService
 import app.pillion.core.AppInfo
 import app.pillion.core.MirrorController
 import app.pillion.core.MirrorSettings
+import app.pillion.core.CastMode
 import app.pillion.core.headunit.HeadUnitProfile
 import app.pillion.core.headunit.registerBuiltInHeadUnits
 import app.pillion.ui.App
@@ -57,7 +58,7 @@ class MainActivity : ComponentActivity() {
                 val intent = Intent(this, CaptureService::class.java)
                     .putExtra(CaptureService.EXTRA_QUALITY, pendingSettings.quality)
                     .putExtra(CaptureService.EXTRA_MAX_FPS, pendingSettings.maxFps)
-                    .putExtra(CaptureService.EXTRA_DASH_ENABLED, settingsStore.dashEnabled())
+                    .putExtra(CaptureService.EXTRA_DASH_ENABLED, false)
                     .putExtra(CaptureService.EXTRA_DASH_WIDTH, pendingSettings.dashResolution.width)
                     .putExtra(CaptureService.EXTRA_DASH_HEIGHT, pendingSettings.dashResolution.height)
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(intent)
@@ -86,7 +87,7 @@ class MainActivity : ComponentActivity() {
             context = applicationContext,
             requestNotificationPermission = ::requestNotificationPermission,
         )
-        setContent { App(::controllerFor, updateChecker, settingsStore, dashSetup, onExportDiagnostics = ::exportDiagnostics) }
+        setContent { App(::controllerFor, updateChecker, settingsStore, dashSetup, onExportDiagnostics = ::exportDiagnostics, onStartDash = ::startDash, onStopDash = ::stopMirroring, castMode = CaptureService.mode) }
     }
 
     private fun exportDiagnostics() {
@@ -115,6 +116,7 @@ class MainActivity : ComponentActivity() {
         }
 
     private fun startMirroring(settings: MirrorSettings) {
+        if (CaptureService.mode.value != CastMode.NONE) return
         pendingSettings = settings
         DiagnosticFlightRecorder.record("UI", "Start requested")
         val missing = requiredPermissions().filter {
@@ -126,6 +128,33 @@ class MainActivity : ComponentActivity() {
     private fun requestProjection() {
         val mpm = getSystemService(MediaProjectionManager::class.java)
         projectionLauncher.launch(mpm.createScreenCaptureIntent())
+    }
+
+    private val dashPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions(),
+    ) { granted ->
+        if (granted.values.all { it }) launchDashService(pendingSettings)
+    }
+
+    private fun startDash(settings: MirrorSettings) {
+        if (CaptureService.mode.value != CastMode.NONE) return
+        pendingSettings = settings
+        val missing = requiredPermissions().filter {
+            checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED
+        }
+        if (missing.isEmpty()) launchDashService(settings)
+        else dashPermissionLauncher.launch(missing.toTypedArray())
+    }
+
+    private fun launchDashService(settings: MirrorSettings) {
+        val intent = Intent(this, CaptureService::class.java)
+            .putExtra(CaptureService.EXTRA_DASH_ENABLED, true)
+            .putExtra(CaptureService.EXTRA_QUALITY, settings.quality)
+            .putExtra(CaptureService.EXTRA_MAX_FPS, settings.maxFps)
+            .putExtra(CaptureService.EXTRA_DASH_WIDTH, settings.dashResolution.width)
+            .putExtra(CaptureService.EXTRA_DASH_HEIGHT, settings.dashResolution.height)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(intent)
+        else startService(intent)
     }
 
     private fun stopMirroring() {
