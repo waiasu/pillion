@@ -40,11 +40,13 @@ class DashStreamScreenSource : ScreenSource {
 
     private fun readLoop() {
         while (running) {
+            var activeSocket: Socket? = null
             try {
                 val s = Socket().apply {
                     tcpNoDelay = true
                     connect(InetSocketAddress("127.0.0.1", DashServer.PORT), CONNECT_TIMEOUT_MS)
                 }
+                activeSocket = s
                 socket = s
                 Log.d(TAG, "dash stream: connected to 127.0.0.1:${DashServer.PORT}")
                 syncDesiredState(s)
@@ -84,8 +86,8 @@ class DashStreamScreenSource : ScreenSource {
                     gate.pause()
                     latest = null
                 }
-                runCatching { socket?.close() }
-                socket = null
+                runCatching { activeSocket?.close() }
+                if (socket === activeSocket) socket = null
             }
             if (running) Thread.sleep(RETRY_MS)
         }
