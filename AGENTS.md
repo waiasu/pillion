@@ -1,6 +1,6 @@
 # Pillion `test-base` workbench rules / 本家PR向け実験室
 
-This file governs work that starts from `test-base` and prepares fixes for upstream.
+This file governs a curated experimental workbench and optional isolated upstream submissions. Curated updates are kept separate from upstream PR proposals.
 `test-base` is a **diagnostic workbench, not a release branch**.
 本家に提出する修正と、実験用のログ・ライブラリ変更を厳密に分離すること。
 
@@ -9,7 +9,7 @@ This file governs work that starts from `test-base` and prepares fixes for upstr
 | Branch | Purpose | Allowed changes |
 | --- | --- | --- |
 | `main` | Clean upstream-based fork baseline | No test-only instrumentation or experimental patches |
-| `test-base` | Reusable test infrastructure | Flight recorder, diagnostic exporter, test CI, documented vendored ADB synchronization fixes |
+| `test-base` | Curated, build-verified experimental improvements | Diagnostic workbench plus one independently documented change per squash commit |
 | `test/<issue>` | One disposable experiment based on `test-base` | One candidate fix, targeted temporary diagnostic logs, focused tests |
 | `pr/<issue>` | One upstream PR candidate based **directly on clean `main`** | Only the verified production fix and any directly necessary production tests |
 | `xmax-pillion` | Independently maintained, stable XMAX-specific fork | **Never change** as part of upstream testing/PR preparation |
@@ -28,7 +28,7 @@ Keep test infrastructure on `test-base` separate from the fixes being tested.
 
 1. **Read this file first.** Identify the single bug and its observable symptom.
    Confirm the intended base branch before making any GitHub write.
-2. **Create `test/<issue>` from `test-base`.** Never modify `test-base` merely to test a candidate fix.
+2. **Create `test/<issue>` from the current `test-base`.** Never implement or test directly on `test-base`. Complete and validate each update before starting the next.
    Keep experiments for different bugs in separate branches.
 3. **Implement the smallest candidate fix.** Add low-frequency, state-transition diagnostics on the
    test branch when needed to establish cause and effect. Keep logs distinguishable from production changes.
@@ -44,14 +44,15 @@ Keep test infrastructure on `test-base` separate from the fixes being tested.
    For a screen-source change, test normal mirror, screen off / VD promotion, unlock / demotion,
    reconnection or VD frame gaps, and Stop. Confirm the relevant events in logs.
    An observed improvement is not proof of unrelated behavior; document remaining limitations.
-6. **Freeze the verified production change.** Review the diff between `test-base` and
+6. **Curate the successful experiment.** Inspect the complete diff and actual CI/test results. If verified, squash the changes into exactly one focused commit on `test-base`, with Purpose, Problem, Changes, Verification, and Limitations in its message. Preserve the original branch for troubleshooting if needed; never force-push or rewrite the published `test-base` history. Start the next test branch only after this update is complete.
+7. **Freeze a production-only change when explicitly preparing an upstream submission.** Review the diff between `test-base` and
    `test/<issue>`. Classify **each changed line** as production fix, necessary test, or
    diagnostic/experimental scaffolding. Only the first two categories may be ported.
-7. **Create `pr/<issue>` from a current, clean `main`.** Verify the baseline against upstream;
+8. **Create `pr/<issue>` from a current, clean `main`.** Verify the baseline against upstream;
    if it needs syncing, treat syncing as a separate explicit operation, not part of this PR.
    Manually apply **only** the verified production change. Do not merge/cherry-pick the test branch
    wholesale. Prefer one focused commit when practical.
-8. **Audit the PR diff against `main` before submission.** Run equivalent checks:
+9. **Audit the PR diff against `main` before submission.** Run equivalent checks:
    ```sh
    git diff --stat main...pr/<issue>
    git diff --name-status main...pr/<issue>
@@ -60,14 +61,14 @@ Keep test infrastructure on `test-base` separate from the fixes being tested.
    ```
    Review every file and hunk, not only the file count. The diff must be limited to this bug.
    If any unintended file or line appears, **remove it before opening the PR**.
-9. **Validate the isolated PR change.** Build/test it when possible, or verify line-by-line that its
+10. **Validate the isolated PR change.** Build/test it when possible, or verify line-by-line that its
    production behavior matches the version already built and field-tested. Do not claim an unrun
    PR-branch build or upstream CI succeeded. Note the exact test scope and residual risks.
-10. **Open an English upstream PR** from `waiasu:pr/<issue>` to `alexandrevega/pillion:main`.
+11. **Open an English upstream PR** from `waiasu:pr/<issue>` to `alexandrevega/pillion:main`.
     Describe the problem, root cause, minimal fix, physical-device testing, and limitations.
     If GitHub API permission prevents creation, give the GitHub compare/create link for the user;
     **verify the PR URL/state afterward, and never report it created before confirmation**.
-11. **Clean up only when safe.** A finished `test/<issue>` branch may be deleted after its
+12. **Clean up only when safe.** A finished `test/<issue>` branch may be deleted after its
     verified fix is preserved. Keep `test-base` and the `pr/<issue>` branch while its PR is open.
     Never delete a PR head branch prematurely. Never alter `xmax-pillion`.
 
@@ -103,4 +104,4 @@ start over from clean `main` if necessary.
 - The earlier RFCOMM socket fix followed the same pattern (upstream PR #15):
   <https://github.com/alexandrevega/pillion/pull/15>.
 
-**Guiding rule: observe broadly in the test workbench; submit narrowly to upstream.**
+**Guiding rule: verify and squash one focused experiment at a time on `test-base`; submit narrowly to upstream only when requested.**

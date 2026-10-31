@@ -39,8 +39,10 @@ class RfcommByteChannel : ByteChannel {
         DiagnosticFlightRecorder.record("RFCOMM", "connecting candidates=" + candidates.size)
         for (dash in candidates) {
             Log.d("Pillion", "rfcomm: connecting to ${dash.name}")
+            var attemptSocket: BluetoothSocket? = null
             try {
                 val s = dash.createInsecureRfcommSocketToServiceRecord(SPP_UUID)
+                attemptSocket = s
                 s.connect()
                 socket = s
                 input = s.inputStream
@@ -52,7 +54,7 @@ class RfcommByteChannel : ByteChannel {
                 lastError = t
                 DiagnosticFlightRecorder.record("RFCOMM", "connect failed: " + t.javaClass.simpleName)
                 Log.d("Pillion", "rfcomm: ${dash.name} unreachable (${t.message}); trying next")
-                runCatching { socket?.close() }
+                runCatching { attemptSocket?.close() }
             }
         }
         DiagnosticFlightRecorder.record("RFCOMM", "all candidates failed")
