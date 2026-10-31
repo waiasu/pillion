@@ -100,6 +100,10 @@ class CaptureService : Service() {
             // mirror session, not leave RFCOMM connected awaiting frames forever.
             if (!stopping && _mode.value == CastMode.MIRROR) {
                 DiagnosticFlightRecorder.record("CAPTURE", "projection revoked; stopping mirror session")
+                // Do not wait for Service.onDestroy to release RFCOMM: interrupt an
+                // in-flight handshake or IMAGE_ACK as soon as Android revokes capture.
+                // A mere frame gap (with no onStop callback) does not reach this path.
+                engine?.stop()
                 stopSelf()
             }
         }, fps)
