@@ -12,6 +12,8 @@ import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
 import android.util.Log
+import app.pillion.core.DashMargins
+import app.pillion.core.DashMarginColor
 import app.pillion.core.DashDpi
 import app.pillion.core.DashResolution
 import app.pillion.core.MirrorEngine
@@ -63,7 +65,9 @@ class CaptureService : Service() {
         _state.value = MirrorState.Connecting
         val quality = intent?.getIntExtra(EXTRA_QUALITY, 40) ?: 40
         val fps = intent?.getIntExtra(EXTRA_MAX_FPS, 15) ?: 15
-        if (dashEnabled) startDashSession(quality, fps, dashResolutionFrom(intent), intent?.getStringExtra(EXTRA_DASH_COMPONENT), DashDpi.snap(intent?.getIntExtra(EXTRA_DASH_DPI, DashDpi.DEFAULT) ?: DashDpi.DEFAULT))
+        if (dashEnabled) startDashSession(quality, fps, dashResolutionFrom(intent), intent?.getStringExtra(EXTRA_DASH_COMPONENT), DashDpi.snap(intent?.getIntExtra(EXTRA_DASH_DPI, DashDpi.DEFAULT) ?: DashDpi.DEFAULT),
+            DashMargins.clamped(intent?.getIntExtra(EXTRA_MARGIN_LEFT, 0) ?: 0, intent?.getIntExtra(EXTRA_MARGIN_BOTTOM, 0) ?: 0),
+            DashMarginColor.fromName(intent?.getStringExtra(EXTRA_MARGIN_COLOR)))
         else startMirrorSession(quality, fps)
         return START_NOT_STICKY
     }
@@ -108,7 +112,7 @@ class CaptureService : Service() {
         }, fps)
     }
 
-    private fun startDashSession(quality: Int, fps: Int, resolution: DashResolution, component: String?, dpi: Int) {
+    private fun startDashSession(quality: Int, fps: Int, resolution: DashResolution, component: String?, dpi: Int, margins: DashMargins, marginColor: DashMarginColor) {
         if (component.isNullOrBlank()) {
             fail("Select an app to display in Settings")
             return
@@ -119,7 +123,7 @@ class CaptureService : Service() {
             fail("VD foreground service unavailable")
             return
         }
-        val source = DashStreamScreenSource(dpi)
+        val source = DashStreamScreenSource(dpi, margins, marginColor)
         dashSource = source
         runEngine(source, fps, retryInitialConnection = true)
         scope.launch(Dispatchers.IO) {
@@ -284,6 +288,9 @@ class CaptureService : Service() {
         const val EXTRA_DASH_ENABLED = "dashEnabled"
         const val EXTRA_DASH_COMPONENT = "dashComponent"
         const val EXTRA_DASH_DPI = "dashDpi"
+        const val EXTRA_MARGIN_LEFT = "marginLeft"
+        const val EXTRA_MARGIN_BOTTOM = "marginBottom"
+        const val EXTRA_MARGIN_COLOR = "marginColor"
         const val EXTRA_DASH_WIDTH = "dashWidth"
         const val EXTRA_DASH_HEIGHT = "dashHeight"
 
