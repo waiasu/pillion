@@ -11,6 +11,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.platform.LocalUriHandler
 import app.pillion.core.AppInfo
 import app.pillion.core.DashSetup
+import app.pillion.core.DashDpi
 import app.pillion.core.DashAppCatalog
 import app.pillion.core.DashResolution
 import app.pillion.core.MirrorController
@@ -70,6 +71,7 @@ fun App(
         var showDashOnboarding by rememberSaveable { mutableStateOf(false) }
         var dashEnabled by remember { mutableStateOf(settingsStore?.dashEnabled() ?: false) }
         var dashResolution by remember { mutableStateOf(settingsStore?.dashResolution() ?: DashResolution.DEFAULT) }
+        var dashDpi by remember { mutableStateOf(settingsStore?.dashDpi() ?: DashDpi.DEFAULT) }
         var dashAppPackage by remember { mutableStateOf(settingsStore?.dashAppPackage()) }
         val dashApps = remember(dashAppCatalog) { dashAppCatalog?.availableApps().orEmpty() }
         var dashStartError by remember { mutableStateOf<String?>(null) }
@@ -110,6 +112,8 @@ fun App(
                     dashResolution = it
                     settingsStore?.setDashResolution(it)
                 },
+                dashDpi = dashDpi,
+                onDashDpi = { dashDpi = DashDpi.snap(it); settingsStore?.setDashDpi(dashDpi) },
                 dashApps = dashApps,
                 selectedDashApp = dashAppPackage,
                 onDashApp = { dashAppPackage = it; settingsStore?.setDashAppPackage(it); dashStartError = null },
@@ -141,7 +145,7 @@ fun App(
                         dashStartError = "The selected app is unavailable. Choose another app in Settings."
                     } else {
                         dashStartError = null
-                        onStartDash?.invoke(MirrorSettings(quality, maxFps, dashResolution))
+                        onStartDash?.invoke(MirrorSettings(quality, maxFps, dashResolution, dashDpi))
                     }
                 },
                 onStopDash = { onStopDash?.invoke() },
