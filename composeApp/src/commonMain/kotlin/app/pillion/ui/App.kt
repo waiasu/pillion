@@ -11,6 +11,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.platform.LocalUriHandler
 import app.pillion.core.AppInfo
 import app.pillion.core.DashSetup
+import app.pillion.core.DashAppCatalog
 import app.pillion.core.DashResolution
 import app.pillion.core.MirrorController
 import app.pillion.core.CastMode
@@ -38,6 +39,7 @@ fun App(
     updateChecker: UpdateChecker? = null,
     settingsStore: SettingsStore? = null,
     dashSetup: DashSetup? = null,
+    dashAppCatalog: DashAppCatalog? = null,
     onExportDiagnostics: (() -> Unit)? = null,
     onStartDash: ((MirrorSettings) -> Unit)? = null,
     onStopDash: (() -> Unit)? = null,
@@ -68,6 +70,9 @@ fun App(
         var showDashOnboarding by rememberSaveable { mutableStateOf(false) }
         var dashEnabled by remember { mutableStateOf(settingsStore?.dashEnabled() ?: false) }
         var dashResolution by remember { mutableStateOf(settingsStore?.dashResolution() ?: DashResolution.DEFAULT) }
+        var dashAppPackage by remember { mutableStateOf(settingsStore?.dashAppPackage()) }
+        val dashApps = remember(dashAppCatalog) { dashAppCatalog?.availableApps().orEmpty() }
+        var dashStartError by remember { mutableStateOf<String?>(null) }
         var showDisclaimer by rememberSaveable { mutableStateOf(false) }
         var acknowledged by rememberSaveable { mutableStateOf(false) }
         var update by remember { mutableStateOf<UpdateInfo?>(null) }
@@ -105,6 +110,9 @@ fun App(
                     dashResolution = it
                     settingsStore?.setDashResolution(it)
                 },
+                dashApps = dashApps,
+                selectedDashApp = dashAppPackage,
+                onDashApp = { dashAppPackage = it; settingsStore?.setDashAppPackage(it); dashStartError = null },
                 onSetUpDash = { showDashOnboarding = true },
                 onDisableDash = { dashEnabled = false; settingsStore?.setDashEnabled(false) },
                 bikeName = profile.displayName,
@@ -115,7 +123,7 @@ fun App(
             )
         } else {
             HomeScreen(
-                state = state,
+                state = if (dashStartError != null && activeMode == CastMode.NONE) app.pillion.core.MirrorState.Error(dashStartError!!) else state,
                 update = update,
                 onOpenSettings = { showSettings = true },
                 onStart = {
@@ -126,7 +134,16 @@ fun App(
                 castMode = activeMode,
                 showDash = onStartDash != null && !profile.requiresUsb,
                 dashReady = dashEnabled,
-                onStartDash = { onStartDash?.invoke(MirrorSettings(quality, maxFps, dashResolution)) },
+                onStartDash = {
+                    if (dashAppPackage == null) {
+                        dashStartError = "Select an app to display in Settings before starting Virtual Display."
+                    } else if (dashApps.none { it.packageName == dashAppPackage }) {
+                        dashStartError = "The selected app is unavailable. Choose another app in Settings."
+                    } else {
+                        dashStartError = null
+                        onStartDash?.invoke(MirrorSettings(quality, maxFps, dashResolution))
+                    }
+                },
                 onStopDash = { onStopDash?.invoke() },
             )
         }
