@@ -221,11 +221,11 @@ internal fun SettingsScreen(
         SettingsGroup {
             SettingSlider("Image quality", "$quality", quality.toFloat(), 10f, 80f) { onQuality(it.roundToInt()) }
             GroupDivider()
-            SettingSlider("Max frame rate", "$maxFps fps", maxFps.toFloat(), 5f, 30f) { onMaxFps(it.roundToInt()) }
+            SettingSlider("Max frame rate", "$maxFps fps", maxFps.toFloat(), 1f, 15f, steps = 13) { onMaxFps(it.roundToInt()) }
         }
         Text(
-            "Higher quality looks sharper but makes the picture less smooth (about 15–25 fps at 40% " +
-                "on a fast phone). The cap keeps the frame rate down to save battery and reduce heat.",
+            "Higher quality looks sharper but makes the picture less smooth. The FPS cap " +
+                "saves battery and reduces heat.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(start = 6.dp, top = 8.dp, end = 6.dp),
@@ -338,6 +338,7 @@ private fun SettingSlider(
     current: Float,
     min: Float,
     max: Float,
+    steps: Int = 0,
     onChange: (Float) -> Unit,
 ) {
     Column(Modifier.padding(vertical = 4.dp)) {
@@ -349,7 +350,7 @@ private fun SettingSlider(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        Slider(value = current, onValueChange = onChange, valueRange = min..max)
+        Slider(value = current, onValueChange = onChange, valueRange = min..max, steps = steps)
     }
 }
 
