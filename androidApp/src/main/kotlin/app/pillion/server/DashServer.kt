@@ -8,7 +8,11 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.graphics.Canvas
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.PixelFormat
+import android.graphics.Paint
+import android.os.SystemClock
+import java.util.concurrent.Executors
 import android.hardware.display.VirtualDisplay
 import android.media.Image
 import android.media.ImageReader
@@ -98,6 +102,16 @@ object DashServer {
     private var margins = DashMargins()
     private var marginColor = DashMarginColor.Black
     private var quality = 40
+    // The capture handler owns marker state; no polling or bitmap/JPEG work on the TCP reader.
+    private var markerX = 0f
+    private var markerY = 0f
+    private var markerUntilMs = 0L
+    private var markerGeneration = 0L
+    @Volatile private var tapEpoch = 0L
+    private var markerCleanBitmap: Bitmap? = null
+    private val markerOutlinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = android.graphics.Color.BLACK; style = Paint.Style.FILL }
+    private val markerFillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = android.graphics.Color.WHITE; style = Paint.Style.FILL }
+    private val tapExecutor = Executors.newSingleThreadExecutor { task -> Thread(task, "pillion-dash-tap").apply { isDaemon = true } }
     private var lastEncodeMs = 0L
     private var encodeWindowStartMs = 0L
     private var encodeFrames = 0
@@ -252,6 +266,7 @@ object DashServer {
     }
 
     private fun readCommands(client: Socket, out: DataOutputStream, writeLock: Any, sizeReadyForClient: AtomicBoolean) {
+        val clientAlive = AtomicBoolean(true)
         try {
             val input = client.getInputStream().bufferedReader()
             while (true) {
@@ -275,22 +290,120 @@ object DashServer {
                             }
                         }
                     }
+                    line.startsWith("TAP ") -> {
+                        val parts = line.removePrefix("TAP ").trim().split(" ")
+                        val x = parts.getOrNull(0)?.toIntOrNull()
+                        val y = parts.getOrNull(1)?.toIntOrNull()
+                        val duration = parts.getOrNull(2)?.toLongOrNull()
+                        if (x != null && y != null && duration != null && x in 0..100 && y in 0..100 && duration in 100L..2000L) {
+                            tapDashPercent(x, y, duration, clientAlive)
+                        }
+                    }
                     line == "QUIT" -> shutdown()
                 }
             }
         } catch (_: Throwable) {
             // fall through to close
         } finally {
+            clientAlive.set(false)
             // Closing wakes the writer loop (it checks isClosed) so a broken client's thread ends
             // instead of sleeping forever.
             runCatching { client.close() }
         }
     }
 
+    private fun tapDashPercent(xPercent: Int, yPercent: Int, durationMs: Long, clientAlive: AtomicBoolean) {
+        val targetDisplay = displayId
+        val epoch = tapEpoch
+        if (!clientAlive.get() || !capturing || !sizeConfigured || targetDisplay < 0) return
+        val x = ((virtualWidth - 1L) * xPercent / 100L).toInt()
+        val y = ((virtualHeight - 1L) * yPercent / 100L).toInt()
+        captureHandler?.post {
+            if (!capturing || !sizeConfigured || targetDisplay != displayId) return@post
+            markerX = margins.left + (outputWidth - margins.left - 1) * xPercent / 100f
+            markerY = (outputHeight - margins.bottom - 1) * yPercent / 100f
+            markerUntilMs = SystemClock.elapsedRealtime() + durationMs
+            val generation = ++markerGeneration
+            // Publish one marker JPEG immediately, even when the VD has no new buffer.
+            // Subsequent ImageReader frames continue to render the marker until expiry.
+            publishImmediateMarker()
+            captureHandler?.postDelayed({
+                if (generation == markerGeneration && SystemClock.elapsedRealtime() >= markerUntilMs) {
+                    markerUntilMs = 0L
+                    // Restore the newest clean image even if VD is static after the tap.
+                    markerCleanBitmap?.let { clean ->
+                        if (capturing && sizeConfigured) {
+                            val out = ByteArrayOutputStream()
+                            clean.compress(Bitmap.CompressFormat.JPEG, quality, out)
+                            latestJpeg = out.toByteArray()
+                            latestSeq++
+                        }
+                        clean.recycle()
+                        markerCleanBitmap = null
+                    }
+                }
+            }, durationMs + 20L)
+        }
+        // Never block SIZE/PROMOTE/DEMOTE or image stream while shell input is executing.
+        tapExecutor.execute {
+            if (clientAlive.get() && capturing && sizeConfigured && displayId == targetDisplay && tapEpoch == epoch) {
+                val rc = exec("input", "-d", targetDisplay.toString(), "tap", x.toString(), y.toString())
+                if (rc != 0) Log.w(TAG, "dash tap failed rc=$rc")
+            }
+        }
+    }
+
+    /** Capture-thread only. Force one marker frame without depending on an ImageReader callback. */
+    private fun publishImmediateMarker() {
+        try {
+            // During a previous tap, latestJpeg already has a marker. Reuse its clean
+            // backup instead of decoding and drawing over the old marker.
+            val clean = markerCleanBitmap ?: run {
+                val jpeg = latestJpeg ?: return
+                val bitmap = BitmapFactory.decodeByteArray(jpeg, 0, jpeg.size) ?: return
+                if (bitmap.width != outputWidth || bitmap.height != outputHeight) {
+                    bitmap.recycle()
+                    return
+                }
+                markerCleanBitmap = bitmap
+                bitmap
+            }
+            val marked = clean.copy(Bitmap.Config.ARGB_8888, true) ?: return
+            try {
+                drawTapMarker(Canvas(marked))
+                val out = ByteArrayOutputStream()
+                if (marked.compress(Bitmap.CompressFormat.JPEG, quality, out)) {
+                    latestJpeg = out.toByteArray()
+                    latestSeq++
+                }
+            } finally {
+                marked.recycle()
+            }
+        } catch (t: Throwable) {
+            // A later VD frame still paints the marker during the normal duration.
+            Log.w(TAG, "tap marker: immediate JPEG unavailable", t)
+        }
+    }
+
+    private fun drawTapMarker(canvas: Canvas) {
+        canvas.drawCircle(markerX, markerY, 12f, markerOutlinePaint)
+        canvas.drawCircle(markerX, markerY, 10f, markerFillPaint)
+    }
+
     /**
      * Apply CCU geometry to the existing VD and ImageReader. The task stays on the
      * same displayId. Reply SIZE_READY only after capture-thread reconfiguration ends.
      */
+    private fun resetMarker() {
+        ++tapEpoch
+        captureHandler?.post {
+            ++markerGeneration
+            markerUntilMs = 0L
+            markerCleanBitmap?.recycle()
+            markerCleanBitmap = null
+        }
+    }
+
     private fun resizeOutput(arg: String): SizeReady? {
         val parts = arg.split(' ')
         val w = parts.getOrNull(0)?.toIntOrNull() ?: return null
@@ -324,6 +437,11 @@ object DashServer {
                     return@post
                 }
                 sizeConfigured = false
+                ++tapEpoch
+                ++markerGeneration
+                markerUntilMs = 0L
+                markerCleanBitmap?.recycle()
+                markerCleanBitmap = null
                 latestJpeg = null
                 if (size.width != virtualWidth || size.height != virtualHeight) {
                     val vd = display ?: error("virtual display missing")
@@ -370,6 +488,7 @@ object DashServer {
     /** Move the foreground app onto the dash display and start encoding (phone just locked). */
     private fun promoteApp(component: String) {
         if (displayId < 0 || component.isEmpty()) return
+        resetMarker()
         relocateApp(component, displayId)
         lastComponent = component
         capturing = true
@@ -705,6 +824,7 @@ object DashServer {
     /** Move the app back to the phone and stop encoding (phone unlocked). */
     private fun demoteApp() {
         capturing = false
+        resetMarker()
         stopPanelOffRetries()
         stopHeartbeat()
         latestJpeg = null
@@ -769,6 +889,14 @@ object DashServer {
             }
         }
         val out = ByteArrayOutputStream()
+        if (markerUntilMs > SystemClock.elapsedRealtime()) {
+            markerCleanBitmap?.recycle()
+            markerCleanBitmap = Bitmap.createBitmap(output)
+            drawTapMarker(Canvas(output))
+        } else {
+            markerCleanBitmap?.recycle()
+            markerCleanBitmap = null
+        }
         output.compress(Bitmap.CompressFormat.JPEG, quality, out)
         if (output !== scaled) output.recycle()
         if (scaled !== bitmap) scaled.recycle()

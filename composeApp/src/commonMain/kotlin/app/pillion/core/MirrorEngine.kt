@@ -40,6 +40,7 @@ class MirrorEngine(
     @Volatile private var running = false
     @Volatile private var lastFrameKb = 0
     private var seq = 1
+    private val writeLock = Any()
 
     fun start(scope: CoroutineScope) {
         if (job != null) return
@@ -146,9 +147,26 @@ class MirrorEngine(
         // FrameReader.next() is blocking I/O: a coroutine timeout around it would not interrupt
         // the read. Keep a single dedicated reader and let the sender time out on its channel.
         val incomingFrames = Channel<NaviFrameView>(Channel.BUFFERED)
+        // Event-driven serial worker. Preserve press order without delaying Bluetooth responses.
+        val tapEvents = Channel<Boolean>(Channel.UNLIMITED)
+        val tapWorker = launch(Dispatchers.IO) {
+            for (up in tapEvents) {
+                if (running) screen.tapDashPoint(up)
+            }
+        }
         val receiver = launch(Dispatchers.IO) {
             try {
-                while (running && isActive) incomingFrames.send(reader.next())
+                while (running && isActive) {
+                    val next = reader.next()
+                    if (next.serviceType == 51 || next.serviceType == 52) {
+                        // Acknowledge even during STATUS/PROMOTING; never wedge the CCU pressed effect.
+                        synchronized(writeLock) {
+                            channel.write(NaviLiteCodec.build(FRAME_TYPE_PHONE, ServiceType.ZOOM, PDT_POINTER, ZOOM_PAYLOAD))
+                        }
+                        // Never wait for shell input on the RFCOMM reader.
+                        tapEvents.trySend(next.serviceType == 51)
+                    } else incomingFrames.send(next)
+                }
             } catch (t: Throwable) {
                 if (running) incomingFrames.close(t)
             } finally {
@@ -168,6 +186,13 @@ class MirrorEngine(
         var ackMsMax = 0L
         var consecutiveTimeouts = 0
         while (running) {
+            // Pace first, then sample the latest frame. Sampling before the FPS wait
+            // held an older JPEG even when the helper had already supplied a newer one.
+            if (minIntervalMs > 0L) {
+                val wait = minIntervalMs - (nowMs() - lastSend)
+                if (wait > 0L) sleepMs(wait)
+            }
+            if (!running) break
             val jpeg = screen.latestFrame()
             if (jpeg == null) {
                 if (!waitedForFrame) {
@@ -176,10 +201,6 @@ class MirrorEngine(
                 }
                 sleepMs(15)
                 continue
-            }
-            if (minIntervalMs > 0L) {
-                val wait = minIntervalMs - (nowMs() - lastSend)
-                if (wait > 0L) sleepMs(wait)
             }
             val sentAt = nowMs()
             lastSend = sentAt
@@ -225,6 +246,8 @@ class MirrorEngine(
             runCatching { channel.close() }
             receiver.cancel()
             incomingFrames.cancel()
+            tapEvents.cancel()
+            tapWorker.cancel()
         }
     }
 
@@ -235,7 +258,9 @@ class MirrorEngine(
         payload[2] = ((seq ushr 8) and 0xff).toByte()
         jpeg.copyInto(payload, 3)
         seq++
-        channel.write(NaviLiteCodec.build(FRAME_TYPE_PHONE, ServiceType.IMAGE, PDT_POINTER, payload))
+        synchronized(writeLock) {
+            channel.write(NaviLiteCodec.build(FRAME_TYPE_PHONE, ServiceType.IMAGE, PDT_POINTER, payload))
+        }
     }
 
     private companion object {
@@ -243,6 +268,7 @@ class MirrorEngine(
         const val RECONNECT_DELAY_MS = 1500L
         const val HANDSHAKE_TIMEOUT_MS = 5000L
         const val ACK_TIMEOUT_MS = 2000L
+        val ZOOM_PAYLOAD = byteArrayOf(0x07, 0x19, 0x06, 0x00, 0x30, 0x2e, 0x32, 0x20, 0x6d, 0x69)
     }
 }
 

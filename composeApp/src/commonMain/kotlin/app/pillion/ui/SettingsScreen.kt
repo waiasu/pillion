@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -33,6 +34,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -51,10 +53,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.pillion.core.AppInfo
 import app.pillion.core.DashDpi
+import app.pillion.core.DashTapSettings
 import app.pillion.core.DashMargins
 import app.pillion.core.DashMarginColor
 import app.pillion.core.DashApp
@@ -85,6 +90,8 @@ internal fun SettingsScreen(
     onDashMargins: (DashMargins) -> Unit = {},
     dashMarginColor: DashMarginColor = DashMarginColor.Black,
     onDashMarginColor: (DashMarginColor) -> Unit = {},
+    dashTap: DashTapSettings = DashTapSettings(),
+    onDashTap: (DashTapSettings) -> Unit = {},
     dashApps: List<DashApp> = emptyList(),
     selectedDashApp: String? = null,
     onDashApp: (String?) -> Unit = {},
@@ -272,6 +279,17 @@ internal fun SettingsScreen(
                 MarginColorSelector(dashMarginColor, onDashMarginColor)
                 GroupDivider()
                 DashAppSelector(dashApps, selectedDashApp, onDashApp)
+                GroupDivider()
+                Text("タップ位置", style = MaterialTheme.typography.titleMedium)
+                Text("左上基準・0〜100%（変更は次回Startから反映）",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                TapPositionRow("↑ ズームイン", dashTap.upX, dashTap.upY,
+                    onX = { onDashTap(dashTap.copy(upX = it)) },
+                    onY = { onDashTap(dashTap.copy(upY = it)) })
+                GroupDivider()
+                TapPositionRow("↓ ズームアウト", dashTap.downX, dashTap.downY,
+                    onX = { onDashTap(dashTap.copy(downX = it)) },
+                    onY = { onDashTap(dashTap.copy(downY = it)) })
             }
             Text(
                 "Casts the real app to the dash in landscape with the screen off. Run setup once " +
@@ -388,12 +406,103 @@ private fun DashDpiSelector(dpi: Int, onDpi: (Int) -> Unit) {
 }
 
 @Composable
-private fun PixelMarginSelector(label: String, px: Int, maximum: Int, onChange: (Int) -> Unit) {
-    val value = px.coerceIn(0, maximum)
+private fun PixelMarginSelector(label: String, px: Int, maximum: Int, onChange: (Int) -> Unit) =
+    NumericSelector(label, px, maximum, "px", onChange)
+
+@Composable
+private fun TapPositionRow(
+    title: String,
+    x: Int,
+    y: Int,
+    onX: (Int) -> Unit,
+    onY: (Int) -> Unit,
+) {
+    Column(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+        Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            TapPercentAxis("H・横", x, onX, Modifier.weight(1f))
+            TapPercentAxis("V・縦", y, onY, Modifier.weight(1f))
+        }
+    }
+}
+
+@Composable
+private fun TapPercentAxis(
+    label: String,
+    input: Int,
+    onChange: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val value = input.coerceIn(0, 100)
+    var editing by remember { mutableStateOf(false) }
+    var editValue by remember { mutableStateOf(value.toString()) }
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(label, style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically) {
+            IconButton(
+                onClick = { onChange((value - 1).coerceAtLeast(0)) },
+                enabled = value > 0, modifier = Modifier.size(36.dp)
+            ) {
+                Icon(Icons.Filled.Remove, contentDescription = "Decrease $label",
+                    modifier = Modifier.size(18.dp))
+            }
+            Text("$value%", modifier = Modifier.width(54.dp).clickable {
+                editValue = value.toString()
+                editing = true
+            }, style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary,
+                textAlign = TextAlign.Center)
+            IconButton(
+                onClick = { onChange((value + 1).coerceAtMost(100)) },
+                enabled = value < 100, modifier = Modifier.size(36.dp)
+            ) {
+                Icon(Icons.Filled.Add, contentDescription = "Increase $label",
+                    modifier = Modifier.size(18.dp))
+            }
+        }
+    }
+    if (editing) {
+        AlertDialog(
+            onDismissRequest = { editing = false },
+            title = { Text("$label (0〜100%)") },
+            text = {
+                OutlinedTextField(
+                    value = editValue,
+                    onValueChange = { updated ->
+                        if (updated.length <= 3 && updated.all { it.isDigit() }) editValue = updated
+                    },
+                    label = { Text("座標 (%)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        editValue.toIntOrNull()?.let { onChange(it.coerceIn(0, 100)) }
+                        editing = false
+                    },
+                    enabled = editValue.toIntOrNull() != null,
+                ) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(onClick = { editing = false }) { Text("Cancel") }
+            },
+        )
+    }
+}
+
+@Composable
+private fun NumericSelector(label: String, input: Int, maximum: Int, unit: String, onChange: (Int) -> Unit) {
+    val value = input.coerceIn(0, maximum)
     Column(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(label, style = MaterialTheme.typography.bodyLarge)
-            Text("$value px", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("$value $unit", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = { onChange((value - 1).coerceAtLeast(0)) }, enabled = value > 0, modifier = Modifier.size(40.dp)) {
@@ -406,8 +515,8 @@ private fun PixelMarginSelector(label: String, px: Int, maximum: Int, onChange: 
             }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("0 px", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text("$maximum px", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("0 $unit", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("$maximum $unit", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

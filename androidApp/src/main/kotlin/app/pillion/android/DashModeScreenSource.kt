@@ -1,6 +1,7 @@
 package app.pillion.android
 
 import android.util.Log
+import android.os.SystemClock
 import app.pillion.core.ScreenSource
 
 /**
@@ -14,6 +15,7 @@ class DashModeScreenSource(
     private val status = StatusScreenSource()
     @Volatile private var mode = Mode.STATUS
     @Volatile private var promoteStartFrameSeq = 0L
+    @Volatile private var dashReadyAtMs = Long.MAX_VALUE
 
     override fun start() {
         status.start()
@@ -33,14 +35,28 @@ class DashModeScreenSource(
             if (frame == null) status.latestFrame()
             else {
                 mode = Mode.DASH
+                dashReadyAtMs = SystemClock.elapsedRealtime() + 1_000L
                 Log.i(TAG, "VD first fresh frame; STATUS -> DASH")
                 frame
             }
         }
-        Mode.DASH -> dash.latestFrame() ?: status.latestFrame()
+        Mode.DASH -> dash.latestFrame() ?: run {
+            // Helper transport/size gate was lost. Re-arm the fresh-frame and settle gate.
+            promoteStartFrameSeq = dash.receivedFrameSequence()
+            dashReadyAtMs = Long.MAX_VALUE
+            mode = Mode.PROMOTING
+            status.reset()
+            status.latestFrame()
+        }
+    }
+
+    override fun tapDashPoint(up: Boolean) {
+        if (mode != Mode.DASH || SystemClock.elapsedRealtime() < dashReadyAtMs) return
+        dash.tapDashPoint(up)
     }
 
     fun promote(component: String) {
+        dashReadyAtMs = Long.MAX_VALUE
         // Arm the cover *before* sending PROMOTE. Do not reveal the old task's
         // JPEG during relocation or a delayed VD restart.
         promoteStartFrameSeq = dash.receivedFrameSequence()
@@ -51,6 +67,7 @@ class DashModeScreenSource(
     }
 
     fun demote() {
+        dashReadyAtMs = Long.MAX_VALUE
         mode = Mode.STATUS
         status.reset()
         dash.demote()
@@ -60,6 +77,7 @@ class DashModeScreenSource(
     fun quit() = dash.quit()
 
     override fun stop() {
+        dashReadyAtMs = Long.MAX_VALUE
         dash.stop()
         status.stop()
     }

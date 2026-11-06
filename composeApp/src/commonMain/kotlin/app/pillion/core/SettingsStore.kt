@@ -5,6 +5,13 @@ package app.pillion.core
  * provide it (Android: SharedPreferences). A null store simply means "use defaults" (e.g. previews).
  */
 interface SettingsStore {
+    fun imageQuality(): Int = 80
+    fun setImageQuality(value: Int) {}
+    fun maxFrameRate(): Int = 3
+    fun setMaxFrameRate(value: Int) {}
+    fun dashTapSettings(): DashTapSettings = DashTapSettings()
+    fun setDashTapSettings(settings: DashTapSettings) {}
+
     fun themeMode(): ThemeMode
     fun setThemeMode(mode: ThemeMode)
 

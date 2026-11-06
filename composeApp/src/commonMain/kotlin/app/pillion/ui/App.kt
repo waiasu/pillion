@@ -13,6 +13,7 @@ import app.pillion.core.AppInfo
 import app.pillion.core.DashSetup
 import app.pillion.core.DashDpi
 import app.pillion.core.DashMargins
+import app.pillion.core.DashTapSettings
 import app.pillion.core.DashMarginColor
 import app.pillion.core.DashAppCatalog
 import app.pillion.core.DashResolution
@@ -67,8 +68,8 @@ fun App(
         val controller = remember(profile.id) { controllerFor(profile) }
         val state by controller.state.collectAsState()
         val activeMode by castMode.collectAsState()
-        var quality by rememberSaveable { mutableStateOf(40) }
-        var maxFps by rememberSaveable { mutableStateOf(15) }
+        var quality by remember { mutableStateOf(settingsStore?.imageQuality() ?: 80) }
+        var maxFps by remember { mutableStateOf(settingsStore?.maxFrameRate() ?: 3) }
         var showSettings by rememberSaveable { mutableStateOf(false) }
         var showDashOnboarding by rememberSaveable { mutableStateOf(false) }
         var dashEnabled by remember { mutableStateOf(settingsStore?.dashEnabled() ?: false) }
@@ -76,6 +77,7 @@ fun App(
         var dashDpi by remember { mutableStateOf(settingsStore?.dashDpi() ?: DashDpi.DEFAULT) }
         var dashMargins by remember { mutableStateOf(settingsStore?.dashMargins() ?: DashMargins()) }
         var dashMarginColor by remember { mutableStateOf(settingsStore?.dashMarginColor() ?: DashMarginColor.Black) }
+        var dashTap by remember { mutableStateOf(settingsStore?.dashTapSettings() ?: DashTapSettings()) }
         var dashAppPackage by remember { mutableStateOf(settingsStore?.dashAppPackage()) }
         val dashApps = remember(dashAppCatalog) { dashAppCatalog?.availableApps().orEmpty() }
         var dashStartError by remember { mutableStateOf<String?>(null) }
@@ -104,9 +106,9 @@ fun App(
         } else if (showSettings) {
             SettingsScreen(
                 quality = quality,
-                onQuality = { quality = it },
+                onQuality = { quality = it.coerceIn(10, 80); settingsStore?.setImageQuality(quality) },
                 maxFps = maxFps,
-                onMaxFps = { maxFps = it },
+                onMaxFps = { maxFps = it.coerceIn(1, 15); settingsStore?.setMaxFrameRate(maxFps) },
                 themeMode = themeMode,
                 onThemeMode = { themeMode = it; settingsStore?.setThemeMode(it) },
                 dashSupported = dashSetup != null,
@@ -122,6 +124,8 @@ fun App(
                 onDashMargins = { dashMargins = DashMargins.clamped(it.left, it.bottom); settingsStore?.setDashMargins(dashMargins) },
                 dashMarginColor = dashMarginColor,
                 onDashMarginColor = { dashMarginColor = it; settingsStore?.setDashMarginColor(it) },
+                dashTap = dashTap,
+                onDashTap = { dashTap = DashTapSettings.clamped(it.upX, it.upY, it.downX, it.downY); settingsStore?.setDashTapSettings(dashTap) },
                 dashApps = dashApps,
                 selectedDashApp = dashAppPackage,
                 onDashApp = { dashAppPackage = it; settingsStore?.setDashAppPackage(it); dashStartError = null },
@@ -153,7 +157,7 @@ fun App(
                         dashStartError = "The selected app is unavailable. Choose another app in Settings."
                     } else {
                         dashStartError = null
-                        onStartDash?.invoke(MirrorSettings(quality, maxFps, dashResolution, dashDpi, dashMargins, dashMarginColor))
+                        onStartDash?.invoke(MirrorSettings(quality, maxFps, dashResolution, dashDpi, dashMargins, dashMarginColor, dashTap))
                     }
                 },
                 onStopDash = { onStopDash?.invoke() },

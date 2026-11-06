@@ -11,6 +11,8 @@ interface ScreenSource {
     /** The most recent screen as a 480x240 JPEG, or null if no frame is available yet. */
     fun latestFrame(): ByteArray?
     fun stop()
+    /** Optional VD stick tap. Ignored by ordinary screen sources. */
+    fun tapDashPoint(up: Boolean) {}
 
     /**
      * Resize output frames to the dash's native size once the session resolves it from the head

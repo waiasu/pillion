@@ -2,6 +2,7 @@ package app.pillion.android
 
 import android.content.Context
 import app.pillion.core.DashDpi
+import app.pillion.core.DashTapSettings
 import app.pillion.core.DashMargins
 import app.pillion.core.DashMarginColor
 import app.pillion.core.DashResolution
@@ -11,6 +12,21 @@ import app.pillion.core.ThemeMode
 /** [SettingsStore] backed by SharedPreferences. Single responsibility: persist preferences. */
 class AndroidSettingsStore(context: Context) : SettingsStore {
     private val prefs = context.getSharedPreferences("pillion.settings", Context.MODE_PRIVATE)
+
+    override fun imageQuality(): Int = prefs.getInt("image_quality", 80).coerceIn(10, 80)
+    override fun setImageQuality(value: Int) { prefs.edit().putInt("image_quality", value.coerceIn(10, 80)).apply() }
+    override fun maxFrameRate(): Int = prefs.getInt("max_frame_rate", 3).coerceIn(1, 15)
+    override fun setMaxFrameRate(value: Int) { prefs.edit().putInt("max_frame_rate", value.coerceIn(1, 15)).apply() }
+
+    override fun dashTapSettings(): DashTapSettings = DashTapSettings.clamped(
+        prefs.getInt("tap_up_x", 93), prefs.getInt("tap_up_y", 47),
+        prefs.getInt("tap_down_x", 93), prefs.getInt("tap_down_y", 74),
+    )
+    override fun setDashTapSettings(settings: DashTapSettings) {
+        val v = DashTapSettings.clamped(settings.upX, settings.upY, settings.downX, settings.downY)
+        prefs.edit().putInt("tap_up_x", v.upX).putInt("tap_up_y", v.upY)
+            .putInt("tap_down_x", v.downX).putInt("tap_down_y", v.downY).apply()
+    }
 
     override fun themeMode(): ThemeMode =
         runCatching { ThemeMode.valueOf(prefs.getString(KEY_THEME, null) ?: ThemeMode.SYSTEM.name) }

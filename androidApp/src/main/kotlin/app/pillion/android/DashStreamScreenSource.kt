@@ -4,6 +4,7 @@ import android.graphics.BitmapFactory
 import android.os.SystemClock
 import android.util.Log
 import app.pillion.core.DashMargins
+import app.pillion.core.DashTapSettings
 import app.pillion.core.DashMarginColor
 import app.pillion.core.DashDpi
 import app.pillion.core.DashFrameGate
@@ -28,8 +29,11 @@ class DashStreamScreenSource(
     dpi: Int = DashDpi.DEFAULT,
     private val margins: DashMargins = DashMargins(),
     private val marginColor: DashMarginColor = DashMarginColor.Black,
+    private val tapSettings: DashTapSettings = DashTapSettings(),
+    private val sessionFps: Int = 3,
 ) : ScreenSource {
     private val sessionDpi = DashDpi.snap(dpi)
+    private val markerMs = DashTapSettings.markerDurationMs(sessionFps)
     private val thread = Thread(::readLoop).apply { isDaemon = true }
     @Volatile private var running = false
     @Volatile private var socket: Socket? = null
@@ -150,6 +154,14 @@ class DashStreamScreenSource(
 
     /** Incremented only after a size-validated helper JPEG is received. */
     fun receivedFrameSequence(): Long = receiveSeq
+
+    /** No retries: stale taps must never replay after helper reconnection. */
+    override fun tapDashPoint(up: Boolean) {
+        if (!running || socket == null || !gate.isReady()) return
+        val x = if (up) tapSettings.upX else tapSettings.downX
+        val y = if (up) tapSettings.upY else tapSettings.downY
+        send("TAP $x $y $markerMs\n")
+    }
 
     /** Tell the helper to move the foreground app onto the dash display and start encoding. */
     fun promote(component: String) {

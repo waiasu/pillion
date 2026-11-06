@@ -16,6 +16,7 @@ import android.os.IBinder
 import android.os.PowerManager
 import android.util.Log
 import app.pillion.core.DashMargins
+import app.pillion.core.DashTapSettings
 import app.pillion.core.DashMarginColor
 import app.pillion.core.DashDpi
 import app.pillion.core.DashResolution
@@ -73,11 +74,17 @@ class CaptureService : Service() {
         _mode.value = if (dashEnabled) CastMode.DASH else CastMode.MIRROR
         acquireWakeLock()
         _state.value = MirrorState.Connecting
-        val quality = intent?.getIntExtra(EXTRA_QUALITY, 40) ?: 40
-        val fps = intent?.getIntExtra(EXTRA_MAX_FPS, 15) ?: 15
+        val quality = intent?.getIntExtra(EXTRA_QUALITY, 80) ?: 80
+        val fps = intent?.getIntExtra(EXTRA_MAX_FPS, 3) ?: 3
         if (dashEnabled) startDashSession(quality, fps, dashResolutionFrom(intent), intent?.getStringExtra(EXTRA_DASH_COMPONENT), DashDpi.snap(intent?.getIntExtra(EXTRA_DASH_DPI, DashDpi.DEFAULT) ?: DashDpi.DEFAULT),
             DashMargins.clamped(intent?.getIntExtra(EXTRA_MARGIN_LEFT, 0) ?: 0, intent?.getIntExtra(EXTRA_MARGIN_BOTTOM, 0) ?: 0),
-            DashMarginColor.fromName(intent?.getStringExtra(EXTRA_MARGIN_COLOR)))
+            DashMarginColor.fromName(intent?.getStringExtra(EXTRA_MARGIN_COLOR)),
+            DashTapSettings.clamped(
+                intent?.getIntExtra(EXTRA_TAP_UP_X, 93) ?: 93,
+                intent?.getIntExtra(EXTRA_TAP_UP_Y, 47) ?: 47,
+                intent?.getIntExtra(EXTRA_TAP_DOWN_X, 93) ?: 93,
+                intent?.getIntExtra(EXTRA_TAP_DOWN_Y, 74) ?: 74,
+            ))
         else startMirrorSession(quality, fps)
         return START_NOT_STICKY
     }
@@ -122,7 +129,7 @@ class CaptureService : Service() {
         }, fps)
     }
 
-    private fun startDashSession(quality: Int, fps: Int, resolution: DashResolution, component: String?, dpi: Int, margins: DashMargins, marginColor: DashMarginColor) {
+    private fun startDashSession(quality: Int, fps: Int, resolution: DashResolution, component: String?, dpi: Int, margins: DashMargins, marginColor: DashMarginColor, tap: DashTapSettings) {
         if (component.isNullOrBlank()) {
             fail("Select an app to display in Settings")
             return
@@ -133,7 +140,7 @@ class CaptureService : Service() {
             fail("VD foreground service unavailable")
             return
         }
-        val source = DashStreamScreenSource(dpi, margins, marginColor)
+        val source = DashStreamScreenSource(dpi, margins, marginColor, tap, fps)
         dashSource = source
         val modeSource = DashModeScreenSource(source)
         dashModeSource = modeSource
@@ -408,6 +415,10 @@ class CaptureService : Service() {
         const val EXTRA_MARGIN_LEFT = "marginLeft"
         const val EXTRA_MARGIN_BOTTOM = "marginBottom"
         const val EXTRA_MARGIN_COLOR = "marginColor"
+        const val EXTRA_TAP_UP_X = "tapUpX"
+        const val EXTRA_TAP_UP_Y = "tapUpY"
+        const val EXTRA_TAP_DOWN_X = "tapDownX"
+        const val EXTRA_TAP_DOWN_Y = "tapDownY"
         const val EXTRA_DASH_WIDTH = "dashWidth"
         const val EXTRA_DASH_HEIGHT = "dashHeight"
 
