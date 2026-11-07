@@ -88,7 +88,7 @@ object DashHelper {
                 .filter { it.startsWith("main:") || it.startsWith("system:") }
                 .joinToString("; ")
             val resized = status.contains("main: ring buffer is 8 MiB") &&
-                status.contains("system: ring buffer is 8 MiB"
+                status.contains("system: ring buffer is 8 MiB")
             Log.i(TAG, "diag logcat sizes (verified=$resized): $status")
             DiagnosticFlightRecorder.record("DIAG", "logcat 8MiB verified=$resized: $status")
         }.onFailure {
