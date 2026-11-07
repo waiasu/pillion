@@ -58,6 +58,11 @@ object DashHelper {
             )
         }
 
+        // Test branch only: logcat -G is reset by Android on reboot. Set the main/system
+        // ring sizes after ADB becomes available, before the helper starts.
+        // Never block a usable dash session merely because diagnostic tuning failed.
+        expandDiagnosticLogcatBuffers(adb)
+
         runCatching { adb.prepareDashPrivileges(appContext) }
             .onSuccess { Log.d(TAG, "dash: granted usage-stats appop through shell") }
             .onFailure { Log.w(TAG, "dash: could not grant usage-stats appop", it) }
@@ -67,6 +72,23 @@ object DashHelper {
         waitUntilStopped()
         spawn(adb, appContext, quality, dashResolution)
         check(waitUntilRunning()) { "Dash helper did not start" }
+    }
+
+    /** Diagnostic-only boot-local logcat size adjustment; kept out of stable branches. */
+    private fun expandDiagnosticLogcatBuffers(adb: PillionAdb) {
+        runCatching {
+            adb.runShell("logcat -b main -G 8M")
+            adb.runShell("logcat -b system -G 8M")
+            val status = adb.runShell("logcat -g")
+                .lineSequence()
+                .filter { it.startsWith("main:") || it.startsWith("system:") }
+                .joinToString("; ")
+            Log.i(TAG, "diag logcat sizes: $status")
+            DiagnosticFlightRecorder.record("DIAG", "logcat resize requested: $status")
+        }.onFailure {
+            Log.w(TAG, "diag logcat resize failed; continuing helper start", it)
+            DiagnosticFlightRecorder.record("DIAG", "logcat resize failed: ${it.javaClass.simpleName}")
+        }
     }
 
     /**
