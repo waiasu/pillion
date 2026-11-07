@@ -41,6 +41,10 @@ object DashHelper {
         preferExisting: Boolean = false,
     ) {
         if (preferExisting && isRunning()) {
+            // The helper can survive an app update, so the normal preparation path below
+            // might be skipped. Apply diagnostics if an ADB connection is already live.
+            val adb = PillionAdb.getInstance(context.applicationContext)
+            if (adb.isConnected()) expandDiagnosticLogcatBuffers(adb)
             Log.d(TAG, "dash: using existing helper")
             return
         }
@@ -83,8 +87,10 @@ object DashHelper {
                 .lineSequence()
                 .filter { it.startsWith("main:") || it.startsWith("system:") }
                 .joinToString("; ")
-            Log.i(TAG, "diag logcat sizes: $status")
-            DiagnosticFlightRecorder.record("DIAG", "logcat resize requested: $status")
+            val resized = status.contains("main: ring buffer is 8 MiB") &&
+                status.contains("system: ring buffer is 8 MiB"
+            Log.i(TAG, "diag logcat sizes (verified=$resized): $status")
+            DiagnosticFlightRecorder.record("DIAG", "logcat 8MiB verified=$resized: $status")
         }.onFailure {
             Log.w(TAG, "diag logcat resize failed; continuing helper start", it)
             DiagnosticFlightRecorder.record("DIAG", "logcat resize failed: ${it.javaClass.simpleName}")
