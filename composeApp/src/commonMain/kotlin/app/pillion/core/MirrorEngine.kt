@@ -41,10 +41,15 @@ class MirrorEngine(
     @Volatile private var lastFrameKb = 0
     private var seq = 1
     private val writeLock = Any()
+    private val stopGate = Any()
+    @Volatile private var stopRequested = false
+    @Volatile private var pendingImageAckSeq = -1
+    @Volatile private var imageWriteInProgress = false
 
     fun start(scope: CoroutineScope) {
         if (job != null) return
         running = true
+        stopRequested = false
         _state.value = MirrorState.Connecting
         job = scope.launch(Dispatchers.Default) {
             try {
@@ -58,19 +63,19 @@ class MirrorEngine(
                 // resume, so a drop is a brief reconnect instead of a dead session. Only stop() ends it.
                 var connectedOnce = false
                 var initialFailures = 0
-                while (running) {
+                while (running && !stopRequested) {
                     try {
                         _state.value = MirrorState.Connecting
-                        if (!running) break
+                        if (!running || stopRequested) break
                         Logger.d("session: connecting transport")
                         channel.open()
                         // Stop may arrive while a blocking RFCOMM connect is in progress.
                         // Never start a handshake on a transport opened after shutdown.
-                        if (!running) break
+                        if (!running || stopRequested) break
                         val reader = FrameReader(channel)
                         Logger.d("session: handshake")
                         val dashSize = performHandshakeWithTimeout(reader)
-                        if (!running) break
+                        if (!running || stopRequested) break
                         Logger.d("session: dash size ${dashSize.width}x${dashSize.height}")
                         screen.resizeOutput(dashSize.width, dashSize.height)
                         if (!connectedOnce && initialFailures > 0) {
@@ -81,7 +86,7 @@ class MirrorEngine(
                         Logger.d("session: streaming")
                         streamLoop(reader)
                     } catch (t: Throwable) {
-                        if (!running) break
+                        if (!running || stopRequested) break
                         if (!connectedOnce && !retryInitialConnection) {
                             throw t // normal mirror: first failure remains fatal
                         }
@@ -98,7 +103,7 @@ class MirrorEngine(
                         runCatching { channel.close() }
                         // Stop must end a pending initial-connect wait without a long join.
                         var remaining = RECONNECT_DELAY_MS
-                        while (running && remaining > 0) {
+                        while (running && !stopRequested && remaining > 0) {
                             val step = minOf(100L, remaining)
                             sleepMs(step)
                             remaining -= step
@@ -137,8 +142,27 @@ class MirrorEngine(
     }
 
     fun stop() {
+        // Prevent a new IMAGE while keeping the receiver alive just long enough to
+        // collect the last IMAGE_ACK. Closing RFCOMM immediately after IMAGE write
+        // was correlated with a CCU that reconnects but never sends ESN_UPDATE.
+        val firstStop = synchronized(stopGate) {
+            if (stopRequested) false else {
+                stopRequested = true
+                true
+            }
+        }
+        if (!firstStop) return
+        val began = nowMs()
+        if (pendingImageAckSeq != -1 || imageWriteInProgress) {
+            while ((pendingImageAckSeq != -1 || imageWriteInProgress) &&
+                nowMs() - began < STOP_ACK_GRACE_MS) {
+                sleepMs(5)
+            }
+            Logger.d("session: Stop final IMAGE_ACK wait=${nowMs() - began}ms " +
+                "completed=${pendingImageAckSeq == -1 && !imageWriteInProgress}")
+        }
         running = false
-        runCatching { channel.close() } // unblocks the blocking reader
+        runCatching { channel.close() } // unblocks a missing ACK or handshake read
         job = null
         _state.value = MirrorState.Idle
     }
@@ -158,6 +182,10 @@ class MirrorEngine(
             try {
                 while (running && isActive) {
                     val next = reader.next()
+                    if (next.serviceType == ServiceType.IMAGE_ACK &&
+                        imageAckSequence(next.payload) == pendingImageAckSeq) {
+                        pendingImageAckSeq = -1
+                    }
                     if (next.serviceType == 51 || next.serviceType == 52) {
                         // Acknowledge even during STATUS/PROMOTING; never wedge the CCU pressed effect.
                         synchronized(writeLock) {
@@ -185,14 +213,14 @@ class MirrorEngine(
         var ackMsTotal = 0L
         var ackMsMax = 0L
         var consecutiveTimeouts = 0
-        while (running) {
+        while (running && !stopRequested) {
             // Pace first, then sample the latest frame. Sampling before the FPS wait
             // held an older JPEG even when the helper had already supplied a newer one.
             if (minIntervalMs > 0L) {
                 val wait = minIntervalMs - (nowMs() - lastSend)
                 if (wait > 0L) sleepMs(wait)
             }
-            if (!running) break
+            if (!running || stopRequested) break
             val jpeg = screen.latestFrame()
             if (jpeg == null) {
                 if (!waitedForFrame) {
@@ -205,7 +233,21 @@ class MirrorEngine(
             val sentAt = nowMs()
             lastSend = sentAt
             val sentSeq = seq and 0xffff
-            sendImage(jpeg)
+            // This gate makes Stop and "begin IMAGE write" mutually exclusive.
+            // Stop can never miss a write that starts just as it checks the ACK.
+            val maySend = synchronized(stopGate) {
+                if (stopRequested) false else {
+                    pendingImageAckSeq = sentSeq
+                    imageWriteInProgress = true
+                    true
+                }
+            }
+            if (!maySend) break
+            try {
+                sendImage(jpeg)
+            } finally {
+                imageWriteInProgress = false
+            }
             lastFrameKb = jpeg.size / 1024
             if (seq == 2) Logger.d("session: first image sent (${jpeg.size} bytes)")
             // Match only this image's ACK. A late or malformed ACK must not unblock a later image,
@@ -268,6 +310,7 @@ class MirrorEngine(
         const val RECONNECT_DELAY_MS = 1500L
         const val HANDSHAKE_TIMEOUT_MS = 5000L
         const val ACK_TIMEOUT_MS = 2000L
+        const val STOP_ACK_GRACE_MS = 500L
         val ZOOM_PAYLOAD = byteArrayOf(0x07, 0x19, 0x06, 0x00, 0x30, 0x2e, 0x32, 0x20, 0x6d, 0x69)
     }
 }

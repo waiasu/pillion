@@ -163,6 +163,40 @@ private class StalledHandshakeThenRecoveredChannel : ByteChannel {
     }
 }
 
+/** A real IMAGE is sent, but the CCU deliberately never acknowledges it. */
+private class ImageWithoutAckChannel : ByteChannel {
+    private val handshake =
+        NaviLiteCodec.build(6, ServiceType.ESN_UPDATE, 0, byteArrayOf()) +
+        NaviLiteCodec.build(6, ServiceType.SEC_DATA, 1, ByteArray(16) { (it + 1).toByte() })
+    private var offset = 0
+    @Volatile var imageSent = false
+    @Volatile var closed = false
+
+    override fun open() {}
+    override fun write(bytes: ByteArray) {
+        if (bytes.size >= 16 && NaviLiteCodec.serviceTypeAt(bytes, 0) == ServiceType.IMAGE) {
+            imageSent = true
+        }
+    }
+    override fun read(buffer: ByteArray): Int {
+        if (offset < handshake.size) {
+            val count = minOf(buffer.size, handshake.size - offset)
+            handshake.copyInto(buffer, 0, offset, offset + count)
+            offset += count
+            return count
+        }
+        while (!closed) sleepMs(2)
+        return -1
+    }
+    override fun close() { closed = true }
+}
+
+private class ConstantFrameScreen : ScreenSource {
+    override fun start() {}
+    override fun latestFrame(): ByteArray = byteArrayOf(1, 2, 3, 4)
+    override fun stop() {}
+}
+
 class MirrorEngineTest {
     @Test
     fun vd_stalled_sec_data_times_out_then_reauthenticates_on_a_fresh_connection() {
@@ -258,6 +292,47 @@ class MirrorEngineTest {
             val opensAtStop = channel.openCount
             sleepMs(1700) // longer than the engine's reconnect delay
             assertEquals(opensAtStop, channel.openCount, "revoked projection must not reconnect")
+        } finally {
+            engine.stop()
+            sessionJob.cancel()
+        }
+    }
+
+    @Test
+    fun stop_waits_briefly_for_missing_last_image_ack_then_releases_rfcomm() {
+        val sessionJob = Job()
+        val channel = ImageWithoutAckChannel()
+        val engine = MirrorEngine(channel, ConstantFrameScreen(), maxFps = 3)
+        try {
+            engine.start(CoroutineScope(sessionJob))
+            assertTrue(awaitMirrorCondition { channel.imageSent }, "image was never sent")
+            val began = nowMs()
+            engine.stop()
+            val elapsed = nowMs() - began
+            assertTrue(elapsed >= 400L, "Stop did not allow the 500ms last IMAGE_ACK grace period: ${elapsed}ms")
+            assertTrue(elapsed < 1200L, "Stop waited too long for missing ACK: ${elapsed}ms")
+            assertTrue(channel.closed, "Stop failed to close RFCOMM")
+            assertEquals(MirrorState.Idle, engine.state.value)
+        } finally {
+            engine.stop()
+            sessionJob.cancel()
+        }
+    }
+
+    @Test
+    fun stop_without_an_outstanding_image_ack_closes_without_grace_delay() {
+        val sessionJob = Job()
+        val channel = LiveButSilentChannel()
+        val screen = SilentScreen()
+        val engine = MirrorEngine(channel, screen)
+        try {
+            engine.start(CoroutineScope(sessionJob))
+            assertTrue(awaitMirrorCondition { screen.polls > 2 }, "handshake not complete")
+            val began = nowMs()
+            engine.stop()
+            val elapsed = nowMs() - began
+            assertTrue(elapsed < 90L, "Stop delayed despite no image in flight: ${elapsed}ms")
+            assertTrue(channel.closed)
         } finally {
             engine.stop()
             sessionJob.cancel()
