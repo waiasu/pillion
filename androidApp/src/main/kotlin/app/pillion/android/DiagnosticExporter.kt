@@ -52,8 +52,8 @@ object DiagnosticExporter {
                     Thread(r, "pillion-diagnostic-adb").apply { isDaemon = true }
                 }
                 try {
-                    val future = task.submit<String> { adb.runShell("logcat -d -t 12000 -v threadtime") }
-                    try { future.get(30, TimeUnit.SECONDS) }
+                    val future = task.submit<String> { adb.runShell("logcat -d -t 120000 -v threadtime") }
+                    try { future.get(60, TimeUnit.SECONDS) }
                     catch (t: Exception) { future.cancel(true); throw t }
                 } finally { task.shutdownNow() }
             }

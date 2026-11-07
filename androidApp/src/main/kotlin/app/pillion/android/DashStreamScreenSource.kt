@@ -63,6 +63,7 @@ class DashStreamScreenSource(
                 activeSocket = s
                 socket = s
                 Log.d(TAG, "dash stream: connected to 127.0.0.1:${DashServer.PORT}")
+                DiagnosticFlightRecorder.record("VD_TCP", "helper connected")
                 syncDesiredState(s)
                 val data = DataInputStream(s.getInputStream().buffered())
                 while (running) {
@@ -76,7 +77,10 @@ class DashStreamScreenSource(
                             if (ok) latest = null
                             ok
                         }
-                        if (accepted) Log.i(TAG, "dash stream: SIZE_READY ${width}x${height} revision=$revision")
+                        if (accepted) {
+                            Log.i(TAG, "dash stream: SIZE_READY ${width}x${height} revision=$revision")
+                            DiagnosticFlightRecorder.record("VD_TCP", "SIZE_READY ${width}x${height} rev=$revision")
+                        }
                         continue
                     }
                     if (len <= 0 || len > MAX_FRAME) throw IllegalStateException("bad frame length $len")
@@ -95,7 +99,11 @@ class DashStreamScreenSource(
                     }
                 }
             } catch (t: Throwable) {
-                if (running) Log.d(TAG, "dash stream: ${t.message}, retrying")
+                if (running) {
+                    Log.d(TAG, "dash stream: ${t.message}, retrying")
+                    if (activeSocket != null)
+                        DiagnosticFlightRecorder.record("VD_TCP", "helper disconnected: ${t.javaClass.simpleName}")
+                }
             } finally {
                 synchronized(stateLock) {
                     gate.pause()
@@ -155,6 +163,11 @@ class DashStreamScreenSource(
     /** Incremented only after a size-validated helper JPEG is received. */
     fun receivedFrameSequence(): Long = receiveSeq
 
+    /** Metadata-only status snapshot for low-frequency STATUS/PROMOTING diagnostics. */
+    fun debugSnapshot(): String = synchronized(stateLock) {
+        "tcp=${socket != null} sizeReady=${gate.isReady()} frame=${latest != null} seq=$receiveSeq"
+    }
+
     /** No retries: stale taps must never replay after helper reconnection. */
     override fun tapDashPoint(up: Boolean) {
         if (!running || socket == null || !gate.isReady()) return
@@ -192,6 +205,8 @@ class DashStreamScreenSource(
     private fun send(line: String) {
         val s = socket ?: run {
             Log.d(TAG, "dash stream: queued ${line.trim()} until helper connects")
+            if (line.startsWith("PROMOTE ") || line == "DEMOTE\n")
+                DiagnosticFlightRecorder.record("VD_TCP", "helper not connected; queued ${line.trim().substringBefore(' ')}")
             return
         }
         send(s, line)
@@ -204,6 +219,10 @@ class DashStreamScreenSource(
         }
         request?.let { send(s, "SIZE ${it.width} ${it.height} ${it.revision} $sessionDpi ${margins.left} ${margins.bottom} ${marginColor.name}\n") }
         val component = desiredComponent
+        DiagnosticFlightRecorder.record(
+            "VD_TCP",
+            "helper resync sizeRequest=${request != null} desired=${if (component != null) "PROMOTE" else if (explicitDemote) "DEMOTE" else "STATUS"}"
+        )
         if (component == null) {
             if (explicitDemote) send(s, "DEMOTE\n")
         } else {
@@ -215,7 +234,15 @@ class DashStreamScreenSource(
     private fun send(s: Socket, line: String) {
         synchronized(writeLock) {
             runCatching { s.getOutputStream().apply { write(line.toByteArray()); flush() } }
+                .onSuccess {
+                    if (line.startsWith("PROMOTE ") || line == "DEMOTE\n")
+                        DiagnosticFlightRecorder.record("VD_TCP", "sent ${line.trim().substringBefore(' ')} to helper")
+                }
                 .onFailure {
+                    if (line.startsWith("PROMOTE ") || line == "DEMOTE\n")
+                        DiagnosticFlightRecorder.record(
+                            "VD_TCP", "helper command send failed: ${line.trim().substringBefore(' ')} ${it.javaClass.simpleName}"
+                        )
                     // The phone can silently tear down this loopback socket on screen-off, so a write
                     // at lock time (PROMOTE) fails. Close it to wake the read loop, which reconnects
                     // and replays desiredComponent via syncDesiredState — self-healing the command.
