@@ -178,6 +178,14 @@ class CaptureService : Service() {
                 val action = intent.action ?: return
                 scope.launch(Dispatchers.IO) {
                     if (stopping || _mode.value != CastMode.DASH) return@launch
+                    val promotedAt = dashPromotedAtMs
+                    val age = if (promotedAt == 0L) -1L else System.currentTimeMillis() - promotedAt
+                    val interactive = getSystemService(PowerManager::class.java)?.isInteractive
+                    DiagnosticFlightRecorder.record(
+                        "VD_POWER",
+                        "event=${action.substringAfterLast('.')} interactive=$interactive " +
+                            "locked=${isKeyguardLockedNow()} promoted=${promotedAt != 0L} ageMs=$age"
+                    )
                     when (action) {
                         Intent.ACTION_SCREEN_OFF -> {
                             val promoted = dashPromotedAtMs
@@ -186,6 +194,7 @@ class CaptureService : Service() {
                                 demoteDash("POWER during PROMOTE")
                             } else {
                                 Log.d(TAG, "dash: ignoring synthetic SCREEN_OFF during settle")
+                                DiagnosticFlightRecorder.record("VD_POWER", "SCREEN_OFF ignored: promote settle")
                             }
                         }
                         Intent.ACTION_SCREEN_ON -> {
@@ -200,6 +209,12 @@ class CaptureService : Service() {
                                     delay(PROMOTE_GRACE_MS - age + 150L)
                                     if (generation == promotionGeneration && dashPromotedAtMs != 0L &&
                                         dashSawLockedKeyguard && !isKeyguardLockedNow()) demoteDash("unlock settled")
+                                    else DiagnosticFlightRecorder.record(
+                                        "VD_POWER",
+                                        "SCREEN_ON settle kept: active=${dashPromotedAtMs != 0L} " +
+                                            "locked=${isKeyguardLockedNow()} sawLocked=$dashSawLockedKeyguard " +
+                                            "generationCurrent=${generation == promotionGeneration}"
+                                    )
                                 }
                             }
                         }
@@ -236,7 +251,7 @@ class CaptureService : Service() {
         dashPromotedAtMs = at
         val generation = ++promotionGeneration
         dashSawLockedKeyguard = isKeyguardLockedNow()
-        DiagnosticFlightRecorder.record("VD", "PROMOTE trigger=$reason")
+        DiagnosticFlightRecorder.record("VD", "PROMOTE trigger=$reason locked=$dashSawLockedKeyguard")
         dashModeSource?.promote(component)
         scope.launch(Dispatchers.IO) {
             delay(250L)
@@ -254,10 +269,11 @@ class CaptureService : Service() {
     @Synchronized
     private fun demoteDash(reason: String, force: Boolean = false) {
         if (stopping || (!force && dashPromotedAtMs == 0L)) return
+        val wasPromoted = dashPromotedAtMs != 0L
         dashPromotedAtMs = 0L
         promotionGeneration++
         dashSawLockedKeyguard = false
-        DiagnosticFlightRecorder.record("VD", "DEMOTE trigger=$reason")
+        DiagnosticFlightRecorder.record("VD", "DEMOTE trigger=$reason wasPromoted=$wasPromoted force=$force")
         dashModeSource?.demote()
     }
 

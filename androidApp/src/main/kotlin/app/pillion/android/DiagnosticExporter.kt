@@ -17,6 +17,9 @@ import java.util.zip.ZipOutputStream
 
 /** User-triggered ZIP. Preserve private breadcrumbs before best-effort ADB queries. */
 object DiagnosticExporter {
+    private const val LOGCAT_END_MARKER = "__PILLION_LOGCAT_COMPLETE_7B93__"
+    private data class LogcatResult(val text: String, val complete: Boolean, val attempts: Int, val reason: String)
+
     private val executor = Executors.newSingleThreadExecutor { r ->
         Thread(r, "pillion-diagnostic-export").apply { isDaemon = true }
     }
@@ -52,17 +55,54 @@ object DiagnosticExporter {
                     Thread(r, "pillion-diagnostic-adb").apply { isDaemon = true }
                 }
                 try {
-                    val future = task.submit<String> { adb.runShell("logcat -d -t 12000 -v threadtime") }
-                    try { future.get(30, TimeUnit.SECONDS) }
-                    catch (t: Exception) { future.cancel(true); throw t }
+                    // ADB runShell() can return a truncated string when its stream closes
+                    // prematurely. Only a shell-side trailing marker proves that logcat
+                    // actually finished; a final newline alone is not sufficient.
+                    var bestPartial: String? = null
+                    var failure = "completion marker missing"
+                    for (attempt in 1..2) {
+                        val future = task.submit<String> {
+                            adb.runShell("logcat -d -t 120000 -v threadtime && echo $LOGCAT_END_MARKER")
+                        }
+                        val output = try {
+                            future.get(60, TimeUnit.SECONDS)
+                        } catch (t: Exception) {
+                            future.cancel(true)
+                            failure = "${t.javaClass.simpleName}: ${t.message?.take(120)}"
+                            // Do not queue another read on a potentially blocked ADB worker.
+                            break
+                        }
+                        val markerAt = output.lastIndexOf("\n$LOGCAT_END_MARKER")
+                        if (markerAt >= 0 &&
+                            output.substring(markerAt + 1).trimEnd('\r', '\n') == LOGCAT_END_MARKER
+                        ) {
+                            return@runCatching LogcatResult(
+                                output.substring(0, markerAt + 1), true, attempt,
+                                "completion marker received"
+                            )
+                        }
+                        if (output.length > (bestPartial?.length ?: 0)) bestPartial = output
+                        failure = "completion marker missing (ADB stream ended early)"
+                        if (attempt == 1) {
+                            DiagnosticFlightRecorder.record("DIAG", "logcat incomplete; retrying once")
+                        }
+                    }
+                    if (bestPartial != null) {
+                        LogcatResult(bestPartial, false, 2, failure)
+                    } else error("logcat unavailable: $failure")
                 } finally { task.shutdownNow() }
             }
-            query.onSuccess { File(work, "android-logcat.txt").writeText(it) }
-                .onFailure {
-                    File(work, "adb-status.txt").writeText(
-                        "logcat unavailable: ${it.javaClass.simpleName}: ${it.message?.take(160)}\n"
-                    )
-                }
+            query.onSuccess { result ->
+                File(work, "android-logcat.txt").writeText(result.text)
+                File(work, "logcat-status.txt").writeText(
+                    "Complete: ${result.complete}\nAttempts: ${result.attempts}\n" +
+                        "Reason: ${result.reason}\nBytes: ${result.text.toByteArray().size}\n"
+                )
+            }.onFailure {
+                File(work, "adb-status.txt").writeText(
+                    "logcat unavailable: ${it.javaClass.simpleName}: ${it.message?.take(160)}\n"
+                )
+            }
 
             val bytes = java.io.ByteArrayOutputStream()
             ZipOutputStream(bytes).use { zip ->

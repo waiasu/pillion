@@ -2,6 +2,7 @@ package app.pillion.android
 
 import android.content.Context
 import android.os.SystemClock
+import android.provider.Settings
 import android.util.Log
 import app.pillion.core.DashResolution
 import app.pillion.server.DashServer
@@ -28,6 +29,10 @@ object DashHelper {
     // A freshly-spawned helper takes ~1-2s to create the display + bind its socket; don't respawn
     // (which pkills it) until it's had time to come up, or the watchdog thrashes in a respawn loop.
     private const val SPAWN_GRACE_MS = 8_000L
+    private const val DIAGNOSTIC_PREFS = "pillion_diagnostics"
+    private const val LOGCAT_READY_BOOT_COUNT = "logcat_ready_boot_count"
+    // Accessed only by synchronized ensureRunning(), not by the stream loop.
+    private var logcatReadyThisProcess = false
 
     @Volatile private var lastSpawnAt = 0L
     // Watchdog lifecycle must never wait for ensureRunning() holding the helper/ADB lock.
@@ -41,6 +46,10 @@ object DashHelper {
         preferExisting: Boolean = false,
     ) {
         if (preferExisting && isRunning()) {
+            // The helper can survive an app update, so the normal preparation path below
+            // might be skipped. Apply diagnostics if an ADB connection is already live.
+            val adb = PillionAdb.getInstance(context.applicationContext)
+            if (adb.isConnected()) expandDiagnosticLogcatBuffers(context.applicationContext, adb)
             Log.d(TAG, "dash: using existing helper")
             return
         }
@@ -58,6 +67,11 @@ object DashHelper {
             )
         }
 
+        // Test branch only: logcat -G is reset by Android on reboot. Set the main/system
+        // ring sizes after ADB becomes available, before the helper starts.
+        // Never block a usable dash session merely because diagnostic tuning failed.
+        expandDiagnosticLogcatBuffers(appContext, adb)
+
         runCatching { adb.prepareDashPrivileges(appContext) }
             .onSuccess { Log.d(TAG, "dash: granted usage-stats appop through shell") }
             .onFailure { Log.w(TAG, "dash: could not grant usage-stats appop", it) }
@@ -67,6 +81,45 @@ object DashHelper {
         waitUntilStopped()
         spawn(adb, appContext, quality, dashResolution)
         check(waitUntilRunning()) { "Dash helper did not start" }
+    }
+
+    /**
+     * Diagnostic-only boot-local logcat sizing. Never delay every Start with three ADB
+     * commands once both buffers have been verified during this boot. Persist the boot
+     * counter so a Pillion process restart does not repeat the work. If unavailable,
+     * skip repeats only within the current process and retry after a process restart.
+     * This is deliberately best-effort and must not prevent the helper from starting.
+     * Called only through synchronized ensureRunning().
+     */
+    private fun expandDiagnosticLogcatBuffers(context: Context, adb: PillionAdb) {
+        if (logcatReadyThisProcess) return
+        val bootCount = runCatching {
+            Settings.Global.getInt(context.contentResolver, Settings.Global.BOOT_COUNT, -1)
+        }.getOrDefault(-1)
+        val prefs = context.getSharedPreferences(DIAGNOSTIC_PREFS, Context.MODE_PRIVATE)
+        if (bootCount >= 0 && prefs.getInt(LOGCAT_READY_BOOT_COUNT, -1) == bootCount) {
+            logcatReadyThisProcess = true
+            return
+        }
+        runCatching {
+            adb.runShell("logcat -b main -G 8M")
+            adb.runShell("logcat -b system -G 8M")
+            val status = adb.runShell("logcat -g")
+                .lineSequence()
+                .filter { it.startsWith("main:") || it.startsWith("system:") }
+                .joinToString("; ")
+            val resized = status.contains("main: ring buffer is 8 MiB") &&
+                status.contains("system: ring buffer is 8 MiB")
+            Log.i(TAG, "diag logcat sizes (verified=$resized): $status")
+            DiagnosticFlightRecorder.record("DIAG", "logcat 8MiB verified=$resized: $status")
+            if (resized) {
+                logcatReadyThisProcess = true
+                if (bootCount >= 0) prefs.edit().putInt(LOGCAT_READY_BOOT_COUNT, bootCount).apply()
+            }
+        }.onFailure {
+            Log.w(TAG, "diag logcat resize failed; continuing helper start", it)
+            DiagnosticFlightRecorder.record("DIAG", "logcat resize failed: ${it.javaClass.simpleName}")
+        }
     }
 
     /**
