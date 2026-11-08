@@ -31,6 +31,7 @@ class DashStreamScreenSource(
     private val marginColor: DashMarginColor = DashMarginColor.Black,
     private val tapSettings: DashTapSettings = DashTapSettings(),
     private val sessionFps: Int = 3,
+    private val restartOnVd: Boolean = false,
 ) : ScreenSource {
     private val sessionDpi = DashDpi.snap(dpi)
     private val markerMs = DashTapSettings.markerDurationMs(sessionFps)
@@ -169,11 +170,30 @@ class DashStreamScreenSource(
     }
 
     /** No retries: stale taps must never replay after helper reconnection. */
-    override fun tapDashPoint(up: Boolean) {
+    override fun tapDashPoint(up: Boolean) = tapStickPoint(up, false)
+
+    fun tapStickPoint(up: Boolean, drive: Boolean) {
         if (!running || socket == null || !gate.isReady()) return
-        val x = if (up) tapSettings.upX else tapSettings.downX
-        val y = if (up) tapSettings.upY else tapSettings.downY
+        val x = when {
+            drive && up -> tapSettings.driveUpX
+            drive -> tapSettings.driveDownX
+            up -> tapSettings.upX
+            else -> tapSettings.downX
+        }
+        val y = when {
+            drive && up -> tapSettings.driveUpY
+            drive -> tapSettings.driveDownY
+            up -> tapSettings.upY
+            else -> tapSettings.downY
+        }
         send("TAP $x $y $markerMs\n")
+    }
+
+    /** One-shot, configurable Drive Mode tap. Report failed sends so we do not mark DRIVE. */
+    fun tapAutoDrive(x: Int, y: Int): Boolean {
+        if (!running || !gate.isReady()) return false
+        val s = socket ?: return false
+        return send(s, "TAP ${x.coerceIn(0, 100)} ${y.coerceIn(0, 100)} $markerMs\n")
     }
 
     /** Tell the helper to move the foreground app onto the dash display and start encoding. */
@@ -181,7 +201,7 @@ class DashStreamScreenSource(
         synchronized(stateLock) { latest = null }
         desiredComponent = component
         explicitDemote = false
-        send("PROMOTE $component\n")
+        send("PROMOTE $component ${if (restartOnVd) 1 else 0}\n")
     }
 
     /** Tell the helper to move the app back to the phone and stop encoding. */
@@ -227,13 +247,13 @@ class DashStreamScreenSource(
             if (explicitDemote) send(s, "DEMOTE\n")
         } else {
             Log.d(TAG, "dash stream: syncing pending PROMOTE $component")
-            send(s, "PROMOTE $component\n")
+            send(s, "PROMOTE $component ${if (restartOnVd) 1 else 0}\n")
         }
     }
 
-    private fun send(s: Socket, line: String) {
+    private fun send(s: Socket, line: String): Boolean {
         synchronized(writeLock) {
-            runCatching { s.getOutputStream().apply { write(line.toByteArray()); flush() } }
+            return runCatching { s.getOutputStream().apply { write(line.toByteArray()); flush() } }
                 .onSuccess {
                     if (line.startsWith("PROMOTE ") || line == "DEMOTE\n")
                         DiagnosticFlightRecorder.record("VD_TCP", "sent ${line.trim().substringBefore(' ')} to helper")
@@ -248,7 +268,7 @@ class DashStreamScreenSource(
                     // and replays desiredComponent via syncDesiredState — self-healing the command.
                     Log.d(TAG, "dash stream: send failed for ${line.trim()}: ${it.javaClass.simpleName}; reconnecting")
                     runCatching { s.close() }
-                }
+                }.isSuccess
         }
     }
 

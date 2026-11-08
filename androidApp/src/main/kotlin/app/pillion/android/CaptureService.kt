@@ -17,6 +17,7 @@ import android.os.PowerManager
 import android.util.Log
 import app.pillion.core.DashMargins
 import app.pillion.core.DashTapSettings
+import app.pillion.core.DashAutoDriveSettings
 import app.pillion.core.DashMarginColor
 import app.pillion.core.DashDpi
 import app.pillion.core.DashResolution
@@ -84,7 +85,16 @@ class CaptureService : Service() {
                 intent?.getIntExtra(EXTRA_TAP_UP_Y, 47) ?: 47,
                 intent?.getIntExtra(EXTRA_TAP_DOWN_X, 93) ?: 93,
                 intent?.getIntExtra(EXTRA_TAP_DOWN_Y, 74) ?: 74,
-            ))
+                intent?.getIntExtra(EXTRA_TAP_DRIVE_UP_X, 93) ?: 93,
+                intent?.getIntExtra(EXTRA_TAP_DRIVE_UP_Y, 13) ?: 13,
+                intent?.getIntExtra(EXTRA_TAP_DRIVE_DOWN_X, 93) ?: 93,
+                intent?.getIntExtra(EXTRA_TAP_DRIVE_DOWN_Y, 30) ?: 30,
+            ), DashAutoDriveSettings.clamped(
+                intent?.getIntExtra(EXTRA_AUTO_INITIAL_X, 7) ?: 7,
+                intent?.getIntExtra(EXTRA_AUTO_INITIAL_Y, 53) ?: 53,
+                intent?.getIntExtra(EXTRA_AUTO_ARRIVED_X, 93) ?: 93,
+                intent?.getIntExtra(EXTRA_AUTO_ARRIVED_Y, 90) ?: 90,
+            ), intent?.getBooleanExtra(EXTRA_YAHOO_NAVI_ENABLED, false) ?: false)
         else startMirrorSession(quality, fps)
         return START_NOT_STICKY
     }
@@ -129,7 +139,7 @@ class CaptureService : Service() {
         }, fps)
     }
 
-    private fun startDashSession(quality: Int, fps: Int, resolution: DashResolution, component: String?, dpi: Int, margins: DashMargins, marginColor: DashMarginColor, tap: DashTapSettings) {
+    private fun startDashSession(quality: Int, fps: Int, resolution: DashResolution, component: String?, dpi: Int, margins: DashMargins, marginColor: DashMarginColor, tap: DashTapSettings, autoDrive: DashAutoDriveSettings, yahooRequested: Boolean) {
         if (component.isNullOrBlank()) {
             fail("Select an app to display in Settings")
             return
@@ -140,9 +150,10 @@ class CaptureService : Service() {
             fail("VD foreground service unavailable")
             return
         }
-        val source = DashStreamScreenSource(dpi, margins, marginColor, tap, fps)
+        val yahooFeatures = yahooRequested && component.startsWith("jp.co.yahoo.android.apps.navi/")
+        val source = DashStreamScreenSource(dpi, margins, marginColor, tap, fps, yahooFeatures)
         dashSource = source
-        val modeSource = DashModeScreenSource(source)
+        val modeSource = DashModeScreenSource(source, autoDrive, yahooFeatures)
         dashModeSource = modeSource
         dashTarget = component
         registerDashScreenReceiver()
@@ -427,6 +438,7 @@ class CaptureService : Service() {
         /** When true, the session switches to the dedicated dash display whenever the phone is locked. */
         const val EXTRA_DASH_ENABLED = "dashEnabled"
         const val EXTRA_DASH_COMPONENT = "dashComponent"
+        const val EXTRA_YAHOO_NAVI_ENABLED = "yahooNaviEnabled"
         const val EXTRA_DASH_DPI = "dashDpi"
         const val EXTRA_MARGIN_LEFT = "marginLeft"
         const val EXTRA_MARGIN_BOTTOM = "marginBottom"
@@ -435,6 +447,14 @@ class CaptureService : Service() {
         const val EXTRA_TAP_UP_Y = "tapUpY"
         const val EXTRA_TAP_DOWN_X = "tapDownX"
         const val EXTRA_TAP_DOWN_Y = "tapDownY"
+        const val EXTRA_TAP_DRIVE_UP_X = "tapDriveUpX"
+        const val EXTRA_TAP_DRIVE_UP_Y = "tapDriveUpY"
+        const val EXTRA_TAP_DRIVE_DOWN_X = "tapDriveDownX"
+        const val EXTRA_TAP_DRIVE_DOWN_Y = "tapDriveDownY"
+        const val EXTRA_AUTO_INITIAL_X = "autoInitialX"
+        const val EXTRA_AUTO_INITIAL_Y = "autoInitialY"
+        const val EXTRA_AUTO_ARRIVED_X = "autoArrivedX"
+        const val EXTRA_AUTO_ARRIVED_Y = "autoArrivedY"
         const val EXTRA_DASH_WIDTH = "dashWidth"
         const val EXTRA_DASH_HEIGHT = "dashHeight"
 

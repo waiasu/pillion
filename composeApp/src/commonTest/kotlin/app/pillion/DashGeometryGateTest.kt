@@ -28,7 +28,7 @@ class DashGeometryGateTest {
 
     @Test
     fun margins_and_fractional_scale_produce_usable_vd_geometry() {
-        assertEquals(DashMargins(50, 46), DashMargins())
+        assertEquals(DashMargins(50, 16), DashMargins())
         assertEquals(70, DashMargins.MAX_LEFT)
         assertEquals(70, DashMargins.MAX_BOTTOM)
         val standard = DashCaptureGeometry.forMargins(DashResolution.Balanced.width, 480, 234, DashMargins(0, 0))
@@ -42,7 +42,7 @@ class DashGeometryGateTest {
         assertEquals(262, fractional.height)
         val defaultGeometry = DashCaptureGeometry.forMargins(DashResolution.Balanced.width, 480, 234, DashMargins())
         assertEquals(860, defaultGeometry.width)
-        assertEquals(376, defaultGeometry.height)
+        assertEquals(436, defaultGeometry.height)
         val maximumGeometry = DashCaptureGeometry.forMargins(DashResolution.Scale3.width, 480, 234, DashMargins(70, 70))
         assertEquals(1230, maximumGeometry.width)
         assertEquals(492, maximumGeometry.height)

@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="yahoo_road_accessibility_description">実験用: 仮想ディスプレイ上のYahoo!カーナビの到着時刻と地図縮尺を読み取り、車体メーターのROAD表示に転送します。画面の操作は行いません。</string>
+</resources>

@@ -39,6 +39,7 @@ import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -60,6 +61,7 @@ import androidx.compose.ui.unit.sp
 import app.pillion.core.AppInfo
 import app.pillion.core.DashDpi
 import app.pillion.core.DashTapSettings
+import app.pillion.core.DashAutoDriveSettings
 import app.pillion.core.DashMargins
 import app.pillion.core.DashMarginColor
 import app.pillion.core.DashApp
@@ -92,6 +94,10 @@ internal fun SettingsScreen(
     onDashMarginColor: (DashMarginColor) -> Unit = {},
     dashTap: DashTapSettings = DashTapSettings(),
     onDashTap: (DashTapSettings) -> Unit = {},
+    dashAutoDrive: DashAutoDriveSettings = DashAutoDriveSettings(),
+    onDashAutoDrive: (DashAutoDriveSettings) -> Unit = {},
+    yahooNaviEnabled: Boolean = true,
+    onYahooNaviEnabled: (Boolean) -> Unit = {},
     dashApps: List<DashApp> = emptyList(),
     selectedDashApp: String? = null,
     onDashApp: (String?) -> Unit = {},
@@ -104,6 +110,9 @@ internal fun SettingsScreen(
     onExportDiagnostics: (() -> Unit)? = null,
 ) {
     val uriHandler = LocalUriHandler.current
+    var tapExpanded by remember { mutableStateOf(false) }
+    var yahooExpanded by remember { mutableStateOf(false) }
+    val yahooSelected = selectedDashApp == "jp.co.yahoo.android.apps.navi"
     Column(
         modifier = Modifier.fillMaxSize()
             .safeDrawingPadding()
@@ -278,18 +287,78 @@ internal fun SettingsScreen(
                 GroupDivider()
                 MarginColorSelector(dashMarginColor, onDashMarginColor)
                 GroupDivider()
+                Row(
+                    Modifier.fillMaxWidth().clickable { tapExpanded = !tapExpanded }.padding(vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("Stick tap positions", modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodyLarge)
+                    Text(if (tapExpanded) "Hide" else "Show", color = MaterialTheme.colorScheme.primary)
+                }
+                if (tapExpanded) {
+                    Text("Relative to top-left (0–100%). Changes apply on next Start.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    TapPositionRow("Zoom in (up)", dashTap.upX, dashTap.upY,
+                        onX = { onDashTap(dashTap.copy(upX = it)) },
+                        onY = { onDashTap(dashTap.copy(upY = it)) })
+                    GroupDivider()
+                    TapPositionRow("Zoom out (down)", dashTap.downX, dashTap.downY,
+                        onX = { onDashTap(dashTap.copy(downX = it)) },
+                        onY = { onDashTap(dashTap.copy(downY = it)) })
+                }
+                GroupDivider()
                 DashAppSelector(dashApps, selectedDashApp, onDashApp)
                 GroupDivider()
-                Text("タップ位置", style = MaterialTheme.typography.titleMedium)
-                Text("左上基準・0〜100%（変更は次回Startから反映）",
-                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                TapPositionRow("↑ ズームイン", dashTap.upX, dashTap.upY,
-                    onX = { onDashTap(dashTap.copy(upX = it)) },
-                    onY = { onDashTap(dashTap.copy(upY = it)) })
-                GroupDivider()
-                TapPositionRow("↓ ズームアウト", dashTap.downX, dashTap.downY,
-                    onX = { onDashTap(dashTap.copy(downX = it)) },
-                    onY = { onDashTap(dashTap.copy(downY = it)) })
+                Row(Modifier.fillMaxWidth().padding(vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Yahoo! Car Navigation features", style = MaterialTheme.typography.bodyLarge)
+                        Text("Fresh VD launch, reload mask, live ROAD text and automatic Drive Mode.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Switch(checked = yahooNaviEnabled && yahooSelected,
+                        onCheckedChange = onYahooNaviEnabled, enabled = yahooSelected)
+                }
+                if (yahooNaviEnabled && yahooSelected) {
+                    GroupDivider()
+                    Row(
+                        Modifier.fillMaxWidth().clickable { yahooExpanded = !yahooExpanded }.padding(vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text("Drive Mode & automatic tap positions",
+                            modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
+                        Text(if (yahooExpanded) "Hide" else "Show",
+                            color = MaterialTheme.colorScheme.primary)
+                    }
+                    if (yahooExpanded) {
+                        Text("Drive Mode stick positions",
+                            style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                        TapPositionRow("Zoom in (Drive Mode)", dashTap.driveUpX, dashTap.driveUpY,
+                            onX = { onDashTap(dashTap.copy(driveUpX = it)) },
+                            onY = { onDashTap(dashTap.copy(driveUpY = it)) })
+                        GroupDivider()
+                        TapPositionRow("Zoom out (Drive Mode)", dashTap.driveDownX, dashTap.driveDownY,
+                            onX = { onDashTap(dashTap.copy(driveDownX = it)) },
+                            onY = { onDashTap(dashTap.copy(driveDownY = it)) })
+                        GroupDivider()
+                        Text("Automatic mode switching",
+                            style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                        Text("Wait 10 seconds on initial or arrival screen before tapping. " +
+                                "After ending guidance, recheck the initial screen and switch to Drive Mode. " +
+                                "Changes apply on next Start.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        TapPositionRow("Initial screen", dashAutoDrive.initialX, dashAutoDrive.initialY,
+                            onX = { onDashAutoDrive(dashAutoDrive.copy(initialX = it)) },
+                            onY = { onDashAutoDrive(dashAutoDrive.copy(initialY = it)) })
+                        GroupDivider()
+                        TapPositionRow("Arrival screen", dashAutoDrive.arrivedX, dashAutoDrive.arrivedY,
+                            onX = { onDashAutoDrive(dashAutoDrive.copy(arrivedX = it)) },
+                            onY = { onDashAutoDrive(dashAutoDrive.copy(arrivedY = it)) })
+                    }
+                }
             }
             Text(
                 "Casts the real app to the dash in landscape with the screen off. Run setup once " +
@@ -421,8 +490,8 @@ private fun TapPositionRow(
         Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically) {
-            TapPercentAxis("H・横", x, onX, Modifier.weight(1f))
-            TapPercentAxis("V・縦", y, onY, Modifier.weight(1f))
+            TapPercentAxis("Horizontal", x, onX, Modifier.weight(1f))
+            TapPercentAxis("Vertical", y, onY, Modifier.weight(1f))
         }
     }
 }
@@ -467,14 +536,14 @@ private fun TapPercentAxis(
     if (editing) {
         AlertDialog(
             onDismissRequest = { editing = false },
-            title = { Text("$label (0〜100%)") },
+            title = { Text("$label (0–100%)") },
             text = {
                 OutlinedTextField(
                     value = editValue,
                     onValueChange = { updated ->
                         if (updated.length <= 3 && updated.all { it.isDigit() }) editValue = updated
                     },
-                    label = { Text("座標 (%)") },
+                    label = { Text("Position (%)") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),

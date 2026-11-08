@@ -11,6 +11,10 @@ interface SettingsStore {
     fun setMaxFrameRate(value: Int) {}
     fun dashTapSettings(): DashTapSettings = DashTapSettings()
     fun setDashTapSettings(settings: DashTapSettings) {}
+    fun dashAutoDriveSettings(): DashAutoDriveSettings = DashAutoDriveSettings()
+    fun setDashAutoDriveSettings(settings: DashAutoDriveSettings) {}
+    fun yahooNaviEnabled(): Boolean = true
+    fun setYahooNaviEnabled(enabled: Boolean) {}
 
     fun themeMode(): ThemeMode
     fun setThemeMode(mode: ThemeMode)

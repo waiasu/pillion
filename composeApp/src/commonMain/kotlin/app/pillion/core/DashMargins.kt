@@ -1,5 +1,5 @@
 package app.pillion.core
-data class DashMargins(val left: Int = 50, val bottom: Int = 46) {
+data class DashMargins(val left: Int = 50, val bottom: Int = 16) {
     companion object {
         const val MAX_LEFT = 70
         const val MAX_BOTTOM = 70

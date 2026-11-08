@@ -15,4 +15,6 @@ data class MirrorSettings(
     val dashMargins: DashMargins = DashMargins(),
     val dashMarginColor: DashMarginColor = DashMarginColor.Black,
     val dashTap: DashTapSettings = DashTapSettings(),
+    val dashAutoDrive: DashAutoDriveSettings = DashAutoDriveSettings(),
+    val yahooNaviEnabled: Boolean = true,
 )

@@ -82,6 +82,7 @@ class MirrorEngine(
                             Logger.d("session: CCU connected after $initialFailures initial failure(s)")
                         }
                         connectedOnce = true
+                        screen.onRoadTransportReady()
                         seq = 1 // fresh sequence per (re)connect, matching a new session
                         Logger.d("session: streaming")
                         streamLoop(reader)
@@ -262,6 +263,19 @@ class MirrorEngine(
                     Logger.e("session: IMAGE_ACK_TIMEOUT seq=$sentSeq after ${ACK_TIMEOUT_MS}ms (consecutive=$consecutiveTimeouts)")
                 }
                 continue // Send the freshest image without reopening a healthy RFCOMM link.
+            }
+            // Keep ROAD on the same sender as JPEG; no concurrent RFCOMM writes.
+            // Only send after the matching IMAGE_ACK, never during auth or Stop.
+            if (!stopRequested && running) {
+                screen.pollRoadText()?.let { road ->
+                    val roadBytes = road.encodeToByteArray()
+                    synchronized(writeLock) {
+                        if (!stopRequested && running) {
+                            channel.write(NaviLiteCodec.build(FRAME_TYPE_PHONE, ServiceType.ROAD, PDT_POINTER, roadBytes))
+                            Logger.d("session: ROAD update bytes=${roadBytes.size}${if (road.isEmpty()) " clear" else ""}")
+                        }
+                    }
+                }
             }
             if (consecutiveTimeouts > 0) {
                 Logger.d("session: IMAGE_ACK recovered seq=$sentSeq after $consecutiveTimeouts timeout(s)")

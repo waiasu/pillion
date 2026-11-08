@@ -3,6 +3,7 @@ package app.pillion.android
 import android.content.Context
 import app.pillion.core.DashDpi
 import app.pillion.core.DashTapSettings
+import app.pillion.core.DashAutoDriveSettings
 import app.pillion.core.DashMargins
 import app.pillion.core.DashMarginColor
 import app.pillion.core.DashResolution
@@ -12,6 +13,7 @@ import app.pillion.core.ThemeMode
 /** [SettingsStore] backed by SharedPreferences. Single responsibility: persist preferences. */
 class AndroidSettingsStore(context: Context) : SettingsStore {
     private val prefs = context.getSharedPreferences("pillion.settings", Context.MODE_PRIVATE)
+    private val packageManager = context.applicationContext.packageManager
 
     override fun imageQuality(): Int = prefs.getInt("image_quality", 80).coerceIn(10, 80)
     override fun setImageQuality(value: Int) { prefs.edit().putInt("image_quality", value.coerceIn(10, 80)).apply() }
@@ -21,11 +23,35 @@ class AndroidSettingsStore(context: Context) : SettingsStore {
     override fun dashTapSettings(): DashTapSettings = DashTapSettings.clamped(
         prefs.getInt("tap_up_x", 93), prefs.getInt("tap_up_y", 47),
         prefs.getInt("tap_down_x", 93), prefs.getInt("tap_down_y", 74),
+        prefs.getInt("tap_drive_up_x", 93), prefs.getInt("tap_drive_up_y", 13),
+        prefs.getInt("tap_drive_down_x", 93), prefs.getInt("tap_drive_down_y", 30),
     )
     override fun setDashTapSettings(settings: DashTapSettings) {
-        val v = DashTapSettings.clamped(settings.upX, settings.upY, settings.downX, settings.downY)
+        val v = DashTapSettings.clamped(settings.upX, settings.upY, settings.downX, settings.downY,
+            settings.driveUpX, settings.driveUpY, settings.driveDownX, settings.driveDownY)
         prefs.edit().putInt("tap_up_x", v.upX).putInt("tap_up_y", v.upY)
-            .putInt("tap_down_x", v.downX).putInt("tap_down_y", v.downY).apply()
+            .putInt("tap_down_x", v.downX).putInt("tap_down_y", v.downY)
+            .putInt("tap_drive_up_x", v.driveUpX).putInt("tap_drive_up_y", v.driveUpY)
+            .putInt("tap_drive_down_x", v.driveDownX).putInt("tap_drive_down_y", v.driveDownY).apply()
+    }
+
+    override fun dashAutoDriveSettings(): DashAutoDriveSettings = DashAutoDriveSettings.clamped(
+        prefs.getInt("auto_drive_initial_x", 7), prefs.getInt("auto_drive_initial_y", 53),
+        prefs.getInt("auto_drive_arrived_x", 93), prefs.getInt("auto_drive_arrived_y", 90),
+    )
+    override fun setDashAutoDriveSettings(settings: DashAutoDriveSettings) {
+        val v = DashAutoDriveSettings.clamped(
+            settings.initialX, settings.initialY, settings.arrivedX, settings.arrivedY,
+        )
+        prefs.edit().putInt("auto_drive_initial_x", v.initialX)
+            .putInt("auto_drive_initial_y", v.initialY)
+            .putInt("auto_drive_arrived_x", v.arrivedX)
+            .putInt("auto_drive_arrived_y", v.arrivedY).apply()
+    }
+
+    override fun yahooNaviEnabled(): Boolean = prefs.getBoolean("yahoo_navi_enabled", true)
+    override fun setYahooNaviEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean("yahoo_navi_enabled", enabled).apply()
     }
 
     override fun themeMode(): ThemeMode =
@@ -67,10 +93,15 @@ class AndroidSettingsStore(context: Context) : SettingsStore {
     override fun dashMarginColor() = DashMarginColor.fromName(prefs.getString("dash_margin_color", null))
     override fun setDashMarginColor(color: DashMarginColor) { prefs.edit().putString("dash_margin_color", color.name).apply() }
 
-    override fun dashAppPackage(): String? = prefs.getString(KEY_DASH_APP, null)
+    override fun dashAppPackage(): String? {
+        // Only an untouched preference gets the Yahoo default. Never overwrite user choice.
+        if (prefs.contains(KEY_DASH_APP)) return prefs.getString(KEY_DASH_APP, null)?.takeIf { it.isNotEmpty() }
+        return YAHOO_PACKAGE.takeIf { packageManager.getLaunchIntentForPackage(it) != null }
+    }
 
     override fun setDashAppPackage(packageName: String?) {
-        prefs.edit().putString(KEY_DASH_APP, packageName).apply()
+        // Empty sentinel preserves an explicit deselection instead of re-enabling the default.
+        prefs.edit().putString(KEY_DASH_APP, packageName ?: "").apply()
     }
 
     override fun selectedBikeId(): String? = prefs.getString(KEY_BIKE, null)
@@ -86,5 +117,6 @@ class AndroidSettingsStore(context: Context) : SettingsStore {
         const val KEY_BIKE = "selected_bike_id"
         const val KEY_DASH_APP = "dash_app_package"
         const val KEY_DASH_DPI = "dash_dpi"
+        const val YAHOO_PACKAGE = "jp.co.yahoo.android.apps.navi"
     }
 }

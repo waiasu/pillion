@@ -13,6 +13,10 @@ interface ScreenSource {
     fun stop()
     /** Optional VD stick tap. Ignored by ordinary screen sources. */
     fun tapDashPoint(up: Boolean) {}
+    /** Optional text for the NaviLite ROAD overlay; null means no update, empty clears it. */
+    fun pollRoadText(): String? = null
+    /** Called after a successful CCU handshake, including every reconnect. */
+    fun onRoadTransportReady() {}
 
     /**
      * Resize output frames to the dash's native size once the session resolves it from the head

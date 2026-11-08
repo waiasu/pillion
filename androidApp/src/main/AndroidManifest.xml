@@ -77,6 +77,20 @@
             android:exported="false"
             android:foregroundServiceType="mediaProjection|connectedDevice" />
 
+        <!-- Test-only, user-enabled, read-only Yahoo! Navi text extraction on the dash VD. -->
+        <service
+            android:name="app.pillion.android.YahooRoadAccessibilityService"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+            android:exported="true"
+            android:label="Pillion Yahoo ROAD (test)">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/yahoo_road_accessibility" />
+        </service>
+
         <!-- SDL "Path B" (USB full-motion). The SDL session. -->
         <service
             android:name="app.pillion.android.sdl.SdlService"

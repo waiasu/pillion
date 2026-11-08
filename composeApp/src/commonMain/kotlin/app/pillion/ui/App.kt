@@ -14,6 +14,7 @@ import app.pillion.core.DashSetup
 import app.pillion.core.DashDpi
 import app.pillion.core.DashMargins
 import app.pillion.core.DashTapSettings
+import app.pillion.core.DashAutoDriveSettings
 import app.pillion.core.DashMarginColor
 import app.pillion.core.DashAppCatalog
 import app.pillion.core.DashResolution
@@ -78,6 +79,8 @@ fun App(
         var dashMargins by remember { mutableStateOf(settingsStore?.dashMargins() ?: DashMargins()) }
         var dashMarginColor by remember { mutableStateOf(settingsStore?.dashMarginColor() ?: DashMarginColor.Black) }
         var dashTap by remember { mutableStateOf(settingsStore?.dashTapSettings() ?: DashTapSettings()) }
+        var dashAutoDrive by remember { mutableStateOf(settingsStore?.dashAutoDriveSettings() ?: DashAutoDriveSettings()) }
+        var yahooNaviEnabled by remember { mutableStateOf(settingsStore?.yahooNaviEnabled() ?: true) }
         var dashAppPackage by remember { mutableStateOf(settingsStore?.dashAppPackage()) }
         val dashApps = remember(dashAppCatalog) { dashAppCatalog?.availableApps().orEmpty() }
         var dashStartError by remember { mutableStateOf<String?>(null) }
@@ -125,7 +128,12 @@ fun App(
                 dashMarginColor = dashMarginColor,
                 onDashMarginColor = { dashMarginColor = it; settingsStore?.setDashMarginColor(it) },
                 dashTap = dashTap,
-                onDashTap = { dashTap = DashTapSettings.clamped(it.upX, it.upY, it.downX, it.downY); settingsStore?.setDashTapSettings(dashTap) },
+                onDashTap = { dashTap = DashTapSettings.clamped(it.upX, it.upY, it.downX, it.downY,
+                    it.driveUpX, it.driveUpY, it.driveDownX, it.driveDownY); settingsStore?.setDashTapSettings(dashTap) },
+                dashAutoDrive = dashAutoDrive,
+                onDashAutoDrive = { dashAutoDrive = DashAutoDriveSettings.clamped(it.initialX, it.initialY, it.arrivedX, it.arrivedY); settingsStore?.setDashAutoDriveSettings(dashAutoDrive) },
+                yahooNaviEnabled = yahooNaviEnabled,
+                onYahooNaviEnabled = { yahooNaviEnabled = it; settingsStore?.setYahooNaviEnabled(it) },
                 dashApps = dashApps,
                 selectedDashApp = dashAppPackage,
                 onDashApp = { dashAppPackage = it; settingsStore?.setDashAppPackage(it); dashStartError = null },
@@ -157,7 +165,8 @@ fun App(
                         dashStartError = "The selected app is unavailable. Choose another app in Settings."
                     } else {
                         dashStartError = null
-                        onStartDash?.invoke(MirrorSettings(quality, maxFps, dashResolution, dashDpi, dashMargins, dashMarginColor, dashTap))
+                        onStartDash?.invoke(MirrorSettings(quality, maxFps, dashResolution, dashDpi, dashMargins, dashMarginColor, dashTap, dashAutoDrive,
+                            yahooNaviEnabled && dashAppPackage == "jp.co.yahoo.android.apps.navi"))
                     }
                 },
                 onStopDash = { onStopDash?.invoke() },

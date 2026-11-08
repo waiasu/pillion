@@ -120,6 +120,8 @@ object DashServer {
     private var encodeMsMax = 0L
 
     @Volatile private var latestJpeg: ByteArray? = null
+    @Volatile private var restartFrameGate = false
+    @Volatile private var promotionGeneration = 0L
     @Volatile private var latestSeq = 0L
 
     // Battery: encode only while a foreground app is promoted (phone locked). Idle otherwise.
@@ -194,7 +196,7 @@ object DashServer {
         if (reader !== captureReader) return
         val image = runCatching { reader.acquireLatestImage() }.getOrNull() ?: return
         try {
-            if (!capturing || !sizeConfigured) return
+            if (!capturing || !sizeConfigured || restartFrameGate) return
             val now = System.currentTimeMillis()
             if (now - lastEncodeMs < MIN_INTERVAL_MS) return
             lastEncodeMs = now
@@ -272,7 +274,10 @@ object DashServer {
             while (true) {
                 val line = input.readLine()?.trim() ?: break
                 when {
-                    line.startsWith("PROMOTE ") -> promoteApp(line.removePrefix("PROMOTE ").trim())
+                    line.startsWith("PROMOTE ") -> {
+                        val fields = line.removePrefix("PROMOTE ").trim().split(" ")
+                        promoteApp(fields.firstOrNull().orEmpty(), fields.getOrNull(1) == "1")
+                    }
                     line == "DEMOTE" -> demoteApp()
                     line.startsWith("SIZE ") -> {
                         sizeReadyForClient.set(false)
@@ -485,17 +490,106 @@ object DashServer {
 
     private data class SizeReady(val revision: Int, val width: Int, val height: Int)
 
-    /** Move the foreground app onto the dash display and start encoding (phone just locked). */
-    private fun promoteApp(component: String) {
+    /** v40-style native Yahoo restart avoids carrying an old Mapbox renderer to the VD. */
+    private fun promoteApp(component: String, restartOnVd: Boolean = false) {
         if (displayId < 0 || component.isEmpty()) return
+        val generation = ++promotionGeneration
         resetMarker()
-        relocateApp(component, displayId)
         lastComponent = component
         capturing = true
-        startHeartbeat()          // keep the device interactive so the dash group renders
-        setMainDisplayPower(false) // turn the phone's own panel off (it stays awake → dash keeps rendering)
+        startHeartbeat()
+        setMainDisplayPower(false)
         startPanelOffRetries()
-        Log.i(TAG, "promoted $component to display $displayId")
+        if (!restartOnVd || component.substringBefore('/') != "jp.co.yahoo.android.apps.navi") {
+            restartFrameGate = false
+            relocateApp(component, displayId)
+            Log.i(TAG, "promoted $component to display $displayId (relocate)")
+            return
+        }
+        // Start the JPEG gate BEFORE touching the phone task. The app-side status cover
+        // is output-only and releases on the first new JPEG received after confirmation.
+        restartFrameGate = true
+        latestJpeg = null
+        latestSeq++
+        Log.i(TAG, "restart-on-vd: preparing $component for display $displayId")
+        restartAppBeforeVdLaunch(component, generation)
+    }
+
+    private fun restartAppBeforeVdLaunch(component: String, generation: Long) {
+        val target = displayId
+        if (target < 0) return
+        val pkg = component.substringBefore('/')
+        val active = {
+            capturing && displayId == target && lastComponent == component &&
+                promotionGeneration == generation
+        }
+        Thread {
+            if (!active()) return@Thread
+            val task = runCatching { taskAndDisplayForPackage(pkg) }
+                .onFailure { Log.w(TAG, "restart-on-vd: task lookup failed", it) }
+                .getOrNull()
+            val oldTaskId = task?.first
+            if (oldTaskId != null) {
+                val removed = runCatching { removeTaskFromRecents(oldTaskId) }
+                    .onFailure { Log.w(TAG, "restart-on-vd: removeTask failed", it) }
+                    .getOrDefault(false)
+                Log.i(TAG, "restart-on-vd: removeTask($oldTaskId) from display ${task.second} = $removed")
+                if (!removed) {
+                    if (active()) {
+                        relocateApp(component, target)
+                        restartFrameGate = false
+                    }
+                    return@Thread
+                }
+                val goneStart = android.os.SystemClock.uptimeMillis()
+                var gone = false
+                while (active()) {
+                    val current = runCatching { taskAndDisplayForPackage(pkg) }.getOrNull()
+                    if (current?.first != oldTaskId) { gone = true; break }
+                    if (android.os.SystemClock.uptimeMillis() - goneStart >= 1_500L) break
+                    try { Thread.sleep(50L) } catch (_: InterruptedException) { return@Thread }
+                }
+                if (!gone || !active()) {
+                    Log.w(TAG, "restart-on-vd: old task not gone within 1500ms")
+                    if (active()) {
+                        relocateApp(component, target)
+                        restartFrameGate = false
+                    }
+                    return@Thread
+                }
+            }
+            // Give the native/Mapbox renderer 500ms for teardown before fresh launch.
+            try { Thread.sleep(500L) } catch (_: InterruptedException) { return@Thread }
+            if (!active()) return@Thread
+            val rc = exec(
+                "am", "start", "--display", target.toString(),
+                "-a", "android.intent.action.MAIN", "-c", "android.intent.category.LAUNCHER",
+                "-n", component,
+            )
+            val launchStart = android.os.SystemClock.uptimeMillis()
+            var launched: Pair<Int, Int>? = null
+            while (active()) {
+                launched = runCatching { taskAndDisplayForPackage(pkg) }.getOrNull()
+                if (launched != null) break
+                if (android.os.SystemClock.uptimeMillis() - launchStart >= 1_500L) break
+                try { Thread.sleep(50L) } catch (_: InterruptedException) { return@Thread }
+            }
+            if (!active()) return@Thread
+            if (launched?.second != target) relocateApp(component, target)
+            restartFrameGate = false
+            Log.i(TAG, "restart-on-vd: new task=$launched display=$target rc=$rc; fresh JPEG pending")
+        }.apply { name = "pillion-restart-on-vd"; isDaemon = true; start() }
+    }
+
+    /** Android's Recents removeTask primitive; does not force-stop the Yahoo process. */
+    private fun removeTaskFromRecents(taskId: Int): Boolean {
+        val atm = Class.forName("android.app.ActivityTaskManager").getMethod("getService").invoke(null)
+        val method = atm.javaClass.methods.firstOrNull {
+            it.name == "removeTask" && it.parameterTypes.size == 1 &&
+                it.parameterTypes[0] == Int::class.javaPrimitiveType
+        } ?: error("IActivityTaskManager.removeTask(int) unavailable")
+        val result = method.invoke(atm, taskId)
+        return (result as? Boolean) ?: true
     }
 
     /**
@@ -823,7 +917,9 @@ object DashServer {
 
     /** Move the app back to the phone and stop encoding (phone unlocked). */
     private fun demoteApp() {
+        ++promotionGeneration
         capturing = false
+        restartFrameGate = false
         resetMarker()
         stopPanelOffRetries()
         stopHeartbeat()
