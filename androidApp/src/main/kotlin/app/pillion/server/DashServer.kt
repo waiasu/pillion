@@ -130,9 +130,14 @@ object DashServer {
     @Volatile private var lastComponent: String? = null
     @Volatile private var keepAlive: Thread? = null
     @Volatile private var panelOffRetry: Thread? = null
+    @Volatile private var secureCameraWatcher: Thread? = null
+    @Volatile private var secureCameraPanelRestore: Thread? = null
 
     private const val KEEP_ALIVE_MS = 3000L // poke the dash display group well under its ~10s idle timeout
-    private val PANEL_OFF_RETRY_DELAYS_MS = longArrayOf(700L, 1500L)
+    private val PANEL_OFF_RETRY_DELAYS_MS = longArrayOf(100L, 700L, 1500L)
+    private const val SECURE_CAMERA_POLL_MS = 250L
+    private const val SECURE_CAMERA_SETTLE_MS = 500L
+    private const val GOOGLE_CAMERA_PACKAGE = "com.google.android.GoogleCamera"
 
     @JvmStatic
     fun main(args: Array<String>) {
@@ -170,6 +175,7 @@ object DashServer {
             )
             this.display = display
             displayId = display.display.displayId
+            startSecureCameraWatcher()
             Log.i(
                 TAG,
                 "trusted display created id=$displayId virtual=${virtualWidth}x$virtualHeight " +
@@ -619,6 +625,126 @@ object DashServer {
             )
             Log.i(TAG, "relocate: launched $component on display $target (was not running)")
         }
+    }
+
+    /**
+     * v33 camera assist, intentionally isolated from v30's proven power / PROMOTE / DEMOTE flow.
+     *
+     * Pixel's double-POWER shortcut can launch SecureCamera on display 0 while v30 is still finishing
+     * its normal relocation + panel-blank sequence. Do not suppress or reorder any of that existing
+     * logic. Instead, when SecureCamera first becomes the actual top activity, wait briefly for v30's
+     * own transitions to settle, verify that SecureCamera is still top, then cancel only the queued
+     * panel-OFF retries and reopen the physical panel. Camera exit remains entirely v30 behaviour.
+     */
+    private fun startSecureCameraWatcher() {
+        if (secureCameraWatcher != null) return
+        val watcher = Thread {
+            var cameraWasTop = false
+            var queryFailureLogged = false
+            Log.i(TAG, "camera-panel: top-activity watcher started")
+            while (!Thread.currentThread().isInterrupted) {
+                val topResult = runCatching { topActivityOnDisplay(0) }
+                if (topResult.isFailure) {
+                    if (!queryFailureLogged) {
+                        Log.w(TAG, "camera-panel: topActivity query failed: ${reason(topResult.exceptionOrNull()!!)}")
+                        queryFailureLogged = true
+                    }
+                } else {
+                    queryFailureLogged = false
+                }
+
+                val cameraIsTop = isPixelSecureCamera(topResult.getOrNull())
+                if (cameraIsTop && !cameraWasTop) {
+                    scheduleSecureCameraPanelRestore()
+                } else if (!cameraIsTop && cameraWasTop) {
+                    // If Camera disappeared during the settle window, do not wake a stale screen.
+                    secureCameraPanelRestore?.interrupt()
+                    secureCameraPanelRestore = null
+                }
+                cameraWasTop = cameraIsTop
+
+                try {
+                    Thread.sleep(SECURE_CAMERA_POLL_MS)
+                } catch (_: InterruptedException) {
+                    break
+                }
+            }
+            secureCameraPanelRestore?.interrupt()
+            secureCameraPanelRestore = null
+            if (secureCameraWatcher === Thread.currentThread()) secureCameraWatcher = null
+            Log.i(TAG, "camera-panel: top-activity watcher stopped")
+        }.apply {
+            name = "pillion-secure-camera-watch"
+            isDaemon = true
+        }
+        secureCameraWatcher = watcher
+        watcher.start()
+    }
+
+    private fun scheduleSecureCameraPanelRestore() {
+        secureCameraPanelRestore?.interrupt()
+        val restore = Thread {
+            try {
+                Thread.sleep(SECURE_CAMERA_SETTLE_MS)
+            } catch (_: InterruptedException) {
+                return@Thread
+            }
+
+            val top = runCatching { topActivityOnDisplay(0) }
+                .onFailure { Log.w(TAG, "camera-panel: recheck failed: ${reason(it)}") }
+                .getOrNull()
+            if (!isPixelSecureCamera(top)) {
+                Log.i(TAG, "camera-panel: restore skipped; SecureCamera no longer top ($top)")
+                if (secureCameraPanelRestore === Thread.currentThread()) secureCameraPanelRestore = null
+                return@Thread
+            }
+
+            // Order matters: stop every queued panel-OFF retry first, then reopen the panel once.
+            // PROMOTE/DEMOTE, heartbeat, task placement, and Camera exit are deliberately untouched.
+            stopPanelOffRetries()
+            setMainDisplayPower(true)
+            Log.i(TAG, "camera-panel: SecureCamera stable for ${SECURE_CAMERA_SETTLE_MS}ms; cancelled panel-OFF retries and restored main panel ($top)")
+            if (secureCameraPanelRestore === Thread.currentThread()) secureCameraPanelRestore = null
+        }.apply {
+            name = "pillion-secure-camera-panel-restore"
+            isDaemon = true
+        }
+        secureCameraPanelRestore = restore
+        restore.start()
+    }
+
+    /** Current top activity for one display. Prefer the focused root task; fall back to z-order. */
+    private fun topActivityOnDisplay(targetDisplayId: Int): ComponentName? {
+        val atm = Class.forName("android.app.ActivityTaskManager").getMethod("getService").invoke(null)
+        val onDisplayMethod = atm.javaClass.methods.firstOrNull {
+            it.name == "getAllRootTaskInfosOnDisplay" &&
+                it.parameterTypes.size == 1 &&
+                it.parameterTypes[0] == Int::class.javaPrimitiveType
+        }
+        val onDisplayInfos = runCatching { onDisplayMethod?.invoke(atm, targetDisplayId) as? List<*> }.getOrNull()
+        val infos = onDisplayInfos
+            ?: (atm.javaClass.getMethod("getAllRootTaskInfos").invoke(atm) as List<*>).filter { info ->
+                info != null && runCatching {
+                    info.javaClass.getField("displayId").getInt(info) == targetDisplayId
+                }.getOrDefault(false)
+            }
+
+        var fallback: ComponentName? = null
+        for (info in infos) {
+            info ?: continue
+            val cls = info.javaClass
+            val top = runCatching { cls.getField("topActivity").get(info) as? ComponentName }.getOrNull()
+                ?: continue
+            if (fallback == null) fallback = top
+            val focused = runCatching { cls.getField("isFocused").getBoolean(info) }.getOrDefault(false)
+            if (focused) return top
+        }
+        return fallback
+    }
+
+    private fun isPixelSecureCamera(component: ComponentName?): Boolean {
+        if (component == null || component.packageName != GOOGLE_CAMERA_PACKAGE) return false
+        return component.className.substringAfterLast('.').contains("SecureCameraActivity")
     }
 
     /** (rootTaskId, displayId) of [pkg]'s current task, or null if it isn't running. */

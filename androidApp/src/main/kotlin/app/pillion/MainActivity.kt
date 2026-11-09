@@ -16,13 +16,11 @@ import app.pillion.android.AndroidMirrorController
 import app.pillion.android.AndroidSettingsStore
 import app.pillion.android.AdbPairingCoordinator
 import app.pillion.android.CaptureService
-import app.pillion.android.GitHubUpdateChecker
 import app.pillion.android.DiagnosticExporter
 import app.pillion.android.DiagnosticFlightRecorder
 import app.pillion.android.SdlMirrorController
 import app.pillion.android.sdl.ProjectionHolder
 import app.pillion.android.sdl.SdlService
-import app.pillion.core.AppInfo
 import app.pillion.core.MirrorController
 import app.pillion.core.MirrorSettings
 import app.pillion.core.CastMode
@@ -83,12 +81,12 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         registerBuiltInHeadUnits()
-        val updateChecker = GitHubUpdateChecker(AppInfo.REPO)
+        // Custom test APK: do not check upstream releases.
         val dashSetup = AndroidDashSetup(
             context = applicationContext,
             requestNotificationPermission = ::requestNotificationPermission,
         )
-        setContent { App(::controllerFor, updateChecker, settingsStore, dashSetup, AndroidDashAppCatalog(applicationContext), onExportDiagnostics = ::exportDiagnostics, onStartDash = ::startDash, onStopDash = ::stopMirroring, castMode = CaptureService.mode) }
+        setContent { App(::controllerFor, null, settingsStore, dashSetup, AndroidDashAppCatalog(applicationContext), onExportDiagnostics = ::exportDiagnostics, onStartDash = ::startDash, onStopDash = ::stopMirroring, castMode = CaptureService.mode) }
     }
 
     private fun exportDiagnostics() {
