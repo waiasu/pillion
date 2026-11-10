@@ -82,7 +82,7 @@
             android:name="app.pillion.android.YahooRoadAccessibilityService"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
             android:exported="true"
-            android:label="Pillion Yahoo ROAD (test)">
+            android:label="Pillion Yahoo ROAD">
             <intent-filter>
                 <action android:name="android.accessibilityservice.AccessibilityService" />
             </intent-filter>
@@ -90,6 +90,11 @@
                 android:name="android.accessibilityservice"
                 android:resource="@xml/yahoo_road_accessibility" />
         </service>
+
+        <!-- Passive ACL watcher in a separate process. -->
+        <service android:name="app.pillion.android.CcuWatcherService"
+            android:process=":ccu_watcher" android:exported="false"
+            android:foregroundServiceType="connectedDevice" />
 
         <!-- SDL "Path B" (USB full-motion). The SDL session. -->
         <service

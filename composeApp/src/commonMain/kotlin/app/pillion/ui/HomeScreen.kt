@@ -54,6 +54,9 @@ internal fun HomeScreen(
     dashReady: Boolean = false,
     onStartDash: () -> Unit = {},
     onStopDash: () -> Unit = {},
+    watcherRunning: Boolean = false,
+    watcherBusy: Boolean = false,
+    onWatcherToggle: () -> Unit = {},
 ) {
     Column(
         modifier = Modifier.fillMaxSize()
@@ -89,12 +92,25 @@ internal fun HomeScreen(
                 }
             }
         }
-        PrimaryButton(state, onStart, onStop, castMode, CastMode.MIRROR, "Mirror screen", standalone = !showDash)
+        PrimaryButton(
+            state, onStart, onStop, castMode, CastMode.MIRROR, "Mirror screen",
+            standalone = !showDash, controlEnabled = !watcherRunning && !watcherBusy,
+        )
         if (showDash) {
             Spacer(Modifier.height(10.dp))
             Text(if (dashReady) "Virtual Display" else "Set up Virtual Display in Settings", style = MaterialTheme.typography.bodySmall)
             Spacer(Modifier.height(6.dp))
-            PrimaryButton(state, onStartDash, onStopDash, castMode, CastMode.DASH, "Virtual Display", dashReady)
+            PrimaryButton(
+                state, onStartDash, onStopDash, castMode, CastMode.DASH, "Virtual Display",
+                available = dashReady, controlEnabled = !watcherRunning && !watcherBusy,
+            )
+            Spacer(Modifier.height(10.dp))
+            ActionButton(
+                label = "CCU linked",
+                active = watcherRunning,
+                enabled = !watcherBusy && (watcherRunning || (dashReady && castMode == CastMode.NONE)),
+                onClick = onWatcherToggle,
+            )
         }
     }
 }
@@ -267,11 +283,29 @@ private fun PrimaryButton(
     label: String,
     available: Boolean = true,
     standalone: Boolean = false,
+    controlEnabled: Boolean = true,
 ) {
-    val active = if (standalone) state is MirrorState.Connecting || state is MirrorState.Streaming || state is MirrorState.Broadcasting else castMode == buttonMode
-    Button(
+    val active = if (standalone) state is MirrorState.Connecting ||
+        state is MirrorState.Streaming || state is MirrorState.Broadcasting else castMode == buttonMode
+    ActionButton(
+        label = label,
+        active = active,
+        enabled = controlEnabled && (active || (available && castMode == CastMode.NONE)),
         onClick = if (active) onStop else onStart,
-        enabled = active || (available && castMode == CastMode.NONE),
+    )
+}
+
+/** Shared button presentation for manual mirroring, VD and CCU-linked mode. */
+@Composable
+private fun ActionButton(
+    label: String,
+    active: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
+    Button(
+        onClick = onClick,
+        enabled = enabled,
         modifier = Modifier.fillMaxWidth().height(56.dp),
         shape = RoundedCornerShape(16.dp),
         colors = ButtonDefaults.buttonColors(

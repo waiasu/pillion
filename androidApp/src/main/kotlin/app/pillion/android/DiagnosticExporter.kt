@@ -104,6 +104,8 @@ object DiagnosticExporter {
                 )
             }
 
+            val watcherLog = File(context.filesDir, "diagnostics/ccu-watcher.log")
+            if (watcherLog.isFile) watcherLog.copyTo(File(work, "ccu-watcher.log"), overwrite = true)
             val bytes = java.io.ByteArrayOutputStream()
             ZipOutputStream(bytes).use { zip ->
                 work.listFiles()?.sortedBy { it.name }?.forEach { file ->

@@ -56,10 +56,14 @@ class CaptureService : Service() {
     @Volatile private var promotionGeneration = 0L
     private var dashTarget: String? = null
     private var ownsSession = false
+    private var keepDashHelperOnDestroy = false
+    private var intentTrialId: String? = null
+    private var ccuInitiallyOff = false
     @Volatile private var stopping = false
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) {
+            keepDashHelperOnDestroy = intent.getBooleanExtra(EXTRA_KEEP_DASH_HELPER, false)
             DiagnosticFlightRecorder.record("CAPTURE", "Stop action")
             stopSelf()
             return START_NOT_STICKY
@@ -72,6 +76,9 @@ class CaptureService : Service() {
         }
         ownsSession = true
         dashEnabled = intent?.getBooleanExtra(EXTRA_DASH_ENABLED, false) ?: false
+        intentTrialId = intent?.getStringExtra(CcuAutoTrial.EXTRA_SESSION_ID)
+        ccuInitiallyOff = intentTrialId != null &&
+            intent?.getBooleanExtra(EXTRA_CCU_INITIALLY_OFF, false) == true
         _mode.value = if (dashEnabled) CastMode.DASH else CastMode.MIRROR
         acquireWakeLock()
         _state.value = MirrorState.Connecting
@@ -89,6 +96,7 @@ class CaptureService : Service() {
                 intent?.getIntExtra(EXTRA_TAP_DRIVE_UP_Y, 13) ?: 13,
                 intent?.getIntExtra(EXTRA_TAP_DRIVE_DOWN_X, 93) ?: 93,
                 intent?.getIntExtra(EXTRA_TAP_DRIVE_DOWN_Y, 30) ?: 30,
+                intent?.getBooleanExtra(EXTRA_STICK_INPUT_ENABLED, true) ?: true,
             ), DashAutoDriveSettings.clamped(
                 intent?.getIntExtra(EXTRA_AUTO_INITIAL_X, 7) ?: 7,
                 intent?.getIntExtra(EXTRA_AUTO_INITIAL_Y, 53) ?: 53,
@@ -158,14 +166,30 @@ class CaptureService : Service() {
         dashTarget = component
         registerDashScreenReceiver()
         runEngine(modeSource, fps, retryInitialConnection = true)
+        intentTrialId?.let { id ->
+            sendBroadcast(Intent(CcuAutoTrial.ACTION_CAPTURE_READY).setPackage(packageName)
+                .putExtra(CcuAutoTrial.EXTRA_SESSION_ID, id))
+            DiagnosticFlightRecorder.record("AUTO", "CAPTURE_READY broadcast")
+        }
         scope.launch(Dispatchers.IO) {
             runCatching { DashHelper.ensureRunning(this@CaptureService, quality, resolution, preferExisting = true) }
                 .onSuccess {
                     if (!stopping && _mode.value == CastMode.DASH) {
                         DashHelper.startWatchdog(this@CaptureService, quality, resolution)
-                        // If Start happens while already locked, no SCREEN_OFF edge will arrive.
-                        val power = getSystemService(PowerManager::class.java)
-                        if (power?.isInteractive == false && dashPromotedAtMs == 0L) promoteDash("already asleep at Start")
+                        // The Helper can WAKE to create VD before we check isInteractive.
+                        // For a trusted CCU start that began OFF, promote once after Helper
+                        // readiness unless a SCREEN_OFF edge has already promoted us.
+                        // Leave manual Start and starts with the phone ON unchanged.
+                        val interactive = getSystemService(PowerManager::class.java)?.isInteractive
+                        val locked = isKeyguardLockedNow()
+                        DiagnosticFlightRecorder.record(
+                            "AUTO", "VD_READY initialOff=$ccuInitiallyOff promoted=${dashPromotedAtMs != 0L} interactive=$interactive locked=$locked"
+                        )
+                        if (ccuInitiallyOff && locked && dashPromotedAtMs == 0L) {
+                            promoteDash("CCU initially asleep at Start")
+                        } else if (interactive == false && dashPromotedAtMs == 0L) {
+                            promoteDash("already asleep at Start")
+                        }
                     }
                 }
                 .onFailure {
@@ -343,6 +367,8 @@ class CaptureService : Service() {
         dashPromotedAtMs = 0L
         promotionGeneration++
         DiagnosticFlightRecorder.record("CAPTURE", "cleanup begin")
+        // Send DEMOTE before closing the session socket when preserving Helper.
+        if (keepDashHelperOnDestroy) runCatching { dashModeSource?.demote() }
         engine?.stop()
         DashHelper.stopWatchdog()
         scope.cancel()
@@ -351,14 +377,18 @@ class CaptureService : Service() {
         Thread({
             try {
                 // First stop the image source, then let the original connect/Helper tasks finish.
-                runCatching { source?.quit() }
+                runCatching {
+                    if (keepDashHelperOnDestroy) source?.stop() else source?.quit()
+                }
                 runBlocking { scope.coroutineContext[Job]?.join() }
                 if (source != null) {
                     // ensureRunning() uses this same monitor. Never kill a newly spawned helper
                     // before the old startup operation has completed.
                     synchronized(DashHelper) {
-                        killHelper()
-                        if (!DashHelper.waitUntilStopped()) {
+                        if (!keepDashHelperOnDestroy) {
+                            killHelper()
+                        }
+                        if (!keepDashHelperOnDestroy && !DashHelper.waitUntilStopped()) {
                             DiagnosticFlightRecorder.record("CAPTURE", "helper exit timeout; port still open")
                             Log.w(TAG, "dash: helper exit timeout; releasing session lock")
                         }
@@ -433,6 +463,8 @@ class CaptureService : Service() {
         private const val TAG = "Pillion"
         private const val MAX_SESSION_MS = 3L * 60 * 60 * 1000 // 3h safety cap
         const val ACTION_STOP = "app.pillion.action.STOP"
+        const val EXTRA_KEEP_DASH_HELPER = "keepDashHelperOnStop"
+        const val EXTRA_CCU_INITIALLY_OFF = "ccuInitiallyOff"
         const val EXTRA_QUALITY = "quality"
         const val EXTRA_MAX_FPS = "maxFps"
         /** When true, the session switches to the dedicated dash display whenever the phone is locked. */
@@ -443,6 +475,7 @@ class CaptureService : Service() {
         const val EXTRA_MARGIN_LEFT = "marginLeft"
         const val EXTRA_MARGIN_BOTTOM = "marginBottom"
         const val EXTRA_MARGIN_COLOR = "marginColor"
+        const val EXTRA_STICK_INPUT_ENABLED = "stickInputEnabled"
         const val EXTRA_TAP_UP_X = "tapUpX"
         const val EXTRA_TAP_UP_Y = "tapUpY"
         const val EXTRA_TAP_DOWN_X = "tapDownX"

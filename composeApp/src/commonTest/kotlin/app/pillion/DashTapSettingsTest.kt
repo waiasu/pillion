@@ -13,6 +13,11 @@ class DashTapSettingsTest {
         assertEquals(DashTapSettings(0, 100, 100, 0), DashTapSettings.clamped(-10, 120, 200, -1))
     }
 
+    @Test fun stickInputDefaultsOnAndSurvivesClamping() {
+        assertEquals(true, DashTapSettings().enabled)
+        assertEquals(false, DashTapSettings.clamped(93, 47, 93, 74, enabled = false).enabled)
+    }
+
     @Test fun markerDurationsCoverTargetFramesPlusTimingMargin() {
         assertEquals(1100, DashTapSettings.markerDurationMs(1))
         assertEquals(600, DashTapSettings.markerDurationMs(2))

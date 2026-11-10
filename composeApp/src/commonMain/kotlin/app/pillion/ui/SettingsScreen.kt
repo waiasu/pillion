@@ -110,6 +110,7 @@ internal fun SettingsScreen(
     onExportDiagnostics: (() -> Unit)? = null,
 ) {
     val uriHandler = LocalUriHandler.current
+    var displayAdjustmentsExpanded by remember { mutableStateOf(false) }
     var tapExpanded by remember { mutableStateOf(false) }
     var yahooExpanded by remember { mutableStateOf(false) }
     val yahooSelected = selectedDashApp == "jp.co.yahoo.android.apps.navi"
@@ -279,13 +280,33 @@ internal fun SettingsScreen(
                 GroupDivider()
                 DashResolutionSelector(dashResolution, onDashResolution)
                 GroupDivider()
-                DashDpiSelector(dashDpi, onDashDpi)
-                GroupDivider()
-                PixelMarginSelector("Left margin", dashMargins.left, DashMargins.MAX_LEFT) { onDashMargins(dashMargins.copy(left = it)) }
-                GroupDivider()
-                PixelMarginSelector("Bottom margin", dashMargins.bottom, DashMargins.MAX_BOTTOM) { onDashMargins(dashMargins.copy(bottom = it)) }
+                Row(
+                    Modifier.fillMaxWidth().clickable { displayAdjustmentsExpanded = !displayAdjustmentsExpanded }
+                        .padding(vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("Display adjustments", modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodyLarge)
+                    Text(if (displayAdjustmentsExpanded) "▲" else "▼",
+                        color = MaterialTheme.colorScheme.primary)
+                }
+                if (displayAdjustmentsExpanded) {
+                    DashDpiSelector(dashDpi, onDashDpi)
+                    GroupDivider()
+                    PixelMarginSelector("Left margin", dashMargins.left, DashMargins.MAX_LEFT) { onDashMargins(dashMargins.copy(left = it)) }
+                    GroupDivider()
+                    PixelMarginSelector("Bottom margin", dashMargins.bottom, DashMargins.MAX_BOTTOM) { onDashMargins(dashMargins.copy(bottom = it)) }
+                }
                 GroupDivider()
                 MarginColorSelector(dashMarginColor, onDashMarginColor)
+                GroupDivider()
+                Row(Modifier.fillMaxWidth().padding(vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Text("Stick input", modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodyLarge)
+                    Switch(checked = dashTap.enabled,
+                        onCheckedChange = { onDashTap(dashTap.copy(enabled = it)) })
+                }
                 GroupDivider()
                 Row(
                     Modifier.fillMaxWidth().clickable { tapExpanded = !tapExpanded }.padding(vertical = 14.dp),
@@ -293,7 +314,7 @@ internal fun SettingsScreen(
                 ) {
                     Text("Stick tap positions", modifier = Modifier.weight(1f),
                         style = MaterialTheme.typography.bodyLarge)
-                    Text(if (tapExpanded) "Hide" else "Show", color = MaterialTheme.colorScheme.primary)
+                    Text(if (tapExpanded) "▲" else "▼", color = MaterialTheme.colorScheme.primary)
                 }
                 if (tapExpanded) {
                     Text("Relative to top-left (0–100%). Changes apply on next Start.",
@@ -329,7 +350,7 @@ internal fun SettingsScreen(
                     ) {
                         Text("Drive Mode & automatic tap positions",
                             modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
-                        Text(if (yahooExpanded) "Hide" else "Show",
+                        Text(if (yahooExpanded) "▲" else "▼",
                             color = MaterialTheme.colorScheme.primary)
                     }
                     if (yahooExpanded) {

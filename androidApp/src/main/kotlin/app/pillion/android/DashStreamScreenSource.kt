@@ -173,7 +173,8 @@ class DashStreamScreenSource(
     override fun tapDashPoint(up: Boolean) = tapStickPoint(up, false)
 
     fun tapStickPoint(up: Boolean, drive: Boolean) {
-        if (!running || socket == null || !gate.isReady()) return
+        // Disable only joystick taps and their marker; automatic Drive Mode taps bypass this gate.
+        if (!tapSettings.enabled || !running || socket == null || !gate.isReady()) return
         val x = when {
             drive && up -> tapSettings.driveUpX
             drive -> tapSettings.driveDownX

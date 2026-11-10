@@ -25,14 +25,17 @@ class AndroidSettingsStore(context: Context) : SettingsStore {
         prefs.getInt("tap_down_x", 93), prefs.getInt("tap_down_y", 74),
         prefs.getInt("tap_drive_up_x", 93), prefs.getInt("tap_drive_up_y", 13),
         prefs.getInt("tap_drive_down_x", 93), prefs.getInt("tap_drive_down_y", 30),
+        prefs.getBoolean("stick_input_enabled", true),
     )
     override fun setDashTapSettings(settings: DashTapSettings) {
         val v = DashTapSettings.clamped(settings.upX, settings.upY, settings.downX, settings.downY,
-            settings.driveUpX, settings.driveUpY, settings.driveDownX, settings.driveDownY)
+            settings.driveUpX, settings.driveUpY, settings.driveDownX, settings.driveDownY,
+            settings.enabled)
         prefs.edit().putInt("tap_up_x", v.upX).putInt("tap_up_y", v.upY)
             .putInt("tap_down_x", v.downX).putInt("tap_down_y", v.downY)
             .putInt("tap_drive_up_x", v.driveUpX).putInt("tap_drive_up_y", v.driveUpY)
-            .putInt("tap_drive_down_x", v.driveDownX).putInt("tap_drive_down_y", v.driveDownY).apply()
+            .putInt("tap_drive_down_x", v.driveDownX).putInt("tap_drive_down_y", v.driveDownY)
+            .putBoolean("stick_input_enabled", v.enabled).apply()
     }
 
     override fun dashAutoDriveSettings(): DashAutoDriveSettings = DashAutoDriveSettings.clamped(

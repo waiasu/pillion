@@ -1,6 +1,10 @@
 package app.pillion
 
 import android.Manifest
+import android.app.ActivityManager
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.IntentFilter
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.media.projection.MediaProjectionManager
@@ -8,6 +12,9 @@ import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import app.pillion.android.AndroidDashAppCatalog
@@ -16,6 +23,8 @@ import app.pillion.android.AndroidMirrorController
 import app.pillion.android.AndroidSettingsStore
 import app.pillion.android.AdbPairingCoordinator
 import app.pillion.android.CaptureService
+import app.pillion.android.CcuAutoTrial
+import app.pillion.android.CcuWatcherService
 import app.pillion.android.DiagnosticExporter
 import app.pillion.android.DiagnosticFlightRecorder
 import app.pillion.android.SdlMirrorController
@@ -37,6 +46,34 @@ class MainActivity : ComponentActivity() {
 
     private var pendingSettings = MirrorSettings()
     private var pendingSdl = false // whether the in-flight projection grant is for the SDL/USB path
+    private var pendingTrialId: String? = null
+    private var watcherRunning by mutableStateOf(false)
+    private var watcherBusy by mutableStateOf(false)
+    // Keep the manual Start buttons disabled until CCU watcher startup is confirmed.
+    private var watcherStartPending = false
+    private var watcherStartGeneration = 0
+    private var watcherReceiverRegistered = false
+    private val watcherStatusReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action != CcuWatcherService.ACTION_STATUS) return
+            val running = intent.getBooleanExtra(CcuWatcherService.EXTRA_RUNNING, false)
+            watcherRunning = running
+            // An unrelated/stale "stopped" status is not a start confirmation.
+            if (watcherStartPending && !running) return
+            watcherStartPending = false
+            watcherBusy = false
+        }
+    }
+    private val watcherPermissions = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions(),
+    ) { result ->
+        if (result.values.all { it }) sendWatcherStart()
+        else {
+            watcherStartPending = false
+            watcherBusy = false
+            Toast.makeText(this, "Bluetooth and notification permissions required", Toast.LENGTH_LONG).show()
+        }
+    }
     private val settingsStore by lazy { AndroidSettingsStore(applicationContext) }
 
     private val projectionLauncher = registerForActivityResult(
@@ -86,7 +123,150 @@ class MainActivity : ComponentActivity() {
             context = applicationContext,
             requestNotificationPermission = ::requestNotificationPermission,
         )
-        setContent { App(::controllerFor, null, settingsStore, dashSetup, AndroidDashAppCatalog(applicationContext), onExportDiagnostics = ::exportDiagnostics, onStartDash = ::startDash, onStopDash = ::stopMirroring, castMode = CaptureService.mode) }
+        setContent { App(::controllerFor, null, settingsStore, dashSetup, AndroidDashAppCatalog(applicationContext), onExportDiagnostics = ::exportDiagnostics, onStartDash = ::startDash, onStopDash = ::stopMirroring, castMode = CaptureService.mode,
+            watcherRunning = watcherRunning, watcherBusy = watcherBusy, onWatcherToggle = ::toggleWatcher) }
+        acceptAutoTrialIntent(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        acceptAutoTrialIntent(intent)
+    }
+
+    override fun onStart() {
+        super.onStart()
+        val filter = IntentFilter(CcuWatcherService.ACTION_STATUS)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+            registerReceiver(watcherStatusReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        else {
+            @Suppress("DEPRECATION")
+            registerReceiver(watcherStatusReceiver, filter)
+        }
+        watcherReceiverRegistered = true
+        refreshWatcherStatus()
+    }
+
+    override fun onStop() {
+        if (watcherReceiverRegistered) {
+            unregisterReceiver(watcherStatusReceiver)
+            watcherReceiverRegistered = false
+        }
+        super.onStop()
+    }
+
+    @Suppress("DEPRECATION")
+    private fun refreshWatcherStatus() {
+        val running = runCatching {
+            getSystemService(ActivityManager::class.java).getRunningServices(Int.MAX_VALUE)
+                .any { it.service.className == CcuWatcherService::class.java.name }
+        }.getOrDefault(false)
+        watcherRunning = running
+        // A negative poll during first service startup must not enable the other buttons.
+        if (!watcherStartPending || running) {
+            watcherStartPending = false
+            watcherBusy = false
+        }
+    }
+
+    private fun sendTrialFailure(reason: String) {
+        val id = pendingTrialId ?: return
+        DiagnosticFlightRecorder.record("AUTO", "START_FAILED reason=${reason}")
+        sendBroadcast(Intent(CcuAutoTrial.ACTION_START_FAILED).setPackage(packageName)
+            .putExtra(CcuAutoTrial.EXTRA_SESSION_ID, id)
+            .putExtra(CcuAutoTrial.EXTRA_REASON, reason))
+        pendingTrialId = null
+    }
+
+    private fun acceptAutoTrialIntent(source: Intent?) {
+        val token = source?.getStringExtra(CcuAutoTrial.EXTRA_TOKEN) ?: return
+        source.removeExtra(CcuAutoTrial.EXTRA_TOKEN)
+        if (!CcuAutoTrial.consume(applicationContext, token)) {
+            DiagnosticFlightRecorder.record("AUTO", "token rejected")
+            return
+        }
+        val initiallyOff = source.getBooleanExtra(CcuAutoTrial.EXTRA_INITIAL_SCREEN_OFF, false)
+        source.removeExtra(CcuAutoTrial.EXTRA_INITIAL_SCREEN_OFF)
+        window.decorView.post {
+            pendingTrialId = token
+            if (CaptureService.mode.value != CastMode.NONE || watcherBusy) {
+                sendTrialFailure("capture_busy")
+                return@post
+            }
+            if (!settingsStore.dashEnabled()) {
+                sendTrialFailure("VD_disabled")
+                return@post
+            }
+            if (settingsStore.dashAppPackage() == null) {
+                sendTrialFailure("no_target_app")
+                return@post
+            }
+            if (requiredPermissions().any { checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED }) {
+                sendTrialFailure("permissions_missing")
+                return@post
+            }
+            try {
+                val settings = CcuAutoTrial.settings(applicationContext)
+                DiagnosticFlightRecorder.record("AUTO", "START saved_VD_settings")
+                launchDashService(settings, initiallyOff)
+                pendingTrialId = null
+            } catch (t: Throwable) {
+                sendTrialFailure(t.javaClass.simpleName)
+            }
+        }
+    }
+
+    private fun toggleWatcher() {
+        if (watcherBusy) return
+        if (watcherRunning) {
+            watcherBusy = true
+            watcherStartPending = false
+            runCatching {
+                startService(Intent(this, CcuWatcherService::class.java).setAction(CcuWatcherService.ACTION_STOP))
+            }.onFailure { watcherBusy = false }
+        } else {
+            if (!settingsStore.dashEnabled() || settingsStore.dashAppPackage() == null) {
+                Toast.makeText(this, "Set up Virtual Display first", Toast.LENGTH_SHORT).show()
+                return
+            }
+            if (CaptureService.mode.value != CastMode.NONE) {
+                Toast.makeText(this, "Stop mirroring before CCU linked Start", Toast.LENGTH_SHORT).show()
+                return
+            }
+            watcherBusy = true
+            watcherStartPending = true
+            val needed = requiredPermissions().filter { checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED }
+            if (needed.isEmpty()) sendWatcherStart()
+            else watcherPermissions.launch(needed.toTypedArray())
+        }
+        window.decorView.postDelayed({ if (watcherBusy) refreshWatcherStatus() }, 3000L)
+    }
+
+    private fun sendWatcherStart() {
+        val attempt = ++watcherStartGeneration
+        try {
+            val intent = Intent(this, CcuWatcherService::class.java).setAction(CcuWatcherService.ACTION_START)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(intent)
+            else startService(intent)
+        } catch (t: Throwable) {
+            watcherStartPending = false
+            watcherBusy = false
+            Toast.makeText(this, "CCU linked Start failed: ${t.javaClass.simpleName}", Toast.LENGTH_LONG).show()
+            return
+        }
+        // ACTION_STATUS normally confirms startup. If it is lost, a running-service poll
+        // can confirm it, but an early negative poll must never clear the Start guard.
+        // Recover a genuinely failed launch after a bounded timeout.
+        window.decorView.postDelayed({
+            if (watcherStartPending && watcherStartGeneration == attempt) {
+                refreshWatcherStatus()
+                if (watcherStartPending) {
+                    watcherStartPending = false
+                    watcherBusy = false
+                    Toast.makeText(this, "CCU linked Start timed out", Toast.LENGTH_LONG).show()
+                }
+            }
+        }, 10_000L)
     }
 
     private fun exportDiagnostics() {
@@ -115,7 +295,7 @@ class MainActivity : ComponentActivity() {
         }
 
     private fun startMirroring(settings: MirrorSettings) {
-        if (CaptureService.mode.value != CastMode.NONE) return
+        if (CaptureService.mode.value != CastMode.NONE || watcherRunning || watcherBusy) return
         pendingSettings = settings
         DiagnosticFlightRecorder.record("UI", "Start requested")
         val missing = requiredPermissions().filter {
@@ -136,7 +316,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun startDash(settings: MirrorSettings) {
-        if (CaptureService.mode.value != CastMode.NONE) return
+        if (CaptureService.mode.value != CastMode.NONE || watcherRunning || watcherBusy) return
         pendingSettings = settings
         val missing = requiredPermissions().filter {
             checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED
@@ -145,16 +325,25 @@ class MainActivity : ComponentActivity() {
         else dashPermissionLauncher.launch(missing.toTypedArray())
     }
 
-    private fun launchDashService(settings: MirrorSettings) {
-        val packageName = settingsStore.dashAppPackage() ?: return
-        val component = packageManager.getLaunchIntentForPackage(packageName)?.component ?: return
+    private fun launchDashService(settings: MirrorSettings, ccuInitiallyOff: Boolean = false) {
+        val packageName = settingsStore.dashAppPackage()
+            ?: run { sendTrialFailure("no_target_app"); return }
+        val component = packageManager.getLaunchIntentForPackage(packageName)?.component
+            ?: run { sendTrialFailure("app_not_launchable"); return }
         val intent = Intent(this, CaptureService::class.java)
             .putExtra(CaptureService.EXTRA_DASH_ENABLED, true)
+            .apply {
+                pendingTrialId?.let {
+                    putExtra(CcuAutoTrial.EXTRA_SESSION_ID, it)
+                    putExtra(CaptureService.EXTRA_CCU_INITIALLY_OFF, ccuInitiallyOff)
+                }
+            }
             .putExtra(CaptureService.EXTRA_DASH_COMPONENT, component.flattenToString())
             .putExtra(CaptureService.EXTRA_DASH_DPI, settings.dashDpi)
             .putExtra(CaptureService.EXTRA_MARGIN_LEFT, settings.dashMargins.left)
             .putExtra(CaptureService.EXTRA_MARGIN_BOTTOM, settings.dashMargins.bottom)
             .putExtra(CaptureService.EXTRA_MARGIN_COLOR, settings.dashMarginColor.name)
+            .putExtra(CaptureService.EXTRA_STICK_INPUT_ENABLED, settings.dashTap.enabled)
             .putExtra(CaptureService.EXTRA_TAP_UP_X, settings.dashTap.upX)
             .putExtra(CaptureService.EXTRA_TAP_UP_Y, settings.dashTap.upY)
             .putExtra(CaptureService.EXTRA_TAP_DOWN_X, settings.dashTap.downX)

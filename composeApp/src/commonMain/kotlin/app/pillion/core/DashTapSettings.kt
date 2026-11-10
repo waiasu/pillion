@@ -10,6 +10,8 @@ data class DashTapSettings(
     val driveUpY: Int = 13,
     val driveDownX: Int = 93,
     val driveDownY: Int = 30,
+    /** Controls only handlebar-stick taps; automatic Drive Mode taps remain enabled. */
+    val enabled: Boolean = true,
 ) {
     companion object {
         /** Marker duration provides at least one frame at low FPS. */
@@ -24,11 +26,13 @@ data class DashTapSettings(
             upX: Int, upY: Int, downX: Int, downY: Int,
             driveUpX: Int = 93, driveUpY: Int = 13,
             driveDownX: Int = 93, driveDownY: Int = 30,
+            enabled: Boolean = true,
         ) = DashTapSettings(
             upX.coerceIn(0, 100), upY.coerceIn(0, 100),
             downX.coerceIn(0, 100), downY.coerceIn(0, 100),
             driveUpX.coerceIn(0, 100), driveUpY.coerceIn(0, 100),
             driveDownX.coerceIn(0, 100), driveDownY.coerceIn(0, 100),
+            enabled = enabled,
         )
     }
 }

@@ -49,6 +49,9 @@ fun App(
     onStartDash: ((MirrorSettings) -> Unit)? = null,
     onStopDash: (() -> Unit)? = null,
     castMode: StateFlow<CastMode> = MutableStateFlow(CastMode.NONE),
+    watcherRunning: Boolean = false,
+    watcherBusy: Boolean = false,
+    onWatcherToggle: () -> Unit = {},
 ) {
     var themeMode by remember { mutableStateOf(settingsStore?.themeMode() ?: ThemeMode.SYSTEM) }
     PillionTheme(themeMode) {
@@ -129,7 +132,7 @@ fun App(
                 onDashMarginColor = { dashMarginColor = it; settingsStore?.setDashMarginColor(it) },
                 dashTap = dashTap,
                 onDashTap = { dashTap = DashTapSettings.clamped(it.upX, it.upY, it.downX, it.downY,
-                    it.driveUpX, it.driveUpY, it.driveDownX, it.driveDownY); settingsStore?.setDashTapSettings(dashTap) },
+                    it.driveUpX, it.driveUpY, it.driveDownX, it.driveDownY, it.enabled); settingsStore?.setDashTapSettings(dashTap) },
                 dashAutoDrive = dashAutoDrive,
                 onDashAutoDrive = { dashAutoDrive = DashAutoDriveSettings.clamped(it.initialX, it.initialY, it.arrivedX, it.arrivedY); settingsStore?.setDashAutoDriveSettings(dashAutoDrive) },
                 yahooNaviEnabled = yahooNaviEnabled,
@@ -151,15 +154,19 @@ fun App(
                 update = update,
                 onOpenSettings = { showSettings = true },
                 onStart = {
-                    if (acknowledged) controller.start(MirrorSettings(quality, maxFps, dashResolution))
-                    else showDisclaimer = true
+                    if (!watcherRunning && !watcherBusy) {
+                        if (acknowledged) controller.start(MirrorSettings(quality, maxFps, dashResolution))
+                        else showDisclaimer = true
+                    }
                 },
                 onStop = controller::stop,
                 castMode = activeMode,
                 showDash = onStartDash != null && !profile.requiresUsb,
                 dashReady = dashEnabled,
                 onStartDash = {
-                    if (dashAppPackage == null) {
+                    if (watcherRunning || watcherBusy) {
+                        dashStartError = "Stop CCU linked mode before manual Start."
+                    } else if (dashAppPackage == null) {
                         dashStartError = "Select an app to display in Settings before starting Virtual Display."
                     } else if (dashApps.none { it.packageName == dashAppPackage }) {
                         dashStartError = "The selected app is unavailable. Choose another app in Settings."
@@ -170,6 +177,8 @@ fun App(
                     }
                 },
                 onStopDash = { onStopDash?.invoke() },
+                watcherRunning = watcherRunning, watcherBusy = watcherBusy,
+                onWatcherToggle = onWatcherToggle,
             )
         }
 
@@ -177,7 +186,8 @@ fun App(
             ExperimentalDialog(onDismiss = {
                 showDisclaimer = false
                 acknowledged = true
-                controller.start(MirrorSettings(quality, maxFps, dashResolution))
+                if (!watcherRunning && !watcherBusy)
+                    controller.start(MirrorSettings(quality, maxFps, dashResolution))
             })
         } else if (update != null && !updateDismissed) {
             UpdateDialog(
