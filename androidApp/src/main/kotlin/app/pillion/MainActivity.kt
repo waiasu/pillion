@@ -1,6 +1,7 @@
 package app.pillion
 
 import android.Manifest
+import android.accessibilityservice.AccessibilityServiceInfo
 import android.app.ActivityManager
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -11,6 +12,7 @@ import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
+import android.view.accessibility.AccessibilityManager
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -28,6 +30,7 @@ import app.pillion.android.CcuWatcherService
 import app.pillion.android.DiagnosticExporter
 import app.pillion.android.DiagnosticFlightRecorder
 import app.pillion.android.SdlMirrorController
+import app.pillion.android.YahooRoadAccessibilityService
 import app.pillion.android.sdl.ProjectionHolder
 import app.pillion.android.sdl.SdlService
 import app.pillion.core.MirrorController
@@ -49,6 +52,7 @@ class MainActivity : ComponentActivity() {
     private var pendingTrialId: String? = null
     private var watcherRunning by mutableStateOf(false)
     private var watcherBusy by mutableStateOf(false)
+    private var yahooAccessibilityEnabled by mutableStateOf(false)
     // Keep the manual Start buttons disabled until CCU watcher startup is confirmed.
     private var watcherStartPending = false
     private var watcherStartGeneration = 0
@@ -124,7 +128,8 @@ class MainActivity : ComponentActivity() {
             requestNotificationPermission = ::requestNotificationPermission,
         )
         setContent { App(::controllerFor, null, settingsStore, dashSetup, AndroidDashAppCatalog(applicationContext), onExportDiagnostics = ::exportDiagnostics, onStartDash = ::startDash, onStopDash = ::stopMirroring, castMode = CaptureService.mode,
-            watcherRunning = watcherRunning, watcherBusy = watcherBusy, onWatcherToggle = ::toggleWatcher) }
+            watcherRunning = watcherRunning, watcherBusy = watcherBusy, onWatcherToggle = ::toggleWatcher,
+            yahooAccessibilityEnabled = yahooAccessibilityEnabled) }
         acceptAutoTrialIntent(intent)
     }
 
@@ -132,6 +137,22 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         acceptAutoTrialIntent(intent)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Also refresh after returning from Android's Accessibility settings.
+        yahooAccessibilityEnabled = isYahooAccessibilityEnabled()
+    }
+
+    private fun isYahooAccessibilityEnabled(): Boolean {
+        val manager = getSystemService(AccessibilityManager::class.java) ?: return false
+        return manager.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_ALL_MASK)
+            .any { info ->
+                val service = info.resolveInfo.serviceInfo
+                service.packageName == packageName &&
+                    service.name == YahooRoadAccessibilityService::class.java.name
+            }
     }
 
     override fun onStart() {
@@ -357,7 +378,7 @@ class MainActivity : ComponentActivity() {
             .putExtra(CaptureService.EXTRA_AUTO_ARRIVED_X, settings.dashAutoDrive.arrivedX)
             .putExtra(CaptureService.EXTRA_AUTO_ARRIVED_Y, settings.dashAutoDrive.arrivedY)
             .putExtra(CaptureService.EXTRA_YAHOO_NAVI_ENABLED, settings.yahooNaviEnabled &&
-                packageName == "jp.co.yahoo.android.apps.navi")
+                packageName == "jp.co.yahoo.android.apps.navi" && isYahooAccessibilityEnabled())
             .putExtra(CaptureService.EXTRA_QUALITY, settings.quality)
             .putExtra(CaptureService.EXTRA_MAX_FPS, settings.maxFps)
             .putExtra(CaptureService.EXTRA_DASH_WIDTH, settings.dashResolution.width)

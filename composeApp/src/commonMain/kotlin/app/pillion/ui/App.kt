@@ -52,6 +52,7 @@ fun App(
     watcherRunning: Boolean = false,
     watcherBusy: Boolean = false,
     onWatcherToggle: () -> Unit = {},
+    yahooAccessibilityEnabled: Boolean = false,
 ) {
     var themeMode by remember { mutableStateOf(settingsStore?.themeMode() ?: ThemeMode.SYSTEM) }
     PillionTheme(themeMode) {
@@ -136,6 +137,7 @@ fun App(
                 dashAutoDrive = dashAutoDrive,
                 onDashAutoDrive = { dashAutoDrive = DashAutoDriveSettings.clamped(it.initialX, it.initialY, it.arrivedX, it.arrivedY); settingsStore?.setDashAutoDriveSettings(dashAutoDrive) },
                 yahooNaviEnabled = yahooNaviEnabled,
+                yahooAccessibilityEnabled = yahooAccessibilityEnabled,
                 onYahooNaviEnabled = { yahooNaviEnabled = it; settingsStore?.setYahooNaviEnabled(it) },
                 dashApps = dashApps,
                 selectedDashApp = dashAppPackage,
@@ -173,7 +175,8 @@ fun App(
                     } else {
                         dashStartError = null
                         onStartDash?.invoke(MirrorSettings(quality, maxFps, dashResolution, dashDpi, dashMargins, dashMarginColor, dashTap, dashAutoDrive,
-                            yahooNaviEnabled && dashAppPackage == "jp.co.yahoo.android.apps.navi"))
+                            yahooNaviEnabled && dashEnabled && yahooAccessibilityEnabled &&
+                                dashAppPackage == "jp.co.yahoo.android.apps.navi"))
                     }
                 },
                 onStopDash = { onStopDash?.invoke() },

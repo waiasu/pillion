@@ -447,8 +447,14 @@ class CcuWatcherService : Service() {
      * CCU icons are Google's Material Symbols (Apache-2.0).
      */
     private fun buildNotification(): Notification {
-        val open = PendingIntent.getActivity(this, 21,
-            Intent(this, MainActivity::class.java),
+        // Reuse the existing MainActivity when opening the CCU notification.
+        // Without these flags, repeated notification taps can stack duplicate Home screens.
+        val openIntent = Intent(this, MainActivity::class.java).addFlags(
+            Intent.FLAG_ACTIVITY_NEW_TASK or
+                Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                Intent.FLAG_ACTIVITY_SINGLE_TOP
+        )
+        val open = PendingIntent.getActivity(this, 21, openIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val stop = PendingIntent.getService(this, 22,
             Intent(this, CcuWatcherService::class.java).setAction(ACTION_STOP),

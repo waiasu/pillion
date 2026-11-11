@@ -97,6 +97,7 @@ internal fun SettingsScreen(
     dashAutoDrive: DashAutoDriveSettings = DashAutoDriveSettings(),
     onDashAutoDrive: (DashAutoDriveSettings) -> Unit = {},
     yahooNaviEnabled: Boolean = true,
+    yahooAccessibilityEnabled: Boolean = false,
     onYahooNaviEnabled: (Boolean) -> Unit = {},
     dashApps: List<DashApp> = emptyList(),
     selectedDashApp: String? = null,
@@ -114,6 +115,7 @@ internal fun SettingsScreen(
     var tapExpanded by remember { mutableStateOf(false) }
     var yahooExpanded by remember { mutableStateOf(false) }
     val yahooSelected = selectedDashApp == "jp.co.yahoo.android.apps.navi"
+    val yahooReady = dashEnabled && yahooSelected && yahooAccessibilityEnabled
     Column(
         modifier = Modifier.fillMaxSize()
             .safeDrawingPadding()
@@ -250,7 +252,7 @@ internal fun SettingsScreen(
 
         if (dashSupported) {
             Spacer(Modifier.height(24.dp))
-            SectionHeader("Dedicated dash display (experimental)")
+            SectionHeader("Dedicated dash display")
             SettingsGroup {
                 Row(
                     Modifier.fillMaxWidth().padding(vertical = 12.dp),
@@ -339,10 +341,18 @@ internal fun SettingsScreen(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    Switch(checked = yahooNaviEnabled && yahooSelected,
-                        onCheckedChange = onYahooNaviEnabled, enabled = yahooSelected)
+                    Switch(checked = yahooNaviEnabled && yahooReady,
+                        onCheckedChange = onYahooNaviEnabled, enabled = yahooReady)
                 }
-                if (yahooNaviEnabled && yahooSelected) {
+                if (dashEnabled && yahooSelected && !yahooAccessibilityEnabled) {
+                    Text(
+                        "Enable the Pillion Yahoo ROAD accessibility service to use these features.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 10.dp),
+                    )
+                }
+                if (yahooNaviEnabled && yahooReady) {
                     GroupDivider()
                     Row(
                         Modifier.fillMaxWidth().clickable { yahooExpanded = !yahooExpanded }.padding(vertical = 14.dp),

@@ -27,7 +27,7 @@ internal fun ExperimentalDialog(onDismiss: () -> Unit) {
             Text(
                 "Pillion is experimental and provided as-is — use it entirely at your own risk. " +
                     "Set your route before you ride and keep your eyes on the road; never interact " +
-                    "with your phone while moving. Not affiliated with, or endorsed by, Yamaha or Garmin.",
+                    "with your phone while moving. Not affiliated with, or endorsed by, Yamaha, Garmin, or Yahoo! JAPAN.",
             )
         },
         confirmButton = {

@@ -367,15 +367,20 @@ class CaptureService : Service() {
         dashPromotedAtMs = 0L
         promotionGeneration++
         DiagnosticFlightRecorder.record("CAPTURE", "cleanup begin")
-        // Send DEMOTE before closing the session socket when preserving Helper.
-        if (keepDashHelperOnDestroy) runCatching { dashModeSource?.demote() }
-        engine?.stop()
-        DashHelper.stopWatchdog()
-        scope.cancel()
-        releaseWakeLock()
         val source = dashSource
         Thread({
             try {
+                // Keep DEMOTE ahead of engine shutdown / scope cancellation, which can
+                // close the Helper socket. Sending here avoids Android's main-thread
+                // network restriction in Service.onDestroy().
+                if (keepDashHelperOnDestroy) {
+                    DiagnosticFlightRecorder.record("CAPTURE", "cleanup DEMOTE on worker before socket close")
+                    runCatching { dashModeSource?.demote() }
+                }
+                engine?.stop()
+                DashHelper.stopWatchdog()
+                scope.cancel()
+                releaseWakeLock()
                 // First stop the image source, then let the original connect/Helper tasks finish.
                 runCatching {
                     if (keepDashHelperOnDestroy) source?.stop() else source?.quit()
