@@ -1,3 +1,25 @@
+## XMAX Experimental Fork
+
+This fork focuses on Yamaha XMAX integration, connection stability, and dedicated dashboard support.
+
+Includes Yahoo! Car Navi integration, joystick controls, and automatic dashboard operation.
+
+"Download experimental APK" (https://github.com/waiasu/pillion/releases/tag/xmax-test-20261111)
+
+Debug build, provided as-is. Some features require additional Android permissions and setup.
+
+---
+
+## Original Pillion README
+
+The following is the original project's README, preserved for reference.
+
+Some descriptions may differ from the current features and behavior of this fork.
+
+Original project: "alexandrevega/pillion" (https://github.com/alexandrevega/pillion)
+
+---
+
 <p align="center">
   <img src="art/icon.png" alt="Pillion logo" width="150" height="150">
 </p>
