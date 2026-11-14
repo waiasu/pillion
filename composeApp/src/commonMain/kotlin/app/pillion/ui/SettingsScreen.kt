@@ -482,16 +482,16 @@ private fun PresetSettings(
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 3.dp, vertical = 8.dp),
             ) { Text("Apply", maxLines = 1, fontSize = 12.sp) }
             OutlinedButton(
-                onClick = { action = "overwrite" },
-                enabled = chosen != null && !chosen.isDefault,
-                modifier = Modifier.weight(1.15f),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 3.dp, vertical = 8.dp),
-            ) { Text("Overwrite", maxLines = 1, fontSize = 12.sp) }
-            OutlinedButton(
                 onClick = { newName = ""; error = ""; action = "new" },
-                modifier = Modifier.weight(1.15f),
+                modifier = Modifier.weight(1f),
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 3.dp, vertical = 8.dp),
             ) { Text("Save new", maxLines = 1, fontSize = 12.sp) }
+            OutlinedButton(
+                onClick = { action = "overwrite" },
+                enabled = chosen != null && !chosen.isDefault,
+                modifier = Modifier.weight(1f),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 3.dp, vertical = 8.dp),
+            ) { Text("Overwrite", maxLines = 1, fontSize = 12.sp) }
             IconButton(
                 onClick = { action = "delete" },
                 enabled = chosen != null && !chosen.isDefault,
