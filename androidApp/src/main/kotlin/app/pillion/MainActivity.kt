@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.IntentFilter
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.projection.MediaProjectionConfig
 import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.os.Bundle
@@ -378,7 +379,14 @@ class MainActivity : ComponentActivity() {
 
     private fun requestProjection() {
         val mpm = getSystemService(MediaProjectionManager::class.java)
-        projectionLauncher.launch(mpm.createScreenCaptureIntent())
+        // Normal Bluetooth mirroring always captures the entire physical display on Android 14+.
+        // Keep USB/SDL and older Android consent behavior unchanged.
+        val intent = if (!pendingSdl && Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            mpm.createScreenCaptureIntent(MediaProjectionConfig.createConfigForDefaultDisplay())
+        } else {
+            mpm.createScreenCaptureIntent()
+        }
+        projectionLauncher.launch(intent)
     }
 
     private val dashPermissionLauncher = registerForActivityResult(
