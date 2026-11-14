@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import app.pillion.core.MirrorSettings
 import app.pillion.core.SettingsStore
+import app.pillion.core.SettingsPreset
 import app.pillion.core.ThemeMode
 import app.pillion.core.UpdateChecker
 import app.pillion.core.UpdateInfo
@@ -86,6 +87,7 @@ fun App(
         var dashAutoDrive by remember { mutableStateOf(settingsStore?.dashAutoDriveSettings() ?: DashAutoDriveSettings()) }
         var yahooNaviEnabled by remember { mutableStateOf(settingsStore?.yahooNaviEnabled() ?: true) }
         var dashAppPackage by remember { mutableStateOf(settingsStore?.dashAppPackage()) }
+        var presets by remember { mutableStateOf(settingsStore?.listPresets().orEmpty()) }
         val dashApps = remember(dashAppCatalog) { dashAppCatalog?.availableApps().orEmpty() }
         var dashStartError by remember { mutableStateOf<String?>(null) }
         var showDisclaimer by rememberSaveable { mutableStateOf(false) }
@@ -149,6 +151,35 @@ fun App(
                 update = update,
                 onBack = { showSettings = false },
                 onExportDiagnostics = onExportDiagnostics,
+                presets = presets,
+                onSavePreset = { name, overwrite ->
+                    val saved = settingsStore?.savePreset(name, overwrite) ?: false
+                    if (saved) presets = settingsStore?.listPresets().orEmpty()
+                    saved
+                },
+                onDeletePreset = { name ->
+                    val removed = settingsStore?.deletePreset(name) ?: false
+                    if (removed) presets = settingsStore?.listPresets().orEmpty()
+                    removed
+                },
+                onApplyPreset = { name ->
+                    val applied = settingsStore?.applyPreset(name) ?: false
+                    if (applied) {
+                        quality = settingsStore?.imageQuality() ?: quality
+                        maxFps = settingsStore?.maxFrameRate() ?: maxFps
+                        dashEnabled = settingsStore?.dashEnabled() ?: dashEnabled
+                        dashResolution = settingsStore?.dashResolution() ?: dashResolution
+                        dashDpi = settingsStore?.dashDpi() ?: dashDpi
+                        dashMargins = settingsStore?.dashMargins() ?: dashMargins
+                        dashMarginColor = settingsStore?.dashMarginColor() ?: dashMarginColor
+                        dashTap = settingsStore?.dashTapSettings() ?: dashTap
+                        dashAutoDrive = settingsStore?.dashAutoDriveSettings() ?: dashAutoDrive
+                        yahooNaviEnabled = settingsStore?.yahooNaviEnabled() ?: yahooNaviEnabled
+                        dashAppPackage = settingsStore?.dashAppPackage()
+                        dashStartError = null
+                    }
+                    applied
+                },
             )
         } else {
             HomeScreen(
