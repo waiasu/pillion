@@ -69,8 +69,10 @@ fun OnboardingScreen(
     profiles: List<HeadUnitProfile>,
     onSelect: (HeadUnitProfile) -> Unit,
     skipIntro: Boolean = false,
+    onRestoreBackup: () -> Unit = {},
+    restoreStatus: String? = null,
 ) {
-    val introPages = 2
+    val introPages = 3
     val pageCount = introPages + 1            // intro pages + the selection page
     val selectionPage = introPages
     val pager = rememberPagerState(initialPage = if (skipIntro) selectionPage else 0) { pageCount }
@@ -94,6 +96,7 @@ fun OnboardingScreen(
                 when (page) {
                     0 -> WelcomePage()
                     1 -> HowItConnectsPage()
+                    2 -> RestoreSettingsPage(onRestoreBackup, restoreStatus)
                     else -> SelectionPage(profiles, onSelect)
                 }
             }
@@ -118,7 +121,8 @@ fun OnboardingScreen(
                         contentColor = MaterialTheme.colorScheme.onPrimary,
                     ),
                 ) {
-                    Text("Continue", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text(if (pager.currentPage == 2) "Continue without restore" else "Continue",
+                        style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 }
             } else {
                 // Keep the bottom height stable so the dots don't jump when the button disappears.
@@ -191,6 +195,38 @@ private fun HowItConnectsPage() {
             Icons.Filled.Map,
             "More bikes over time",
             "We're adding support for more motorcycles and dashes — just keep the app updated.",
+        )
+    }
+}
+
+@Composable
+private fun RestoreSettingsPage(onRestoreBackup: () -> Unit, status: String?) {
+    Column(
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text("Restore settings", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(12.dp))
+        Text(
+            "Used Pillion before? Restore your display settings and saved presets from a diagnostic ZIP. " +
+                "Otherwise, continue with a fresh setup.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(28.dp))
+        Button(onClick = onRestoreBackup, modifier = Modifier.fillMaxWidth().height(54.dp)) {
+            Text("Restore from ZIP")
+        }
+        if (!status.isNullOrBlank()) {
+            Spacer(Modifier.height(18.dp))
+            Text(status, style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Spacer(Modifier.height(16.dp))
+        Text(
+            "Motorcycle, connection permissions and Virtual Display setup are configured separately.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
