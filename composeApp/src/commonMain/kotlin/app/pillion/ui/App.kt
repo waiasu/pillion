@@ -94,8 +94,6 @@ fun App(
         var presets by remember { mutableStateOf(settingsStore?.listPresets().orEmpty()) }
         val dashApps = remember(dashAppCatalog) { dashAppCatalog?.availableApps().orEmpty() }
         var dashStartError by remember { mutableStateOf<String?>(null) }
-        var showDisclaimer by rememberSaveable { mutableStateOf(false) }
-        var acknowledged by rememberSaveable { mutableStateOf(false) }
         var update by remember { mutableStateOf<UpdateInfo?>(null) }
         var updateDismissed by rememberSaveable { mutableStateOf(false) }
         val uriHandler = LocalUriHandler.current
@@ -191,10 +189,8 @@ fun App(
                 update = update,
                 onOpenSettings = { showSettings = true },
                 onStart = {
-                    if (!watcherRunning && !watcherBusy) {
-                        if (acknowledged) controller.start(MirrorSettings(quality, maxFps, dashResolution))
-                        else showDisclaimer = true
-                    }
+                    if (!watcherRunning && !watcherBusy)
+                        controller.start(MirrorSettings(quality, maxFps, dashResolution))
                 },
                 onStop = controller::stop,
                 castMode = activeMode,
@@ -220,14 +216,7 @@ fun App(
             )
         }
 
-        if (showDisclaimer) {
-            ExperimentalDialog(onDismiss = {
-                showDisclaimer = false
-                acknowledged = true
-                if (!watcherRunning && !watcherBusy)
-                    controller.start(MirrorSettings(quality, maxFps, dashResolution))
-            })
-        } else if (update != null && !updateDismissed) {
+        if (update != null && !updateDismissed) {
             UpdateDialog(
                 update = update!!,
                 onUpdate = { uriHandler.openUri(update!!.url); updateDismissed = true },
