@@ -440,7 +440,7 @@ private fun PresetSettings(
     onSave: (String, Boolean) -> Boolean,
     onDelete: (String) -> Boolean,
 ) {
-    var selected by remember { mutableStateOf(presets.firstOrNull()?.name.orEmpty()) }
+    var selected by remember { mutableStateOf("") }
     var expanded by remember { mutableStateOf(false) }
     var action by remember { mutableStateOf<String?>(null) }
     var newName by remember { mutableStateOf("") }
@@ -540,8 +540,8 @@ private fun PresetSettings(
                             else -> onSave(newName.trim(), false)
                         }
                         if (ok) {
-                            if (operation == "new") selected = newName.trim()
-                            if (operation == "delete") selected = presets.firstOrNull()?.name.orEmpty()
+                            // Selection is temporary and must never imply an applied preset.
+                            selected = ""
                             error = ""
                             action = null
                         } else {
