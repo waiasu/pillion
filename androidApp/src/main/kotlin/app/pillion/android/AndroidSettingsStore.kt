@@ -118,7 +118,7 @@ class AndroidSettingsStore(context: Context) : SettingsStore {
 
     // Only projection/app preferences belong to a preset. Device transport, bike and appearance stay untouched.
     private val presetKeys = listOf(
-        "image_quality", "max_frame_rate", KEY_DASH_ENABLED, KEY_DASH_RESOLUTION, KEY_DASH_DPI,
+        "image_quality", "max_frame_rate", KEY_DASH_RESOLUTION, KEY_DASH_DPI,
         "dash_left_margin", "dash_bottom_margin", "dash_margin_color", KEY_DASH_APP,
         "stick_input_enabled", "tap_up_x", "tap_up_y", "tap_down_x", "tap_down_y",
         "tap_drive_up_x", "tap_drive_up_y", "tap_drive_down_x", "tap_drive_down_y",
@@ -131,7 +131,7 @@ class AndroidSettingsStore(context: Context) : SettingsStore {
         val margin = DashMargins()
         mapOf(
             "image_quality" to 80, "max_frame_rate" to 3,
-            KEY_DASH_ENABLED to false, KEY_DASH_RESOLUTION to DashResolution.DEFAULT.name,
+            KEY_DASH_RESOLUTION to DashResolution.DEFAULT.name,
             KEY_DASH_DPI to DashDpi.DEFAULT,
             "dash_left_margin" to margin.left, "dash_bottom_margin" to margin.bottom,
             "dash_margin_color" to DashMarginColor.Black.name,
@@ -160,6 +160,70 @@ class AndroidSettingsStore(context: Context) : SettingsStore {
             data.put(key, value)
         }
         return data
+    }
+
+    /** Versioned, portable settings backup. Device connection, appearance and VD setup flags are excluded. */
+    fun exportBackupJson(): String {
+        val saved = presetObject()
+        val portablePresets = JSONObject()
+        for (name in saved.keys()) {
+            val data = saved.optJSONObject(name) ?: continue
+            if (name != DEFAULT_PRESET && name.isNotBlank() && name.length <= 80) {
+                // Drops legacy dash_enabled even from older named presets.
+                runCatching { portablePresets.put(name, validatedSnapshot(data)) }
+            }
+        }
+        return JSONObject()
+            .put("format", "pillion-settings")
+            .put("version", 1)
+            .put("settings", validatedSnapshot(currentSnapshot()))
+            .put("presets", portablePresets)
+            .toString(2)
+    }
+
+    /** Validate the complete backup before changing any preference. */
+    fun importBackupJson(json: String) {
+        require(json.length <= 1_048_576) { "Settings backup too large" }
+        val root = JSONObject(json)
+        require(root.optString("format") == "pillion-settings" && root.optInt("version") == 1) {
+            "Unsupported settings backup format"
+        }
+        val current = validatedSnapshot(root.getJSONObject("settings"))
+        val sourcePresets = root.getJSONObject("presets")
+        require(sourcePresets.length() <= 100) { "Too many presets" }
+        val portable = JSONObject()
+        for (name in sourcePresets.keys()) {
+            require(name.isNotBlank() && name.length <= 80 && name == name.trim() && name != DEFAULT_PRESET) {
+                "Invalid preset name"
+            }
+            portable.put(name, validatedSnapshot(sourcePresets.getJSONObject(name)))
+        }
+        val editor = prefs.edit()
+        for (key in presetKeys) {
+            when (defaultValues.getValue(key)) {
+                is Boolean -> editor.putBoolean(key, current.getBoolean(key))
+                is Int -> editor.putInt(key, current.getInt(key))
+                is String -> editor.putString(key, current.getString(key))
+            }
+        }
+        editor.putString(KEY_PRESETS, portable.toString()).apply()
+    }
+
+    private fun validatedSnapshot(source: JSONObject): JSONObject {
+        val portable = JSONObject()
+        for (key in presetKeys) {
+            require(source.has(key)) { "Missing setting: $key" }
+            val value = source.get(key)
+            val correctType = when (defaultValues.getValue(key)) {
+                is Boolean -> value is Boolean
+                is Int -> value is Number
+                is String -> value is String
+                else -> false
+            }
+            require(correctType) { "Invalid setting type: $key" }
+            portable.put(key, value)
+        }
+        return portable
     }
 
     override fun listPresets(): List<SettingsPreset> {
