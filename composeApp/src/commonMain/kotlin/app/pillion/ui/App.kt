@@ -54,6 +54,8 @@ fun App(
     watcherBusy: Boolean = false,
     onWatcherToggle: () -> Unit = {},
     yahooAccessibilityEnabled: Boolean = false,
+    onRestoreBackup: () -> Unit = {},
+    restoreStatus: String? = null,
 ) {
     var themeMode by remember { mutableStateOf(settingsStore?.themeMode() ?: ThemeMode.SYSTEM) }
     PillionTheme(themeMode) {
@@ -67,6 +69,8 @@ fun App(
                 profiles = HeadUnitRegistry.all(),
                 onSelect = { p -> settingsStore?.setSelectedBikeId(p.id); selectedBikeId = p.id; changingBike = false },
                 skipIntro = changingBike,
+                onRestoreBackup = onRestoreBackup,
+                restoreStatus = restoreStatus,
             )
             return@PillionTheme
         }
