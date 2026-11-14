@@ -209,14 +209,15 @@ class AndroidSettingsStore(context: Context) : SettingsStore {
         editor.putString(KEY_PRESETS, portable.toString()).apply()
     }
 
+    /** Missing keys use current defaults; unknown keys are ignored. Existing values keep strict types. */
     private fun validatedSnapshot(source: JSONObject): JSONObject {
         val portable = JSONObject()
         for (key in presetKeys) {
-            require(source.has(key)) { "Missing setting: $key" }
-            val value = source.get(key)
-            val correctType = when (defaultValues.getValue(key)) {
+            val fallback = defaultValues.getValue(key)
+            val value = if (source.has(key)) source.get(key) else fallback
+            val correctType = when (fallback) {
                 is Boolean -> value is Boolean
-                is Int -> value is Number
+                is Int -> value is Int || value is Long
                 is String -> value is String
                 else -> false
             }
@@ -256,23 +257,23 @@ class AndroidSettingsStore(context: Context) : SettingsStore {
         val data = if (name == DEFAULT_PRESET) {
             JSONObject().apply { defaultValues.forEach { (key, value) -> put(key, value) } }
         } else presetObject().optJSONObject(name) ?: return false
-        // Snapshot is full and typed; reject incomplete or malformed records before changing preferences.
-        if (presetKeys.any { !data.has(it) }) return false
+        // Older presets may lack new keys; normalize before applying anything.
+        val normalized = runCatching { validatedSnapshot(data) }.getOrNull() ?: return false
         val editor = prefs.edit()
         for (key in presetKeys) {
             val expected = defaultValues.getValue(key)
             when (expected) {
                 is Boolean -> {
-                    if (data.opt(key) !is Boolean) return false
-                    editor.putBoolean(key, data.getBoolean(key))
+                    if (normalized.opt(key) !is Boolean) return false
+                    editor.putBoolean(key, normalized.getBoolean(key))
                 }
                 is Int -> {
-                    if (data.opt(key) !is Number) return false
-                    editor.putInt(key, data.getInt(key))
+                    if (normalized.opt(key) !is Number) return false
+                    editor.putInt(key, normalized.getInt(key))
                 }
                 is String -> {
-                    if (data.opt(key) !is String) return false
-                    editor.putString(key, data.getString(key))
+                    if (normalized.opt(key) !is String) return false
+                    editor.putString(key, normalized.getString(key))
                 }
             }
         }
