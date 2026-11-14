@@ -8,9 +8,12 @@ import android.content.Context
 import android.content.IntentFilter
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.projection.MediaProjectionConfig
 import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.os.Bundle
+import java.util.zip.ZipInputStream
+import java.io.ByteArrayOutputStream
 import android.widget.Toast
 import android.view.accessibility.AccessibilityManager
 import androidx.activity.ComponentActivity
@@ -53,6 +56,38 @@ class MainActivity : ComponentActivity() {
     private var watcherRunning by mutableStateOf(false)
     private var watcherBusy by mutableStateOf(false)
     private var yahooAccessibilityEnabled by mutableStateOf(false)
+    private var restoreStatus by mutableStateOf<String?>(null)
+    private val restorePicker = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            restoreStatus = runCatching {
+                val json = contentResolver.openInputStream(uri)?.use { stream ->
+                    ZipInputStream(stream).use { zip ->
+                        var backup: String? = null
+                        var entry = zip.nextEntry
+                        while (entry != null) {
+                            if (entry.name == "settings-backup.json") {
+                                val buffer = ByteArrayOutputStream()
+                                val chunk = ByteArray(8192)
+                                while (true) {
+                                    val count = zip.read(chunk)
+                                    if (count < 0) break
+                                    if (buffer.size() + count > 1_048_576) error("Settings backup too large")
+                                    buffer.write(chunk, 0, count)
+                                }
+                                backup = buffer.toString(Charsets.UTF_8.name())
+                                break
+                            }
+                            zip.closeEntry()
+                            entry = zip.nextEntry
+                        }
+                        backup ?: error("No settings-backup.json in ZIP")
+                    }
+                } ?: error("Cannot open ZIP")
+                settingsStore.importBackupJson(json)
+                "Settings and presets restored. Continue to choose your motorcycle."
+            }.getOrElse { "Restore failed: ${it.message?.take(140) ?: it.javaClass.simpleName}" }
+        }
+    }
     // Keep the manual Start buttons disabled until CCU watcher startup is confirmed.
     private var watcherStartPending = false
     private var watcherStartGeneration = 0
@@ -78,6 +113,19 @@ class MainActivity : ComponentActivity() {
             Toast.makeText(this, "Bluetooth and notification permissions required", Toast.LENGTH_LONG).show()
         }
     }
+    // Ask for all currently missing runtime permissions at app launch, not during the first cast.
+    // Special access (usage access, accessibility, wireless debugging) has separate Android setup flows.
+    private val startupPermissions = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions(),
+    ) { /* Existing operation-specific guards remain responsible for denied permissions. */ }
+
+    private fun requestStartupPermissions() {
+        val missing = requiredPermissions().filter {
+            checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED
+        }
+        if (missing.isNotEmpty()) startupPermissions.launch(missing.toTypedArray())
+    }
+
     private val settingsStore by lazy { AndroidSettingsStore(applicationContext) }
 
     private val projectionLauncher = registerForActivityResult(
@@ -129,8 +177,12 @@ class MainActivity : ComponentActivity() {
         )
         setContent { App(::controllerFor, null, settingsStore, dashSetup, AndroidDashAppCatalog(applicationContext), onExportDiagnostics = ::exportDiagnostics, onStartDash = ::startDash, onStopDash = ::stopMirroring, castMode = CaptureService.mode,
             watcherRunning = watcherRunning, watcherBusy = watcherBusy, onWatcherToggle = ::toggleWatcher,
-            yahooAccessibilityEnabled = yahooAccessibilityEnabled) }
+            yahooAccessibilityEnabled = yahooAccessibilityEnabled,
+            onRestoreBackup = { restoreStatus = null; restorePicker.launch(arrayOf("application/zip", "application/x-zip-compressed", "application/octet-stream")) },
+            restoreStatus = restoreStatus) }
         acceptAutoTrialIntent(intent)
+        // Only on the first creation of this Activity; never interrupt recreation.
+        if (savedInstanceState == null) window.decorView.post { requestStartupPermissions() }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -327,7 +379,14 @@ class MainActivity : ComponentActivity() {
 
     private fun requestProjection() {
         val mpm = getSystemService(MediaProjectionManager::class.java)
-        projectionLauncher.launch(mpm.createScreenCaptureIntent())
+        // Normal Bluetooth mirroring always captures the entire physical display on Android 14+.
+        // Keep USB/SDL and older Android consent behavior unchanged.
+        val intent = if (!pendingSdl && Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            mpm.createScreenCaptureIntent(MediaProjectionConfig.createConfigForDefaultDisplay())
+        } else {
+            mpm.createScreenCaptureIntent()
+        }
+        projectionLauncher.launch(intent)
     }
 
     private val dashPermissionLauncher = registerForActivityResult(

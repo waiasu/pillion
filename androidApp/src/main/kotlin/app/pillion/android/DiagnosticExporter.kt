@@ -44,6 +44,7 @@ object DiagnosticExporter {
                     "Uptime ms: ${SystemClock.elapsedRealtime()}\n" +
                     "Android: ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})\n"
             )
+            File(work, "settings-backup.json").writeText(AndroidSettingsStore(context).exportBackupJson())
             // ADB is only used on demand. Failure must never destroy the flight snapshot.
             val query = runCatching {
                 val adb = PillionAdb.getInstance(context)

@@ -3,6 +3,7 @@ package app.pillion.ui
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -24,9 +25,12 @@ import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -67,6 +71,7 @@ import app.pillion.core.DashMarginColor
 import app.pillion.core.DashApp
 import app.pillion.core.DashResolution
 import app.pillion.core.ThemeMode
+import app.pillion.core.SettingsPreset
 import app.pillion.core.UpdateInfo
 import app.pillion.resources.Res
 import app.pillion.resources.app_icon
@@ -109,6 +114,10 @@ internal fun SettingsScreen(
     update: UpdateInfo?,
     onBack: () -> Unit,
     onExportDiagnostics: (() -> Unit)? = null,
+    presets: List<SettingsPreset> = emptyList(),
+    onApplyPreset: (String) -> Boolean = { false },
+    onSavePreset: (String, Boolean) -> Boolean = { _, _ -> false },
+    onDeletePreset: (String) -> Boolean = { false },
 ) {
     val uriHandler = LocalUriHandler.current
     var displayAdjustmentsExpanded by remember { mutableStateOf(false) }
@@ -193,25 +202,11 @@ internal fun SettingsScreen(
             Spacer(Modifier.height(24.dp))
         }
 
-        SectionHeader("Appearance")
-        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-            val options = listOf(
-                ThemeMode.SYSTEM to "System",
-                ThemeMode.LIGHT to "Light",
-                ThemeMode.DARK to "Dark",
-            )
-            options.forEachIndexed { index, (mode, label) ->
-                SegmentedButton(
-                    selected = themeMode == mode,
-                    onClick = { onThemeMode(mode) },
-                    shape = SegmentedButtonDefaults.itemShape(index, options.size),
-                ) {
-                    Text(label)
-                }
-            }
+        if (presets.isNotEmpty()) {
+            PresetSettings(presets, onApplyPreset, onSavePreset, onDeletePreset)
+            Spacer(Modifier.height(24.dp))
         }
 
-        Spacer(Modifier.height(24.dp))
         SectionHeader("Motorcycle")
         SettingsGroup {
             Row(
@@ -232,6 +227,25 @@ internal fun SettingsScreen(
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary,
                 )
+            }
+        }
+
+        Spacer(Modifier.height(24.dp))
+        SectionHeader("Appearance")
+        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+            val options = listOf(
+                ThemeMode.SYSTEM to "System",
+                ThemeMode.LIGHT to "Light",
+                ThemeMode.DARK to "Dark",
+            )
+            options.forEachIndexed { index, (mode, label) ->
+                SegmentedButton(
+                    selected = themeMode == mode,
+                    onClick = { onThemeMode(mode) },
+                    shape = SegmentedButtonDefaults.itemShape(index, options.size),
+                ) {
+                    Text(label)
+                }
             }
         }
 
@@ -407,14 +421,150 @@ internal fun SettingsScreen(
             GroupDivider()
             LinkRow("Source code") { uriHandler.openUri(REPO_URL) }
             GroupDivider()
-            LinkRow("Report an issue") { uriHandler.openUri("$REPO_URL/issues") }
-            GroupDivider()
             LinkRow("Changelog") { uriHandler.openUri("$REPO_URL/blob/main/CHANGELOG.md") }
+            GroupDivider()
+            LinkRow("XMAX Custom Fork") { uriHandler.openUri("https://github.com/waiasu/pillion") }
         }
+        Text(
+            "Yamaha, Garmin, and StreetCross are trademarks of their respective owners. " +
+                "Pillion is an independent, unofficial project and is not affiliated with, " +
+                "endorsed by, or sponsored by Yamaha or Garmin.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 6.dp, top = 8.dp, end = 6.dp),
+        )
 
         Spacer(Modifier.height(28.dp))
         MadeByCredit { uriHandler.openUri("https://github.com/alexandrevega") }
         Spacer(Modifier.height(16.dp))
+    }
+}
+
+
+@Composable
+private fun PresetSettings(
+    presets: List<SettingsPreset>,
+    onApply: (String) -> Boolean,
+    onSave: (String, Boolean) -> Boolean,
+    onDelete: (String) -> Boolean,
+) {
+    var selected by remember { mutableStateOf("") }
+    var expanded by remember { mutableStateOf(false) }
+    var action by remember { mutableStateOf<String?>(null) }
+    var newName by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf("") }
+    val chosen = presets.firstOrNull { it.name == selected }
+    SectionHeader("Settings presets")
+    SettingsGroup {
+        Box(Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier.fillMaxWidth().clickable { expanded = true }.padding(vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    chosen?.let { "${it.name}   ·   ${it.dpi} dpi / ${it.layoutScale}" } ?: "Select preset",
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1,
+                )
+                Text("▼", color = MaterialTheme.colorScheme.primary)
+            }
+            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                presets.forEach { preset ->
+                    DropdownMenuItem(
+                        text = { Text("${preset.name}   ·   ${preset.dpi} dpi / ${preset.layoutScale}") },
+                        onClick = { selected = preset.name; expanded = false; error = "" },
+                    )
+                }
+            }
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Button(
+                onClick = { action = "apply" },
+                enabled = chosen != null,
+                modifier = Modifier.weight(1f),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 3.dp, vertical = 8.dp),
+            ) { Text("Apply", maxLines = 1, fontSize = 12.sp) }
+            OutlinedButton(
+                onClick = { newName = ""; error = ""; action = "new" },
+                modifier = Modifier.weight(1f),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 3.dp, vertical = 8.dp),
+            ) { Text("Save new", maxLines = 1, fontSize = 12.sp) }
+            OutlinedButton(
+                onClick = { action = "overwrite" },
+                enabled = chosen != null && !chosen.isDefault,
+                modifier = Modifier.weight(1f),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 3.dp, vertical = 8.dp),
+            ) { Text("Overwrite", maxLines = 1, fontSize = 12.sp) }
+            IconButton(
+                onClick = { action = "delete" },
+                enabled = chosen != null && !chosen.isDefault,
+                modifier = Modifier.size(36.dp),
+            ) { Icon(Icons.Filled.DeleteOutline, contentDescription = "Delete preset", modifier = Modifier.size(18.dp)) }
+        }
+        if (error.isNotEmpty()) {
+            Text(error, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+        }
+    }
+    if (action != null) {
+        val operation = action
+        AlertDialog(
+            onDismissRequest = { action = null },
+            title = { Text(when (operation) {
+                "apply" -> "Apply preset?"
+                "overwrite" -> "Overwrite preset?"
+                "delete" -> "Delete preset?"
+                else -> "Save new preset"
+            }) },
+            text = {
+                if (operation == "new") {
+                    OutlinedTextField(
+                        value = newName,
+                        onValueChange = { newName = it.take(80) },
+                        label = { Text("Preset name") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                } else {
+                    Text(when (operation) {
+                        "apply" -> "Replace current settings with \"${chosen?.name}\"? Changes take effect on next Start."
+                        "overwrite" -> "Replace \"${chosen?.name}\" with the current settings?"
+                        else -> "Permanently delete \"${chosen?.name}\"?"
+                    })
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = operation != "new" || newName.trim().isNotEmpty(),
+                    onClick = {
+                        val ok = when (operation) {
+                            "apply" -> chosen?.let { onApply(it.name) } ?: false
+                            "overwrite" -> chosen?.let { onSave(it.name, true) } ?: false
+                            "delete" -> chosen?.let { onDelete(it.name) } ?: false
+                            else -> onSave(newName.trim(), false)
+                        }
+                        if (ok) {
+                            // Selection is temporary and must never imply an applied preset.
+                            selected = ""
+                            error = ""
+                            action = null
+                        } else {
+                            error = if (operation == "new") "Cannot save: the name may already exist." else "Operation failed."
+                            action = null
+                        }
+                    },
+                ) { Text(if (operation == "new") "Save" else when (operation) {
+                    "apply" -> "Apply"
+                    "overwrite" -> "Overwrite"
+                    else -> "Delete"
+                }) }
+            },
+            dismissButton = { TextButton(onClick = { action = null }) { Text("Cancel") } },
+        )
     }
 }
 
