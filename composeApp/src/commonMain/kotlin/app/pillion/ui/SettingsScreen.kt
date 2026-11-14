@@ -423,7 +423,7 @@ internal fun SettingsScreen(
             GroupDivider()
             LinkRow("Changelog") { uriHandler.openUri("$REPO_URL/blob/main/CHANGELOG.md") }
             GroupDivider()
-            LinkRow("XMAX Custom Fork v40") { uriHandler.openUri("https://github.com/waiasu/pillion") }
+            LinkRow("XMAX Custom Fork") { uriHandler.openUri("https://github.com/waiasu/pillion") }
         }
         Text(
             "Yamaha, Garmin, and StreetCross are trademarks of their respective owners. " +
