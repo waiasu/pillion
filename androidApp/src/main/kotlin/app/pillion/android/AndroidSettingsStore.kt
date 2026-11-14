@@ -227,7 +227,7 @@ class AndroidSettingsStore(context: Context) : SettingsStore {
 
     private companion object {
         const val KEY_PRESETS = "settings_presets_v1"
-        const val DEFAULT_PRESET = "標準設定 (デフォルト)"
+        const val DEFAULT_PRESET = "Default settings"
         const val KEY_THEME = "theme_mode"
         const val KEY_DASH_ENABLED = "dash_enabled"
         const val KEY_DASH_RESOLUTION = "dash_resolution"
