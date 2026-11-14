@@ -207,25 +207,6 @@ internal fun SettingsScreen(
             Spacer(Modifier.height(24.dp))
         }
 
-        SectionHeader("Appearance")
-        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-            val options = listOf(
-                ThemeMode.SYSTEM to "System",
-                ThemeMode.LIGHT to "Light",
-                ThemeMode.DARK to "Dark",
-            )
-            options.forEachIndexed { index, (mode, label) ->
-                SegmentedButton(
-                    selected = themeMode == mode,
-                    onClick = { onThemeMode(mode) },
-                    shape = SegmentedButtonDefaults.itemShape(index, options.size),
-                ) {
-                    Text(label)
-                }
-            }
-        }
-
-        Spacer(Modifier.height(24.dp))
         SectionHeader("Motorcycle")
         SettingsGroup {
             Row(
@@ -246,6 +227,25 @@ internal fun SettingsScreen(
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary,
                 )
+            }
+        }
+
+        Spacer(Modifier.height(24.dp))
+        SectionHeader("Appearance")
+        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+            val options = listOf(
+                ThemeMode.SYSTEM to "System",
+                ThemeMode.LIGHT to "Light",
+                ThemeMode.DARK to "Dark",
+            )
+            options.forEachIndexed { index, (mode, label) ->
+                SegmentedButton(
+                    selected = themeMode == mode,
+                    onClick = { onThemeMode(mode) },
+                    shape = SegmentedButtonDefaults.itemShape(index, options.size),
+                ) {
+                    Text(label)
+                }
             }
         }
 
@@ -421,10 +421,18 @@ internal fun SettingsScreen(
             GroupDivider()
             LinkRow("Source code") { uriHandler.openUri(REPO_URL) }
             GroupDivider()
-            LinkRow("Report an issue") { uriHandler.openUri("$REPO_URL/issues") }
-            GroupDivider()
             LinkRow("Changelog") { uriHandler.openUri("$REPO_URL/blob/main/CHANGELOG.md") }
+            GroupDivider()
+            LinkRow("XMAX Custom Fork v40") { uriHandler.openUri("https://github.com/waiasu/pillion") }
         }
+        Text(
+            "Yamaha, Garmin, and StreetCross are trademarks of their respective owners. " +
+                "Pillion is an independent, unofficial project and is not affiliated with, " +
+                "endorsed by, or sponsored by Yamaha or Garmin.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 6.dp, top = 8.dp, end = 6.dp),
+        )
 
         Spacer(Modifier.height(28.dp))
         MadeByCredit { uriHandler.openUri("https://github.com/alexandrevega") }
