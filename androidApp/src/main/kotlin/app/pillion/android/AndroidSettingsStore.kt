@@ -1,6 +1,8 @@
 package app.pillion.android
 
 import android.content.Context
+import org.json.JSONObject
+import app.pillion.core.SettingsPreset
 import app.pillion.core.DashDpi
 import app.pillion.core.DashTapSettings
 import app.pillion.core.DashAutoDriveSettings
@@ -113,7 +115,119 @@ class AndroidSettingsStore(context: Context) : SettingsStore {
         prefs.edit().putString(KEY_BIKE, id).apply()
     }
 
+
+    // Only projection/app preferences belong to a preset. Device transport, bike and appearance stay untouched.
+    private val presetKeys = listOf(
+        "image_quality", "max_frame_rate", KEY_DASH_ENABLED, KEY_DASH_RESOLUTION, KEY_DASH_DPI,
+        "dash_left_margin", "dash_bottom_margin", "dash_margin_color", KEY_DASH_APP,
+        "stick_input_enabled", "tap_up_x", "tap_up_y", "tap_down_x", "tap_down_y",
+        "tap_drive_up_x", "tap_drive_up_y", "tap_drive_down_x", "tap_drive_down_y",
+        "auto_drive_initial_x", "auto_drive_initial_y", "auto_drive_arrived_x",
+        "auto_drive_arrived_y", "yahoo_navi_enabled",
+    )
+    private val defaultValues: Map<String, Any> by lazy {
+        val tap = DashTapSettings()
+        val drive = DashAutoDriveSettings()
+        val margin = DashMargins()
+        mapOf(
+            "image_quality" to 80, "max_frame_rate" to 3,
+            KEY_DASH_ENABLED to false, KEY_DASH_RESOLUTION to DashResolution.DEFAULT.name,
+            KEY_DASH_DPI to DashDpi.DEFAULT,
+            "dash_left_margin" to margin.left, "dash_bottom_margin" to margin.bottom,
+            "dash_margin_color" to DashMarginColor.Black.name,
+            KEY_DASH_APP to (YAHOO_PACKAGE.takeIf { packageManager.getLaunchIntentForPackage(it) != null } ?: ""),
+            "stick_input_enabled" to tap.enabled,
+            "tap_up_x" to tap.upX, "tap_up_y" to tap.upY,
+            "tap_down_x" to tap.downX, "tap_down_y" to tap.downY,
+            "tap_drive_up_x" to tap.driveUpX, "tap_drive_up_y" to tap.driveUpY,
+            "tap_drive_down_x" to tap.driveDownX, "tap_drive_down_y" to tap.driveDownY,
+            "auto_drive_initial_x" to drive.initialX, "auto_drive_initial_y" to drive.initialY,
+            "auto_drive_arrived_x" to drive.arrivedX, "auto_drive_arrived_y" to drive.arrivedY,
+            "yahoo_navi_enabled" to true,
+        )
+    }
+
+    private fun presetObject(): JSONObject =
+        runCatching { JSONObject(prefs.getString(KEY_PRESETS, "{}") ?: "{}") }.getOrDefault(JSONObject())
+
+    private fun currentSnapshot(): JSONObject {
+        val data = JSONObject()
+        for (key in presetKeys) {
+            val value = when (key) {
+                KEY_DASH_APP -> dashAppPackage() ?: ""
+                else -> prefs.all[key] ?: defaultValues.getValue(key)
+            }
+            data.put(key, value)
+        }
+        return data
+    }
+
+    override fun listPresets(): List<SettingsPreset> {
+        val saved = presetObject()
+        val entries = mutableListOf(
+            SettingsPreset(DEFAULT_PRESET, DashDpi.DEFAULT, DashResolution.DEFAULT.label, isDefault = true),
+        )
+        val names = saved.keys().asSequence().toList().sortedWith(String.CASE_INSENSITIVE_ORDER)
+        for (name in names) {
+            val data = saved.optJSONObject(name) ?: continue
+            val dpi = DashDpi.snap(data.optInt(KEY_DASH_DPI, DashDpi.DEFAULT))
+            val scale = DashResolution.fromName(data.optString(KEY_DASH_RESOLUTION, null)).label
+            entries.add(SettingsPreset(name, dpi, scale))
+        }
+        return entries
+    }
+
+    override fun savePreset(name: String, overwrite: Boolean): Boolean {
+        val normalized = name.trim()
+        if (normalized.isEmpty() || normalized.length > 80 || normalized == DEFAULT_PRESET) return false
+        val saved = presetObject()
+        if (saved.has(normalized) && !overwrite) return false
+        if (!saved.has(normalized) && overwrite) return false
+        saved.put(normalized, currentSnapshot())
+        prefs.edit().putString(KEY_PRESETS, saved.toString()).apply()
+        return true
+    }
+
+    override fun applyPreset(name: String): Boolean {
+        val data = if (name == DEFAULT_PRESET) {
+            JSONObject().apply { defaultValues.forEach { (key, value) -> put(key, value) } }
+        } else presetObject().optJSONObject(name) ?: return false
+        // Snapshot is full and typed; reject incomplete or malformed records before changing preferences.
+        if (presetKeys.any { !data.has(it) }) return false
+        val editor = prefs.edit()
+        for (key in presetKeys) {
+            val expected = defaultValues.getValue(key)
+            when (expected) {
+                is Boolean -> {
+                    if (data.opt(key) !is Boolean) return false
+                    editor.putBoolean(key, data.getBoolean(key))
+                }
+                is Int -> {
+                    if (data.opt(key) !is Number) return false
+                    editor.putInt(key, data.getInt(key))
+                }
+                is String -> {
+                    if (data.opt(key) !is String) return false
+                    editor.putString(key, data.getString(key))
+                }
+            }
+        }
+        editor.apply()
+        return true
+    }
+
+    override fun deletePreset(name: String): Boolean {
+        if (name == DEFAULT_PRESET) return false
+        val saved = presetObject()
+        if (!saved.has(name)) return false
+        saved.remove(name)
+        prefs.edit().putString(KEY_PRESETS, saved.toString()).apply()
+        return true
+    }
+
     private companion object {
+        const val KEY_PRESETS = "settings_presets_v1"
+        const val DEFAULT_PRESET = "標準設定 (デフォルト)"
         const val KEY_THEME = "theme_mode"
         const val KEY_DASH_ENABLED = "dash_enabled"
         const val KEY_DASH_RESOLUTION = "dash_resolution"
