@@ -112,6 +112,19 @@ class MainActivity : ComponentActivity() {
             Toast.makeText(this, "Bluetooth and notification permissions required", Toast.LENGTH_LONG).show()
         }
     }
+    // Ask for all currently missing runtime permissions at app launch, not during the first cast.
+    // Special access (usage access, accessibility, wireless debugging) has separate Android setup flows.
+    private val startupPermissions = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions(),
+    ) { /* Existing operation-specific guards remain responsible for denied permissions. */ }
+
+    private fun requestStartupPermissions() {
+        val missing = requiredPermissions().filter {
+            checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED
+        }
+        if (missing.isNotEmpty()) startupPermissions.launch(missing.toTypedArray())
+    }
+
     private val settingsStore by lazy { AndroidSettingsStore(applicationContext) }
 
     private val projectionLauncher = registerForActivityResult(
@@ -167,6 +180,8 @@ class MainActivity : ComponentActivity() {
             onRestoreBackup = { restoreStatus = null; restorePicker.launch(arrayOf("application/zip", "application/x-zip-compressed", "application/octet-stream")) },
             restoreStatus = restoreStatus) }
         acceptAutoTrialIntent(intent)
+        // Only on the first creation of this Activity; never interrupt recreation.
+        if (savedInstanceState == null) window.decorView.post { requestStartupPermissions() }
     }
 
     override fun onNewIntent(intent: Intent) {
