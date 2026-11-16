@@ -27,6 +27,7 @@ import app.pillion.core.DashFrameGate
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 import android.util.Log
 import android.view.Surface
 import java.io.BufferedOutputStream
@@ -95,6 +96,14 @@ object DashServer {
     private var display: VirtualDisplay? = null
     private var captureReader: ImageReader? = null
     private var captureHandler: Handler? = null
+    // This experiment waits 500ms from VD creation, not for the first ImageReader frame.
+    @Volatile private var vdCreatedAtMs = 0L
+    @Volatile private var lastSizeReadyAtMs = 0L
+    private val sizeEpoch = AtomicInteger(0)
+    private val sizeApplyLock = Any()
+    private const val INITIAL_RESIZE_SETTLE_MS = 500L
+    private const val YAHOO_SIZE_SETTLE_MS = 500L
+    private const val YAHOO_SIZE_WAIT_LIMIT_MS = 8_000L
     @Volatile private var sizeConfigured = false
     // Read on the capture/encode thread, written from the control channel (SIZE) — must be volatile.
     @Volatile private var outputWidth = 480
@@ -189,6 +198,7 @@ object DashServer {
             )
             this.display = display
             displayId = display.display.displayId
+            vdCreatedAtMs = SystemClock.elapsedRealtime()
             startSecureCameraWatcher()
             Log.i(
                 TAG,
@@ -289,6 +299,23 @@ object DashServer {
 
     private fun readCommands(client: Socket, out: DataOutputStream, writeLock: Any, sizeReadyForClient: AtomicBoolean) {
         val clientAlive = AtomicBoolean(true)
+        fun applySize(raw: String, epoch: Int) {
+            synchronized(sizeApplyLock) {
+                if (!clientAlive.get() || epoch != sizeEpoch.get()) return
+                val ready = resizeOutput(raw) ?: return
+                if (!clientAlive.get() || epoch != sizeEpoch.get()) return
+                synchronized(writeLock) {
+                    out.writeInt(DashFrameGate.SIZE_READY_MARKER)
+                    out.writeInt(ready.revision)
+                    out.writeInt(ready.width)
+                    out.writeInt(ready.height)
+                    out.flush()
+                    // SIZE_READY must be published after the resize and reply, not before.
+                    sizeReadyForClient.set(true)
+                    lastSizeReadyAtMs = SystemClock.elapsedRealtime()
+                }
+            }
+        }
         try {
             val input = client.getInputStream().bufferedReader()
             while (true) {
@@ -300,19 +327,24 @@ object DashServer {
                     }
                     line == "DEMOTE" -> demoteApp()
                     line.startsWith("SIZE ") -> {
+                        val raw = line.removePrefix("SIZE ").trim()
+                        val epoch = sizeEpoch.incrementAndGet()
+                        lastSizeReadyAtMs = 0L
                         sizeReadyForClient.set(false)
-                        val ready = resizeOutput(line.removePrefix("SIZE ").trim())
-                        if (ready != null) {
-                            synchronized(writeLock) {
-                                out.writeInt(DashFrameGate.SIZE_READY_MARKER)
-                                out.writeInt(ready.revision)
-                                out.writeInt(ready.width)
-                                out.writeInt(ready.height)
-                                out.flush()
-                                // Let the writer replay the helper's cached JPEG if unchanged,
-                                // or wait for a new frame if the VD was rebuilt.
-                                sizeReadyForClient.set(true)
-                            }
+                        val remaining = if (!sizeConfigured) {
+                            (INITIAL_RESIZE_SETTLE_MS -
+                                (SystemClock.elapsedRealtime() - vdCreatedAtMs)).coerceAtLeast(0L)
+                        } else 0L
+                        if (remaining > 0L) {
+                            // Do not block the TCP command reader: PROMOTE and DEMOTE remain
+                            // responsive while the *first* SIZE waits for VD creation +500ms.
+                            Thread {
+                                try { Thread.sleep(remaining) } catch (_: InterruptedException) { return@Thread }
+                                if (clientAlive.get() && epoch == sizeEpoch.get()) applySize(raw, epoch)
+                            }.apply { name = "pillion-initial-size-delay"; isDaemon = true; start() }
+                            Log.i(TAG, "VD SIZE-DELAY: waiting ${remaining}ms after creation (revision=$epoch)")
+                        } else {
+                            applySize(raw, epoch)
                         }
                     }
                     line.startsWith("TAP ") -> {
@@ -520,19 +552,56 @@ object DashServer {
         startHeartbeat()
         setMainDisplayPower(false)
         startPanelOffRetries()
-        if (!restartOnVd || component.substringBefore('/') != "jp.co.yahoo.android.apps.navi") {
+        if (component.substringBefore('/') != "jp.co.yahoo.android.apps.navi") {
             restartFrameGate = false
             relocateApp(component, displayId)
             Log.i(TAG, "promoted $component to display $displayId (relocate)")
             return
         }
-        // Start the JPEG gate BEFORE touching the phone task. The app-side status cover
-        // is output-only and releases on the first new JPEG received after confirmation.
+        // Both Yahoo paths (restart ON and OFF) wait until the current SIZE_READY
+        // has been sent, then an additional 500ms. No dependency on an initial image.
         restartFrameGate = true
         latestJpeg = null
         latestSeq++
-        Log.i(TAG, "restart-on-vd: preparing $component for display $displayId")
-        restartAppBeforeVdLaunch(component, generation)
+        val target = displayId
+        Thread {
+            val active = {
+                capturing && displayId == target && lastComponent == component &&
+                    promotionGeneration == generation
+            }
+            val started = SystemClock.elapsedRealtime()
+            var settled = false
+            while (active()) {
+                val readyAt = lastSizeReadyAtMs
+                val now = SystemClock.elapsedRealtime()
+                if (readyAt > 0L && sizeConfigured && now - readyAt >= YAHOO_SIZE_SETTLE_MS) {
+                    settled = true
+                    break
+                }
+                if (now - started >= YAHOO_SIZE_WAIT_LIMIT_MS) break
+                try { Thread.sleep(50L) } catch (_: InterruptedException) { return@Thread }
+            }
+            if (!active()) return@Thread
+            val waited = SystemClock.elapsedRealtime() - started
+            if (settled) {
+                Log.i(TAG, "VD SIZE-SETTLE: Yahoo SIZE_READY +500ms, waited=${waited}ms restart=$restartOnVd")
+            } else {
+                // Diagnostic-only fallback: never hold the task forever if resize fails.
+                Log.w(TAG, "VD SIZE-SETTLE: SIZE_READY missing after ${waited}ms; old Yahoo order fallback restart=$restartOnVd")
+            }
+            if (!active()) return@Thread
+            if (restartOnVd) {
+                Log.i(TAG, "restart-on-vd: preparing $component for display $target")
+                restartAppBeforeVdLaunch(component, generation)
+            } else {
+                try {
+                    relocateApp(component, target)
+                    Log.i(TAG, "promoted $component to display $target (relocate; sizeSettled=$settled)")
+                } finally {
+                    if (active()) restartFrameGate = false
+                }
+            }
+        }.apply { name = "pillion-yahoo-size-settle"; isDaemon = true; start() }
     }
 
     private fun restartAppBeforeVdLaunch(component: String, generation: Long) {

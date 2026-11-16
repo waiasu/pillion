@@ -316,6 +316,18 @@ internal fun SettingsScreen(
                 GroupDivider()
                 MarginColorSelector(dashMarginColor, onDashMarginColor)
                 GroupDivider()
+                DashAppSelector(dashApps, selectedDashApp, onDashApp)
+            }
+            Text(
+                "Casts the real app to the dash in landscape with the screen off. Run setup once " +
+                    "while Wi-Fi is connected; after that it can start without Wi-Fi until restart.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 6.dp, top = 8.dp, end = 6.dp),
+            )
+            Spacer(Modifier.height(24.dp))
+            SectionHeader("Stick & tap")
+            SettingsGroup {
                 Row(Modifier.fillMaxWidth().padding(vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically) {
                     Text("Stick input", modifier = Modifier.weight(1f),
@@ -345,26 +357,12 @@ internal fun SettingsScreen(
                         onY = { onDashTap(dashTap.copy(downY = it)) })
                 }
                 GroupDivider()
-                DashAppSelector(dashApps, selectedDashApp, onDashApp)
-                GroupDivider()
                 Row(Modifier.fillMaxWidth().padding(vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text("Yahoo! Car Navigation features", style = MaterialTheme.typography.bodyLarge)
-                        Text("Fresh VD launch, reload mask, live ROAD text and automatic Drive Mode.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
+                    Text("Yahoo! Navi", modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodyLarge)
                     Switch(checked = yahooNaviEnabled && yahooReady,
                         onCheckedChange = onYahooNaviEnabled, enabled = yahooReady)
-                }
-                if (dashEnabled && yahooSelected && !yahooAccessibilityEnabled) {
-                    Text(
-                        "Enable the Pillion Yahoo ROAD accessibility service to use these features.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(bottom = 10.dp),
-                    )
                 }
                 if (yahooNaviEnabled && yahooReady) {
                     GroupDivider()
@@ -372,7 +370,7 @@ internal fun SettingsScreen(
                         Modifier.fillMaxWidth().clickable { yahooExpanded = !yahooExpanded }.padding(vertical = 14.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text("Drive Mode & automatic tap positions",
+                        Text("Drive Mode & taps",
                             modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
                         Text(if (yahooExpanded) "▲" else "▼",
                             color = MaterialTheme.colorScheme.primary)
@@ -406,8 +404,8 @@ internal fun SettingsScreen(
                 }
             }
             Text(
-                "Casts the real app to the dash in landscape with the screen off. Run setup once " +
-                    "while Wi-Fi is connected; after that it can start without Wi-Fi until restart.",
+                "Yahoo! Navi features require VD, Yahoo! Navi as the selected app, and Pillion's accessibility service. " +
+                    "When enabled, Yahoo! Navi restarts on the VD instead of moving its existing task.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = 6.dp, top = 8.dp, end = 6.dp),
@@ -426,9 +424,9 @@ internal fun SettingsScreen(
             LinkRow("XMAX Custom Fork") { uriHandler.openUri("https://github.com/waiasu/pillion") }
         }
         Text(
-            "Yamaha, Garmin, and StreetCross are trademarks of their respective owners. " +
+            "Yamaha, Garmin, StreetCross, and Yahoo! are trademarks of their respective owners. " +
                 "Pillion is an independent, unofficial project and is not affiliated with, " +
-                "endorsed by, or sponsored by Yamaha or Garmin.",
+                "endorsed by, or sponsored by their respective owners.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(start = 6.dp, top = 8.dp, end = 6.dp),
@@ -804,7 +802,7 @@ private fun DashResolutionSelector(
         Column(Modifier.weight(1f)) {
             Text("Map layout size", style = MaterialTheme.typography.bodyLarge)
             Text(
-                "${selected.label} — The image always fits the dashboard.",
+                selected.label,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
