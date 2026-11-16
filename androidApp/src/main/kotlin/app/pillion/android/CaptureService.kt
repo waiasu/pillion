@@ -159,7 +159,7 @@ class CaptureService : Service() {
             return
         }
         val yahooFeatures = yahooRequested && component.startsWith("jp.co.yahoo.android.apps.navi/")
-        val source = DashStreamScreenSource(dpi, margins, marginColor, tap, fps, yahooFeatures)
+        val source = DashStreamScreenSource(this, dpi, margins, marginColor, tap, fps, yahooFeatures)
         dashSource = source
         val modeSource = DashModeScreenSource(source, autoDrive, yahooFeatures)
         dashModeSource = modeSource

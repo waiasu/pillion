@@ -196,7 +196,7 @@ class AdbBootstrapActivity : ComponentActivity() {
                     scope.launch {
                         append("Reading frames over loopback TCP…")
                         withContext(Dispatchers.IO) {
-                            val src = DashStreamScreenSource()
+                            val src = DashStreamScreenSource(this@AdbBootstrapActivity)
                             src.start()
                             var got = 0
                             repeat(20) {

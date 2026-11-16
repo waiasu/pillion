@@ -1,5 +1,6 @@
 package app.pillion.android
 
+import android.content.Context
 import android.graphics.BitmapFactory
 import android.os.SystemClock
 import android.util.Log
@@ -12,7 +13,6 @@ import app.pillion.core.DashSizeRequest
 import app.pillion.core.ScreenSource
 import app.pillion.server.DashServer
 import java.io.DataInputStream
-import java.net.InetSocketAddress
 import java.net.Socket
 
 /**
@@ -26,6 +26,7 @@ import java.net.Socket
  * can start before the helper and reconnect freely.
  */
 class DashStreamScreenSource(
+    context: Context,
     dpi: Int = DashDpi.DEFAULT,
     private val margins: DashMargins = DashMargins(),
     private val marginColor: DashMarginColor = DashMarginColor.Black,
@@ -33,6 +34,7 @@ class DashStreamScreenSource(
     private val sessionFps: Int = 3,
     private val restartOnVd: Boolean = false,
 ) : ScreenSource {
+    private val appContext = context.applicationContext
     private val sessionDpi = DashDpi.snap(dpi)
     private val markerMs = DashTapSettings.markerDurationMs(sessionFps)
     private val thread = Thread(::readLoop).apply { isDaemon = true }
@@ -57,10 +59,8 @@ class DashStreamScreenSource(
         while (running) {
             var activeSocket: Socket? = null
             try {
-                val s = Socket().apply {
-                    tcpNoDelay = true
-                    connect(InetSocketAddress("127.0.0.1", DashServer.PORT), CONNECT_TIMEOUT_MS)
-                }
+                // Re-authenticate on each TCP reconnect (including a watchdog helper respawn).
+                val s = DashHelper.connectAuthenticated(appContext, CONNECT_TIMEOUT_MS)
                 activeSocket = s
                 socket = s
                 Log.d(TAG, "dash stream: connected to 127.0.0.1:${DashServer.PORT}")

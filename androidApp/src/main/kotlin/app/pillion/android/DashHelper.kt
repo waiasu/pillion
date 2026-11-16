@@ -6,8 +6,11 @@ import android.provider.Settings
 import android.util.Log
 import app.pillion.core.DashResolution
 import app.pillion.server.DashServer
+import java.io.DataInputStream
+import java.io.File
 import java.net.InetSocketAddress
 import java.net.Socket
+import java.security.SecureRandom
 
 /**
  * Owns the shell-side dash helper lifecycle. Starting the helper needs Wireless Debugging because
@@ -21,6 +24,7 @@ object DashHelper {
     private const val DASH_PROTOCOL_WIDTH = 480
     private const val DASH_PROTOCOL_HEIGHT = 240
     private const val CONNECT_TIMEOUT_MS = 250
+    private const val AUTH_TIMEOUT_MS = 2_000
     private const val START_TIMEOUT_MS = 5_000L
     private const val WATCHDOG_INTERVAL_MS = 3_000L
     private const val WIRELESS_DISCOVERY_TIMEOUT_MS = 15_000L
@@ -29,6 +33,7 @@ object DashHelper {
     // A freshly-spawned helper takes ~1-2s to create the display + bind its socket; don't respawn
     // (which pkills it) until it's had time to come up, or the watchdog thrashes in a respawn loop.
     private const val SPAWN_GRACE_MS = 8_000L
+    private const val TOKEN_FILE = "dash_helper_token"
     private const val DIAGNOSTIC_PREFS = "pillion_diagnostics"
     private const val LOGCAT_READY_BOOT_COUNT = "logcat_ready_boot_count"
     // Accessed only by synchronized ensureRunning(), not by the stream loop.
@@ -45,7 +50,7 @@ object DashHelper {
         dashResolution: DashResolution,
         preferExisting: Boolean = false,
     ) {
-        if (preferExisting && isRunning()) {
+        if (preferExisting && isRunning(context.applicationContext)) {
             // The helper can survive an app update, so the normal preparation path below
             // might be skipped. Apply diagnostics if an ADB connection is already live.
             val adb = PillionAdb.getInstance(context.applicationContext)
@@ -57,7 +62,7 @@ object DashHelper {
         val appContext = context.applicationContext
         val adb = PillionAdb.getInstance(appContext)
         if (!ensureConnected(adb, appContext)) {
-            if (isRunning()) {
+            if (isRunning(appContext)) {
                 Log.d(TAG, "dash: using existing helper; ADB unavailable")
                 return
             }
@@ -80,7 +85,7 @@ object DashHelper {
         runCatching { adb.runShell("pkill -f app.pillion.server.DashServer") }
         waitUntilStopped()
         spawn(adb, appContext, quality, dashResolution)
-        check(waitUntilRunning()) { "Dash helper did not start" }
+        check(waitUntilRunning(appContext)) { "Dash helper did not start" }
     }
 
     /**
@@ -190,7 +195,7 @@ object DashHelper {
                             break
                         }
                         if (watchdog !== this) break
-                        if (DashHelper.isRunning()) continue
+                        if (DashHelper.isRunning(appContext)) continue
                         // A helper we just spawned is still coming up; don't pkill+respawn it mid-startup.
                         if (SystemClock.elapsedRealtime() - lastSpawnAt < SPAWN_GRACE_MS) continue
                         Log.w(TAG, "dash: helper down — attempting respawn over loopback")
@@ -213,12 +218,50 @@ object DashHelper {
         }
     }
 
-    fun isRunning(): Boolean =
+    /** Our helper is alive only if it accepts the saved per-spawn token. */
+    fun isRunning(context: Context): Boolean =
+        runCatching { connectAuthenticated(context, CONNECT_TIMEOUT_MS).close() }.isSuccess
+
+    /** A raw TCP probe is needed for shutdown, even when the running helper rejects our token. */
+    private fun isListening(): Boolean =
         runCatching {
-            Socket().use { socket ->
-                socket.connect(InetSocketAddress("127.0.0.1", DashServer.PORT), CONNECT_TIMEOUT_MS)
-            }
+            Socket().use { it.connect(InetSocketAddress("127.0.0.1", DashServer.PORT), CONNECT_TIMEOUT_MS) }
         }.isSuccess
+
+    /**
+     * Authenticate before exchanging any command or JPEG frames. The token is re-read for
+     * every connection so watchdog respawns and restarts of the app keep working.
+     */
+    fun connectAuthenticated(context: Context, connectTimeoutMs: Int): Socket {
+        val token = checkNotNull(token(context)) { "no dash helper token yet" }
+        val socket = Socket()
+        try {
+            socket.tcpNoDelay = true
+            socket.connect(InetSocketAddress("127.0.0.1", DashServer.PORT), connectTimeoutMs)
+            socket.soTimeout = AUTH_TIMEOUT_MS
+            socket.getOutputStream().apply { write("AUTH $token\n".toByteArray()); flush() }
+            val ack = ByteArray(3)
+            DataInputStream(socket.getInputStream()).readFully(ack) // no frame-byte prefetch
+            check(String(ack) == "OK\n") { "dash helper rejected the token" }
+            socket.soTimeout = 0
+            return socket
+        } catch (t: Throwable) {
+            runCatching { socket.close() }
+            throw t
+        }
+    }
+
+    /** Retain the secret across app process restarts while the helper survives. */
+    private fun token(context: Context): String? =
+        runCatching { File(context.filesDir, TOKEN_FILE).readText().trim() }.getOrNull()?.takeIf { it.isNotEmpty() }
+
+    /** Rotate on helper spawn, not on TCP reconnection. */
+    internal fun newToken(context: Context): String {
+        val bytes = ByteArray(16).also { SecureRandom().nextBytes(it) }
+        val token = bytes.joinToString("") { "%02x".format(it) }
+        File(context.filesDir, TOKEN_FILE).writeText(token)
+        return token
+    }
 
     private fun spawn(adb: PillionAdb, context: Context, quality: Int, dashResolution: DashResolution) {
         Log.d(
@@ -232,7 +275,9 @@ object DashHelper {
         //
         // Include SYSTEMSERVERCLASSPATH so the helper can load com.android.server.display.DisplayControl
         // on its main classloader for physical-panel power control.
-        val inner = "CLASSPATH=\$(pm path ${context.packageName} | grep base.apk | cut -d: -f2):\$SYSTEMSERVERCLASSPATH " +
+        // Pass the per-spawn token in the shell helper's environment, not command arguments.
+        val token = newToken(context)
+        val inner = "${DashServer.TOKEN_ENV}=$token CLASSPATH=\$(pm path ${context.packageName} | grep base.apk | cut -d: -f2):\$SYSTEMSERVERCLASSPATH " +
             "app_process / app.pillion.server.DashServer " +
             "${dashResolution.width} ${dashResolution.height} $DPI $quality " +
             "$DASH_PROTOCOL_WIDTH $DASH_PROTOCOL_HEIGHT " +
@@ -247,13 +292,13 @@ object DashHelper {
         Log.d(TAG, "dash: helper spawned (detached to init)")
     }
 
-    private fun waitUntilRunning(): Boolean {
+    private fun waitUntilRunning(context: Context): Boolean {
         val deadline = System.currentTimeMillis() + START_TIMEOUT_MS
         while (System.currentTimeMillis() < deadline) {
-            if (isRunning()) return true
+            if (isRunning(context)) return true
             Thread.sleep(100)
         }
-        return isRunning()
+        return isRunning(context)
     }
 
     /** Wait until the old helper stops accepting loopback connections. Used before re-spawn and
@@ -262,9 +307,9 @@ object DashHelper {
     fun waitUntilStopped(): Boolean {
         val deadline = SystemClock.elapsedRealtime() + START_TIMEOUT_MS
         while (SystemClock.elapsedRealtime() < deadline) {
-            if (!isRunning()) return true
+            if (!isListening()) return true
             Thread.sleep(100)
         }
-        return !isRunning()
+        return !isListening()
     }
 }
