@@ -4,7 +4,7 @@ This fork focuses on Yamaha XMAX integration, connection stability, and dedicate
 
 Includes Yahoo! Car Navi integration, joystick controls, and automatic dashboard operation.
 
-"Download experimental APK" (https://github.com/waiasu/pillion/releases/tag/xmax-test-20261111)
+"Download experimental APK" (https://github.com/waiasu/pillion/releases/tag/xmax-test-20261116)
 
 Debug build, provided as-is. Some features require additional Android permissions and setup.
 
