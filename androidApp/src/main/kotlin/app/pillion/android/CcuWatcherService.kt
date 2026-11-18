@@ -161,9 +161,23 @@ class CcuWatcherService : Service() {
                         val connected = adb.isLoopbackConnected() ||
                             adb.connectDevice(PillionAdb.LOOPBACK_HOST, PillionAdb.TCPIP_PORT)
                         if (connected) {
-                            record("AUTO_STOP_SLEEP_REQUEST keyevent=223")
-                            val output = adb.runShell("input keyevent 223")
-                            record("AUTO_STOP_SLEEP_RESULT output=${output.trim().take(160)}")
+                            // CCU auto-stop only: put HOME in front after DEMOTE while still
+                            // locked. Do not steal focus if the user has unlocked meanwhile.
+                            if (started && getSystemService(KeyguardManager::class.java)?.isKeyguardLocked == true) {
+                                record("AUTO_STOP_HOME_REQUEST display=0")
+                                runCatching {
+                                    adb.runShell(
+                                        "am start --display 0 -a android.intent.action.MAIN -c android.intent.category.HOME"
+                                    )
+                                }.onSuccess { record("AUTO_STOP_HOME_RESULT output=${it.trim().take(160)}") }
+                                    .onFailure { record("AUTO_STOP_HOME_FAILED reason=${it.javaClass.simpleName}") }
+                            } else record("AUTO_STOP_HOME_SKIPPED reason=phone_unlocked_or_watcher_stopped")
+                            // Recheck after HOME: unlock during Stop must never cause re-sleep.
+                            if (started && getSystemService(KeyguardManager::class.java)?.isKeyguardLocked == true) {
+                                record("AUTO_STOP_SLEEP_REQUEST keyevent=223")
+                                val output = adb.runShell("input keyevent 223")
+                                record("AUTO_STOP_SLEEP_RESULT output=${output.trim().take(160)}")
+                            } else record("AUTO_STOP_SLEEP_SKIPPED reason=phone_unlocked_or_watcher_stopped")
                         } else record("AUTO_STOP_SLEEP_SKIPPED reason=adb_unavailable")
                     } else record("AUTO_STOP_SLEEP_SKIPPED reason=phone_unlocked_or_watcher_stopped")
                 } else record("AUTO_STOP_SLEEP_SKIPPED reason=not_dark_or_capture_not_stopped")

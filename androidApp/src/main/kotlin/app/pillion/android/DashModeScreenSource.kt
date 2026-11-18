@@ -161,7 +161,7 @@ class DashModeScreenSource(
                     YahooPage.INITIAL -> {
                         returnUnknownSinceMs = 0L
                         phase = DrivePhase.INITIAL
-                        DiagnosticFlightRecorder.record("DRIVE", "ARRIVED exit -> INITIAL; start second 10s check")
+                        DiagnosticFlightRecorder.record("DRIVE", "ARRIVED exit -> INITIAL; start second 5s check")
                     }
                     YahooPage.NAV -> {
                         returnUnknownSinceMs = 0L
@@ -196,7 +196,7 @@ class DashModeScreenSource(
             }
             DrivePhase.ARRIVED -> {
                 if (observed.page == YahooPage.ARRIVED &&
-                    now - arrivedAtMs >= DRIVE_WAIT_MS &&
+                    now - arrivedAtMs >= ARRIVAL_WAIT_MS &&
                     now >= dashReadyAtMs &&
                     dash.tapAutoDrive(autoDrive.arrivedX, autoDrive.arrivedY)) {
                     // The arrival button only closes guidance; it returns to the initial
@@ -317,7 +317,8 @@ class DashModeScreenSource(
 
     private companion object {
         const val TAG = "Pillion"
-        const val DRIVE_WAIT_MS = 10_000L
+        const val DRIVE_WAIT_MS = 5_000L
+        const val ARRIVAL_WAIT_MS = 2_000L
         const val ARRIVAL_UNKNOWN_SETTLE_MS = 5_000L
         const val DRIVE_STICK_SETTLE_MS = 1_000L
     }
