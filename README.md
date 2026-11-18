@@ -1,3 +1,10 @@
+> **Archived branch / 保存用ブランチ**
+>
+> This branch is retained for development reference only. For the updated version, see [test-base](https://github.com/waiasu/pillion/tree/test-base).
+>
+> このブランチは開発資料として保存しているものです。改良版は [test-base](https://github.com/waiasu/pillion/tree/test-base) をご覧ください。
+
+---
 # Pillion – XMAX / Pixel 10a Fork
 
 > Personal fork of Pillion optimized for Yamaha XMAX, Google Pixel 10a, and Yahoo! Car Navigation.
