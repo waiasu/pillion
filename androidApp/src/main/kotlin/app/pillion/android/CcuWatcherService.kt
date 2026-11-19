@@ -9,6 +9,7 @@ import android.app.PendingIntent
 import android.app.Service
 import android.app.ActivityManager
 import android.app.KeyguardManager
+import android.content.ComponentName
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.content.BroadcastReceiver
@@ -53,6 +54,8 @@ class CcuWatcherService : Service() {
     @Volatile private var trialActive = false
     private var autoSessionOwned = false
     private var autoStopInFlight = false
+    private var stopWatcherAfterAutoStop = false
+    private val yahooAccessibilityLock = Any()
     private var sessionCcuAddress: String? = null
     private var disconnectedAtMs = 0L
     private var disconnectReason = ""
@@ -94,7 +97,7 @@ class CcuWatcherService : Service() {
     }
 
     private fun beginAutoStart(address: String?) {
-        if (!started || autoSessionOwned || autoStopInFlight) {
+        if (!started || autoSessionOwned || autoStopInFlight || stopWatcherAfterAutoStop) {
             record("AUTO_START_SUPPRESSED owned=$autoSessionOwned stopping=$autoStopInFlight")
             return
         }
@@ -105,6 +108,70 @@ class CcuWatcherService : Service() {
         Thread({ performRoomTrial() }, "pillion-ccu-auto-start").apply {
             isDaemon = true
             start()
+        }
+    }
+
+    /**
+     * CCU-only, best-effort switch of our own Yahoo ROAD accessibility service.
+     * Keep every other enabled service unchanged. Only the OS setting is checked;
+     * Android is responsible for starting/stopping the actual accessibility service.
+     */
+    private fun setYahooRoadAccessibility(enabled: Boolean) = synchronized(yahooAccessibilityLock) {
+        val action = if (enabled) "ON" else "OFF"
+        try {
+            // An in-flight start may have been cancelled by a CCU/manual Stop.
+            if (enabled && !trialActive) {
+                record("AUTO_ACCESSIBILITY_$action skipped=trial_cancelled")
+                return@synchronized
+            }
+            val adb = PillionAdb.getInstance(applicationContext)
+            val connected = adb.isLoopbackConnected() ||
+                adb.connectDevice(PillionAdb.LOOPBACK_HOST, PillionAdb.TCPIP_PORT)
+            if (!connected) {
+                record("AUTO_ACCESSIBILITY_$action skipped=adb_unavailable")
+                return@synchronized
+            }
+            val component = ComponentName(this, YahooRoadAccessibilityService::class.java)
+            fun readServices(): List<String> {
+                val raw = adb.runShell("settings get secure enabled_accessibility_services").trim()
+                if (raw.isEmpty() || raw == "null") return emptyList()
+                val services = raw.split(':').filter { it.isNotBlank() }
+                check(services.all { ComponentName.unflattenFromString(it) != null }) {
+                    "invalid_accessibility_setting"
+                }
+                return services
+            }
+            fun hasOwnService(services: List<String>): Boolean =
+                services.any { ComponentName.unflattenFromString(it) == component }
+
+            val current = readServices()
+            if (hasOwnService(current) == enabled) {
+                record("AUTO_ACCESSIBILITY_$action verified=true changed=false")
+                return@synchronized
+            }
+            val updated = if (enabled) current + component.flattenToShortString()
+                else current.filterNot { ComponentName.unflattenFromString(it) == component }
+            if (updated.isEmpty()) {
+                adb.runShell("settings delete secure enabled_accessibility_services")
+            } else {
+                val quoted = "'" + updated.joinToString(":").replace("'", "'\\''") + "'"
+                adb.runShell("settings put secure enabled_accessibility_services $quoted")
+            }
+
+            val deadline = SystemClock.elapsedRealtime() + ACCESSIBILITY_VERIFY_MS
+            while (true) {
+                if (hasOwnService(readServices()) == enabled) {
+                    record("AUTO_ACCESSIBILITY_$action verified=true changed=true")
+                    return@synchronized
+                }
+                if (SystemClock.elapsedRealtime() >= deadline) {
+                    record("AUTO_ACCESSIBILITY_$action verified=false timeoutMs=$ACCESSIBILITY_VERIFY_MS")
+                    return@synchronized
+                }
+                Thread.sleep(ACCESSIBILITY_POLL_MS)
+            }
+        } catch (t: Exception) {
+            record("AUTO_ACCESSIBILITY_$action failed=" + t.javaClass.simpleName)
         }
     }
 
@@ -124,7 +191,7 @@ class CcuWatcherService : Service() {
         )
     }
 
-    private fun beginAutoStop(reason: String) {
+    private fun beginAutoStop(reason: String, restorePhonePower: Boolean = true) {
         if (!started || !autoSessionOwned || autoStopInFlight) return
         autoSessionOwned = false
         sessionCcuAddress = null
@@ -154,7 +221,7 @@ class CcuWatcherService : Service() {
                 record("AUTO_STOP_CAPTURE_EXIT stopped=$stopped")
                 // settle window, even when the user unlocks during Stop.
                 if (captureBefore && stopped && started) Thread.sleep(1_200L)
-                if (restoreDark && stopped && started) {
+                if (restorePhonePower && restoreDark && stopped && started) {
                     val stillLocked = getSystemService(KeyguardManager::class.java)?.isKeyguardLocked == true
                     if (started && stillLocked) {
                         val adb = PillionAdb.getInstance(applicationContext)
@@ -184,10 +251,14 @@ class CcuWatcherService : Service() {
             } catch (t: Throwable) {
                 record("AUTO_STOP_FAILED reason=${t.javaClass.simpleName}: ${t.message}".take(230))
             } finally {
+                // After the existing Stop / DEMOTE / optional HOME and sleep path.
+                // Do not make CaptureService cleanup or VD depend on this setting.
+                setYahooRoadAccessibility(false)
                 runCatching { if (wakeLock.isHeld) wakeLock.release() }
                 timerHandler.post {
                     autoStopInFlight = false
                     record("AUTO_STOP_END")
+                    if (stopWatcherAfterAutoStop) stopSelf()
                 }
             }
         }, "pillion-ccu-auto-stop").apply { isDaemon = true; start() }
@@ -226,6 +297,9 @@ class CcuWatcherService : Service() {
                 adb.connectDevice(PillionAdb.LOOPBACK_HOST, PillionAdb.TCPIP_PORT)
             check(connected) { "loopback_adb_unavailable" }
             record("TRIAL_ADB_READY loopback=true")
+            // Restore Yahoo ROAD before MainActivity evaluates its availability.
+            // A failed or timed-out change must not block normal VD startup.
+            setYahooRoadAccessibility(true)
             // Never WAKE/SLEEP here: only report initial state through the one-time
             // token. CaptureService checks it after Helper readiness and promotes if needed.
             check(trialActive) { "cancelled" }
@@ -271,6 +345,7 @@ class CcuWatcherService : Service() {
 
     /** First ACL event activates availability; subsequent events are duplicate-safe. */
     private fun onCcuConnected(device: BluetoothDevice, name: String) {
+        if (stopWatcherAfterAutoStop) return
         val address = runCatching { device.address }.getOrNull()
         record("ACL_CONNECTED name=$name")
         if (sessionCcuAddress == null || sessionCcuAddress == address) cancelDisconnect("acl_connected")
@@ -347,6 +422,14 @@ class CcuWatcherService : Service() {
             record("WATCH_STOP requested")
             trialActive = false
             trialWaiter?.countDown()
+            // If CCU owned a session, use its normal Stop/DEMOTE/HOME path and
+            // disable accessibility before shutting down this watcher.
+            if (autoStopInFlight || autoSessionOwned) {
+                stopWatcherAfterAutoStop = true
+                if (!autoStopInFlight) beginAutoStop("watcher_stop", restorePhonePower = false)
+                else record("WATCH_STOP waiting_for_auto_stop")
+                return START_NOT_STICKY
+            }
             // Stop the current cast through its existing explicit Stop path. This also
             // DEMOTEs the VD target and preserves the idle Helper for a later Start.
             // The watcher is a separate process: its static CaptureService state is
@@ -553,6 +636,8 @@ class CcuWatcherService : Service() {
         private const val NOTIFICATION_ID = 40
         private const val AUTO_STOP_GRACE_MS = 5_000L
         private const val STOP_SERVICE_WAIT_MS = 7_000L
+        private const val ACCESSIBILITY_VERIFY_MS = 3_000L
+        private const val ACCESSIBILITY_POLL_MS = 200L
         private const val START_WAKELOCK_MS = 45_000L
         private const val STOP_WAKELOCK_MS = 20_000L
         private const val MAX_LOG_BYTES = 256 * 1024L

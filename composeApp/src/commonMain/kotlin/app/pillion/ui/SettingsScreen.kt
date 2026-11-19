@@ -232,19 +232,21 @@ internal fun SettingsScreen(
 
         Spacer(Modifier.height(24.dp))
         SectionHeader("Appearance")
-        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-            val options = listOf(
-                ThemeMode.SYSTEM to "System",
-                ThemeMode.LIGHT to "Light",
-                ThemeMode.DARK to "Dark",
-            )
-            options.forEachIndexed { index, (mode, label) ->
-                SegmentedButton(
-                    selected = themeMode == mode,
-                    onClick = { onThemeMode(mode) },
-                    shape = SegmentedButtonDefaults.itemShape(index, options.size),
-                ) {
-                    Text(label)
+        SettingsGroup {
+            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                val options = listOf(
+                    ThemeMode.SYSTEM to "System",
+                    ThemeMode.LIGHT to "Light",
+                    ThemeMode.DARK to "Dark",
+                )
+                options.forEachIndexed { index, (mode, label) ->
+                    SegmentedButton(
+                        selected = themeMode == mode,
+                        onClick = { onThemeMode(mode) },
+                        shape = SegmentedButtonDefaults.itemShape(index, options.size),
+                    ) {
+                        Text(label)
+                    }
                 }
             }
         }
@@ -388,7 +390,7 @@ internal fun SettingsScreen(
                         GroupDivider()
                         Text("Automatic mode switching",
                             style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                        Text("Wait 10 seconds on initial or arrival screen before tapping. " +
+                        Text("Wait briefly on the initial or arrival screen before tapping. " +
                                 "After ending guidance, recheck the initial screen and switch to Drive Mode. " +
                                 "Changes apply on next Start.",
                             style = MaterialTheme.typography.bodySmall,
