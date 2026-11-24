@@ -16,8 +16,9 @@ import app.pillion.core.ThemeMode
 class AndroidSettingsStore(context: Context) : SettingsStore {
     private val prefs = context.getSharedPreferences("pillion.settings", Context.MODE_PRIVATE)
     private val packageManager = context.applicationContext.packageManager
+    private val contextAssets = context.applicationContext.assets
 
-    override fun imageQuality(): Int = prefs.getInt("image_quality", 80).coerceIn(10, 80)
+    override fun imageQuality(): Int = prefs.getInt("image_quality", 60).coerceIn(10, 80)
     override fun setImageQuality(value: Int) { prefs.edit().putInt("image_quality", value.coerceIn(10, 80)).apply() }
     override fun maxFrameRate(): Int = prefs.getInt("max_frame_rate", 3).coerceIn(1, 15)
     override fun setMaxFrameRate(value: Int) { prefs.edit().putInt("max_frame_rate", value.coerceIn(1, 15)).apply() }
@@ -130,7 +131,7 @@ class AndroidSettingsStore(context: Context) : SettingsStore {
         val drive = DashAutoDriveSettings()
         val margin = DashMargins()
         mapOf(
-            "image_quality" to 80, "max_frame_rate" to 3,
+            "image_quality" to 60, "max_frame_rate" to 3,
             KEY_DASH_RESOLUTION to DashResolution.DEFAULT.name,
             KEY_DASH_DPI to DashDpi.DEFAULT,
             "dash_left_margin" to margin.left, "dash_bottom_margin" to margin.bottom,
@@ -147,8 +148,19 @@ class AndroidSettingsStore(context: Context) : SettingsStore {
         )
     }
 
-    private fun presetObject(): JSONObject =
-        runCatching { JSONObject(prefs.getString(KEY_PRESETS, "{}") ?: "{}") }.getOrDefault(JSONObject())
+    private fun presetObject(): JSONObject {
+        // Persist even an empty list: deleted bundled entries must never reappear.
+        if (!prefs.contains(KEY_PRESETS)) {
+            val bundled = contextAssets.open("default-presets.json").bufferedReader().use { it.readText() }
+            val source = JSONObject(bundled)
+            val presets = JSONObject()
+            for (name in source.keys()) presets.put(name, validatedSnapshot(source.getJSONObject(name)))
+            prefs.edit().putString(KEY_PRESETS, presets.toString()).apply()
+            return presets
+        }
+        return runCatching { JSONObject(prefs.getString(KEY_PRESETS, "{}") ?: "{}") }
+            .getOrDefault(JSONObject())
+    }
 
     private fun currentSnapshot(): JSONObject {
         val data = JSONObject()

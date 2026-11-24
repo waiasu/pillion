@@ -8,7 +8,7 @@ package app.pillion.core
  * @param dashResolution off-screen display size for dedicated dash mode; output is scaled to 480x240.
  */
 data class MirrorSettings(
-    val quality: Int = 80,
+    val quality: Int = 60,
     val maxFps: Int = 3,
     val dashResolution: DashResolution = DashResolution.DEFAULT,
     val dashDpi: Int = DashDpi.DEFAULT,

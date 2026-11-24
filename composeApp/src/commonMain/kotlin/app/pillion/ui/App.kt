@@ -78,7 +78,7 @@ fun App(
         val controller = remember(profile.id) { controllerFor(profile) }
         val state by controller.state.collectAsState()
         val activeMode by castMode.collectAsState()
-        var quality by remember { mutableStateOf(settingsStore?.imageQuality() ?: 80) }
+        var quality by remember { mutableStateOf(settingsStore?.imageQuality() ?: 60) }
         var maxFps by remember { mutableStateOf(settingsStore?.maxFrameRate() ?: 3) }
         var showSettings by rememberSaveable { mutableStateOf(false) }
         var showDashOnboarding by rememberSaveable { mutableStateOf(false) }

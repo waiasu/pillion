@@ -82,7 +82,7 @@ class CaptureService : Service() {
         _mode.value = if (dashEnabled) CastMode.DASH else CastMode.MIRROR
         acquireWakeLock()
         _state.value = MirrorState.Connecting
-        val quality = intent?.getIntExtra(EXTRA_QUALITY, 80) ?: 80
+        val quality = intent?.getIntExtra(EXTRA_QUALITY, 60) ?: 60
         val fps = intent?.getIntExtra(EXTRA_MAX_FPS, 3) ?: 3
         if (dashEnabled) startDashSession(quality, fps, dashResolutionFrom(intent), intent?.getStringExtra(EXTRA_DASH_COMPONENT), DashDpi.snap(intent?.getIntExtra(EXTRA_DASH_DPI, DashDpi.DEFAULT) ?: DashDpi.DEFAULT),
             DashMargins.clamped(intent?.getIntExtra(EXTRA_MARGIN_LEFT, 0) ?: 0, intent?.getIntExtra(EXTRA_MARGIN_BOTTOM, 0) ?: 0),

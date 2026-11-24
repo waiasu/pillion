@@ -12,7 +12,7 @@ interface SettingsStore {
     fun applyPreset(name: String): Boolean = false
     fun deletePreset(name: String): Boolean = false
 
-    fun imageQuality(): Int = 80
+    fun imageQuality(): Int = 60
     fun setImageQuality(value: Int) {}
     fun maxFrameRate(): Int = 3
     fun setMaxFrameRate(value: Int) {}

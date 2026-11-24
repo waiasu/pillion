@@ -49,7 +49,9 @@ internal fun PillionTheme(mode: ThemeMode, content: @Composable () -> Unit) {
         ThemeMode.LIGHT -> false
         ThemeMode.DARK -> true
     }
-    MaterialTheme(colorScheme = if (dark) DarkColors else LightColors) {
+    val colors = if (dark) DarkColors else LightColors
+    SystemBars(dark, colors.background)
+    MaterialTheme(colorScheme = colors) {
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background, content = content)
     }
 }

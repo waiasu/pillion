@@ -25,7 +25,7 @@ class CoreModelTest {
     @Test
     fun mirror_settings_defaults_are_sane() {
         val s = MirrorSettings()
-        assertEquals(80, s.quality)
+        assertEquals(60, s.quality)
         assertEquals(3, s.maxFps)
         assertEquals(DashResolution.DEFAULT, s.dashResolution)
     }
