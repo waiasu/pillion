@@ -102,6 +102,7 @@ class CaptureService : Service() {
                 intent?.getIntExtra(EXTRA_AUTO_INITIAL_Y, 53) ?: 53,
                 intent?.getIntExtra(EXTRA_AUTO_ARRIVED_X, 93) ?: 93,
                 intent?.getIntExtra(EXTRA_AUTO_ARRIVED_Y, 90) ?: 90,
+                intent?.getIntExtra(EXTRA_AUTO_VERTICAL_OFFSET_PX, 0) ?: 0,
             ), intent?.getBooleanExtra(EXTRA_YAHOO_NAVI_ENABLED, false) ?: false)
         else startMirrorSession(quality, fps)
         return START_NOT_STICKY
@@ -493,6 +494,7 @@ class CaptureService : Service() {
         const val EXTRA_AUTO_INITIAL_Y = "autoInitialY"
         const val EXTRA_AUTO_ARRIVED_X = "autoArrivedX"
         const val EXTRA_AUTO_ARRIVED_Y = "autoArrivedY"
+        const val EXTRA_AUTO_VERTICAL_OFFSET_PX = "autoVerticalOffsetPx"
         const val EXTRA_DASH_WIDTH = "dashWidth"
         const val EXTRA_DASH_HEIGHT = "dashHeight"
 

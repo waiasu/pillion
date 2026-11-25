@@ -436,6 +436,7 @@ class MainActivity : ComponentActivity() {
             .putExtra(CaptureService.EXTRA_AUTO_INITIAL_Y, settings.dashAutoDrive.initialY)
             .putExtra(CaptureService.EXTRA_AUTO_ARRIVED_X, settings.dashAutoDrive.arrivedX)
             .putExtra(CaptureService.EXTRA_AUTO_ARRIVED_Y, settings.dashAutoDrive.arrivedY)
+            .putExtra(CaptureService.EXTRA_AUTO_VERTICAL_OFFSET_PX, settings.dashAutoDrive.verticalOffsetPx)
             .putExtra(CaptureService.EXTRA_YAHOO_NAVI_ENABLED, settings.yahooNaviEnabled &&
                 packageName == "jp.co.yahoo.android.apps.navi" && isYahooAccessibilityEnabled())
             .putExtra(CaptureService.EXTRA_QUALITY, settings.quality)

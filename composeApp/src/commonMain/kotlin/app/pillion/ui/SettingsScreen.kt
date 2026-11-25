@@ -296,8 +296,6 @@ internal fun SettingsScreen(
                     LinkRow("Re-run setup (after a restart)") { onSetUpDash() }
                 }
                 GroupDivider()
-                DashResolutionSelector(dashResolution, onDashResolution)
-                GroupDivider()
                 Row(
                     Modifier.fillMaxWidth().clickable { displayAdjustmentsExpanded = !displayAdjustmentsExpanded }
                         .padding(vertical = 14.dp),
@@ -315,6 +313,8 @@ internal fun SettingsScreen(
                     GroupDivider()
                     PixelMarginSelector("Bottom margin", dashMargins.bottom, DashMargins.MAX_BOTTOM) { onDashMargins(dashMargins.copy(bottom = it)) }
                 }
+                GroupDivider()
+                DashResolutionSelector(dashResolution, onDashResolution)
                 GroupDivider()
                 MarginColorSelector(dashMarginColor, onDashMarginColor)
                 GroupDivider()
@@ -402,6 +402,8 @@ internal fun SettingsScreen(
                         TapPositionRow("Arrival screen", dashAutoDrive.arrivedX, dashAutoDrive.arrivedY,
                             onX = { onDashAutoDrive(dashAutoDrive.copy(arrivedX = it)) },
                             onY = { onDashAutoDrive(dashAutoDrive.copy(arrivedY = it)) })
+                        GroupDivider()
+                        DriveOffsetSelector(dashAutoDrive.verticalOffsetPx) { onDashAutoDrive(dashAutoDrive.copy(verticalOffsetPx = it)) }
                     }
                 }
             }
@@ -650,6 +652,39 @@ private fun DashDpiSelector(dpi: Int, onDpi: (Int) -> Unit) {
             Text("${DashDpi.MIN} dpi", style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text("${DashDpi.MAX} dpi", style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun DriveOffsetSelector(offsetPx: Int, onOffset: (Int) -> Unit) {
+    val value = offsetPx.coerceIn(0, 20)
+    Column(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text("Drive / Arrival vertical offset", style = MaterialTheme.typography.bodyLarge)
+            Text("$value px", style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = { onOffset((value - 1).coerceIn(0, 20)) },
+                enabled = value > 0, modifier = Modifier.size(40.dp)) {
+                Icon(Icons.Filled.Remove, contentDescription = "Decrease vertical offset by 1 px")
+            }
+            Slider(value = value.toFloat(),
+                onValueChange = { onOffset(it.roundToInt().coerceIn(0, 20)) },
+                valueRange = 0f..20f,
+                steps = 19,
+                modifier = Modifier.weight(1f))
+            IconButton(onClick = { onOffset((value + 1).coerceIn(0, 20)) },
+                enabled = value < 20, modifier = Modifier.size(40.dp)) {
+                Icon(Icons.Filled.Add, contentDescription = "Increase vertical offset by 1 px")
+            }
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text("0 px", style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("20 px", style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }

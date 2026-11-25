@@ -21,6 +21,7 @@
     "auto_drive_initial_y": 57,
     "auto_drive_arrived_x": 94,
     "auto_drive_arrived_y": 90,
+    "auto_drive_vertical_offset_px": 7,
     "yahoo_navi_enabled": true
   },
   "Y!ナビ medium": {
@@ -33,18 +34,19 @@
     "dash_margin_color": "Black",
     "dash_app_package": "jp.co.yahoo.android.apps.navi",
     "stick_input_enabled": true,
-    "tap_up_x": 93,
+    "tap_up_x": 94,
     "tap_up_y": 49,
-    "tap_down_x": 93,
+    "tap_down_x": 94,
     "tap_down_y": 74,
-    "tap_drive_up_x": 93,
+    "tap_drive_up_x": 94,
     "tap_drive_up_y": 17,
-    "tap_drive_down_x": 93,
+    "tap_drive_down_x": 94,
     "tap_drive_down_y": 33,
     "auto_drive_initial_x": 7,
     "auto_drive_initial_y": 55,
-    "auto_drive_arrived_x": 93,
+    "auto_drive_arrived_x": 94,
     "auto_drive_arrived_y": 90,
+    "auto_drive_vertical_offset_px": 7,
     "yahoo_navi_enabled": true
   },
   "Y!ナビ large": {
@@ -69,6 +71,7 @@
     "auto_drive_initial_y": 53,
     "auto_drive_arrived_x": 93,
     "auto_drive_arrived_y": 90,
+    "auto_drive_vertical_offset_px": 5,
     "yahoo_navi_enabled": true
   },
   "Gマップ": {
@@ -93,6 +96,7 @@
     "auto_drive_initial_y": 55,
     "auto_drive_arrived_x": 93,
     "auto_drive_arrived_y": 90,
+    "auto_drive_vertical_offset_px": 0,
     "yahoo_navi_enabled": true
   }
 }

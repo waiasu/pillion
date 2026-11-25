@@ -44,15 +44,17 @@ class AndroidSettingsStore(context: Context) : SettingsStore {
     override fun dashAutoDriveSettings(): DashAutoDriveSettings = DashAutoDriveSettings.clamped(
         prefs.getInt("auto_drive_initial_x", 7), prefs.getInt("auto_drive_initial_y", 53),
         prefs.getInt("auto_drive_arrived_x", 93), prefs.getInt("auto_drive_arrived_y", 90),
+        prefs.getInt("auto_drive_vertical_offset_px", 0),
     )
     override fun setDashAutoDriveSettings(settings: DashAutoDriveSettings) {
         val v = DashAutoDriveSettings.clamped(
-            settings.initialX, settings.initialY, settings.arrivedX, settings.arrivedY,
+            settings.initialX, settings.initialY, settings.arrivedX, settings.arrivedY, settings.verticalOffsetPx,
         )
         prefs.edit().putInt("auto_drive_initial_x", v.initialX)
             .putInt("auto_drive_initial_y", v.initialY)
             .putInt("auto_drive_arrived_x", v.arrivedX)
-            .putInt("auto_drive_arrived_y", v.arrivedY).apply()
+            .putInt("auto_drive_arrived_y", v.arrivedY)
+            .putInt("auto_drive_vertical_offset_px", v.verticalOffsetPx).apply()
     }
 
     override fun yahooNaviEnabled(): Boolean = prefs.getBoolean("yahoo_navi_enabled", true)
@@ -124,7 +126,7 @@ class AndroidSettingsStore(context: Context) : SettingsStore {
         "stick_input_enabled", "tap_up_x", "tap_up_y", "tap_down_x", "tap_down_y",
         "tap_drive_up_x", "tap_drive_up_y", "tap_drive_down_x", "tap_drive_down_y",
         "auto_drive_initial_x", "auto_drive_initial_y", "auto_drive_arrived_x",
-        "auto_drive_arrived_y", "yahoo_navi_enabled",
+        "auto_drive_arrived_y", "auto_drive_vertical_offset_px", "yahoo_navi_enabled",
     )
     private val defaultValues: Map<String, Any> by lazy {
         val tap = DashTapSettings()
@@ -144,6 +146,7 @@ class AndroidSettingsStore(context: Context) : SettingsStore {
             "tap_drive_down_x" to tap.driveDownX, "tap_drive_down_y" to tap.driveDownY,
             "auto_drive_initial_x" to drive.initialX, "auto_drive_initial_y" to drive.initialY,
             "auto_drive_arrived_x" to drive.arrivedX, "auto_drive_arrived_y" to drive.arrivedY,
+            "auto_drive_vertical_offset_px" to drive.verticalOffsetPx,
             "yahoo_navi_enabled" to true,
         )
     }

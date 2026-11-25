@@ -166,6 +166,7 @@ class DashModeScreenSource(
                     YahooPage.NAV -> {
                         returnUnknownSinceMs = 0L
                         phase = DrivePhase.NAV
+                        dash.setDisplayOffset(0)
                         DiagnosticFlightRecorder.record("DRIVE", "ARRIVED exit -> NAV")
                     }
                     YahooPage.UNKNOWN -> {
@@ -190,6 +191,7 @@ class DashModeScreenSource(
                     now >= dashReadyAtMs &&
                     dash.tapAutoDrive(autoDrive.initialX, autoDrive.initialY)) {
                     phase = DrivePhase.DRIVE
+                    dash.setDisplayOffset(autoDrive.verticalOffsetPx)
                     driveStickReadyAtMs = now + DRIVE_STICK_SETTLE_MS
                     DiagnosticFlightRecorder.record("DRIVE", "INITIAL -> DRIVE one-shot tap")
                 }
@@ -202,6 +204,7 @@ class DashModeScreenSource(
                     // The arrival button only closes guidance; it returns to the initial
                     // screen. Reclassify there and perform its separate Drive tap.
                     phase = DrivePhase.WAIT_RETURN
+                    dash.setDisplayOffset(autoDrive.verticalOffsetPx)
                     promoteAtMs = now
                     returnUnknownSinceMs = 0L
                     DiagnosticFlightRecorder.record("DRIVE", "ARRIVED exit tapped -> WAIT_RETURN; re-arm initial screen decision")

@@ -46,6 +46,7 @@ class DashStreamScreenSource(
     @Volatile private var staleLogged = false
     @Volatile private var desiredComponent: String? = null
     @Volatile private var explicitDemote = false
+    @Volatile private var desiredOffsetPx = 0
     private val gate = DashFrameGate()
     private val stateLock = Any()
 
@@ -197,9 +198,18 @@ class DashStreamScreenSource(
         return send(s, "TAP ${x.coerceIn(0, 100)} ${y.coerceIn(0, 100)} $markerMs\n")
     }
 
+    /** Drawing-only vertical offset; keep the requested value across helper TCP reconnects. */
+    fun setDisplayOffset(offsetPx: Int) {
+        val value = offsetPx.coerceIn(0, 20)
+        if (desiredOffsetPx == value) return
+        desiredOffsetPx = value
+        send("OFFSET $value\n")
+    }
+
     /** Tell the helper to move the foreground app onto the dash display and start encoding. */
     fun promote(component: String) {
         synchronized(stateLock) { latest = null }
+        desiredOffsetPx = 0
         desiredComponent = component
         explicitDemote = false
         send("PROMOTE $component ${if (restartOnVd) 1 else 0}\n")
@@ -207,6 +217,7 @@ class DashStreamScreenSource(
 
     /** Tell the helper to move the app back to the phone and stop encoding. */
     fun demote() {
+        desiredOffsetPx = 0
         desiredComponent = null
         explicitDemote = true
         latest = null
@@ -248,7 +259,7 @@ class DashStreamScreenSource(
             if (explicitDemote) send(s, "DEMOTE\n")
         } else {
             Log.d(TAG, "dash stream: syncing pending PROMOTE $component")
-            send(s, "PROMOTE $component ${if (restartOnVd) 1 else 0}\n")
+            send(s, "PROMOTE $component ${if (restartOnVd) 1 else 0} $desiredOffsetPx\n")
         }
     }
 

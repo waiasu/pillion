@@ -115,6 +115,7 @@ object DashServer {
     @Volatile private var outputHeight = 240
     private var margins = DashMargins()
     private var marginColor = DashMarginColor.Black
+    @Volatile private var displayOffsetPx = 0
     private var quality = 40
     // The capture handler owns marker state; no polling or bitmap/JPEG work on the TCP reader.
     private var markerX = 0f
@@ -352,9 +353,16 @@ object DashServer {
                 when {
                     line.startsWith("PROMOTE ") -> {
                         val fields = line.removePrefix("PROMOTE ").trim().split(" ")
+                        displayOffsetPx = fields.getOrNull(2)?.toIntOrNull()?.takeIf { it in 0..20 } ?: 0
                         promoteApp(fields.firstOrNull().orEmpty(), fields.getOrNull(1) == "1")
                     }
-                    line == "DEMOTE" -> demoteApp()
+                    line == "DEMOTE" -> {
+                        displayOffsetPx = 0
+                        demoteApp()
+                    }
+                    line.startsWith("OFFSET ") -> {
+                        line.removePrefix("OFFSET ").trim().toIntOrNull()?.takeIf { it in 0..20 }?.let { displayOffsetPx = it }
+                    }
                     line.startsWith("SIZE ") -> {
                         val raw = line.removePrefix("SIZE ").trim()
                         val epoch = sizeEpoch.incrementAndGet()
@@ -471,9 +479,10 @@ object DashServer {
         }
     }
 
-    private fun drawTapMarker(canvas: Canvas) {
-        canvas.drawCircle(markerX, markerY, 12f, markerOutlinePaint)
-        canvas.drawCircle(markerX, markerY, 10f, markerFillPaint)
+    private fun drawTapMarker(canvas: Canvas, offsetPx: Int = displayOffsetPx) {
+        val y = markerY - offsetPx
+        canvas.drawCircle(markerX, y, 12f, markerOutlinePaint)
+        canvas.drawCircle(markerX, y, 10f, markerFillPaint)
     }
 
     /**
@@ -1213,20 +1222,21 @@ object DashServer {
         } else {
             Bitmap.createScaledBitmap(bitmap, usableWidth, usableHeight, true)
         }
-        val output = if (margins.left == 0 && margins.bottom == 0) {
+        val offsetPx = displayOffsetPx
+        val output = if (offsetPx == 0 && margins.left == 0 && margins.bottom == 0) {
             scaled
         } else {
             Bitmap.createBitmap(outputWidth, outputHeight, Bitmap.Config.ARGB_8888).also { target ->
                 val canvas = Canvas(target)
                 canvas.drawColor(marginColor.argb)
-                canvas.drawBitmap(scaled, margins.left.toFloat(), 0f, null)
+                canvas.drawBitmap(scaled, margins.left.toFloat(), -offsetPx.toFloat(), null)
             }
         }
         val out = ByteArrayOutputStream()
         if (markerUntilMs > SystemClock.elapsedRealtime()) {
             markerCleanBitmap?.recycle()
             markerCleanBitmap = Bitmap.createBitmap(output)
-            drawTapMarker(Canvas(output))
+            drawTapMarker(Canvas(output), offsetPx)
         } else {
             markerCleanBitmap?.recycle()
             markerCleanBitmap = null

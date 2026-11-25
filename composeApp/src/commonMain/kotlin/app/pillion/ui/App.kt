@@ -139,7 +139,7 @@ fun App(
                 onDashTap = { dashTap = DashTapSettings.clamped(it.upX, it.upY, it.downX, it.downY,
                     it.driveUpX, it.driveUpY, it.driveDownX, it.driveDownY, it.enabled); settingsStore?.setDashTapSettings(dashTap) },
                 dashAutoDrive = dashAutoDrive,
-                onDashAutoDrive = { dashAutoDrive = DashAutoDriveSettings.clamped(it.initialX, it.initialY, it.arrivedX, it.arrivedY); settingsStore?.setDashAutoDriveSettings(dashAutoDrive) },
+                onDashAutoDrive = { dashAutoDrive = DashAutoDriveSettings.clamped(it.initialX, it.initialY, it.arrivedX, it.arrivedY, it.verticalOffsetPx); settingsStore?.setDashAutoDriveSettings(dashAutoDrive) },
                 yahooNaviEnabled = yahooNaviEnabled,
                 yahooAccessibilityEnabled = yahooAccessibilityEnabled,
                 onYahooNaviEnabled = { yahooNaviEnabled = it; settingsStore?.setYahooNaviEnabled(it) },
